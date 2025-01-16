@@ -1,0 +1,218 @@
+---
+title: "Biomass: non-destructive method"
+author: "JPG"
+format:
+  html:
+    toc: true
+    toc-depth: 3
+    code-fold: true
+    number-sections: true
+editor: visual
+bibliography: "C:/Users/javier.porras/Documents/arkaute_/code/experiment_references.bib"
+---
+
+```{r opening packages}
+#| warning: false
+#| echo: false
+rm(list = ls(all.names = TRUE))
+library(dplyr)
+library(ggplot2)
+library(broom)
+library(ggrepel)
+
+theme_set(theme_bw() +
+            theme(axis.title.x = element_blank(),
+                  legend.position = "right",
+                  panel.grid = element_blank(),
+                  strip.background = element_blank(),
+                  strip.text = element_text(face = "bold"),
+                  text = element_text(size = 11)))
+```
+
+## Context
+
+In the experiment carried out in Arkaute (Alava), the 1 m$^2$.... \[insert all information about biomass limitations, chosing non-destructive methods and bibliography\]. @pottier2017,
+
+## Estimating number of individuals
+
+\[write down the problem about number of individuals per square meter\]
+
+To be able to estimate abundance based on the number of individuals we need data were abundance and number of individuals per species, plot and sampling were available. Since we have been learning the application of this non-destructive methodology in the go, we have 2 different groups of data:
+
+1.  Since sampling 12, we have been estimating the number of individuals per species and plot based on direct field observations.
+
+2.  Up to sampling 11, We only measured the morphological parameters of 5 individuals per specie as maximum. If there were less than 5 species, we know that number was the total amount of individuals in the plot.
+
+```{r First steps}
+#| echo: false
+#| warning: false
+
+setwd("C:/Users/javier.porras/Documents/arkaute_")
+
+nind <- read.csv("data/n_individuals.csv")
+#source("code/first_script_old.R")
+
+nind$code <- as.factor(nind$code)
+
+nind <- select(nind, sampling, plot, code, nind_m2, abundance)
+#flora_nind <-  flora %>% select(code, family) %>% distinct(code, .keep_all = TRUE)
+
+nind <- nind %>%
+  group_by(sampling, plot, code) %>%
+  summarize(nind_m2 = sum(nind_m2), abundance = sum(abundance))  ## Las especies de asteraceaes que hemos agrupado por familia se recalculan sus individuos y abundancias aquí
+
+
+source("C:/Users/javier.porras/Documents/arkaute_/code/first_script.R")
+
+flora_raw <- select(flora_raw, -date, -category, -OBS, -ni.agrupado, -familia, -species_old_1, -species_old_2, -height, - Cb, -Cm, -Db, -Dm)
+
+#Durante todo el muestreo, si había más de 5 individuos, no mediamos más. Por lo que, si hay menos de 5 individuos, ese número es el número de individuos por 
+# metro 2 que había. Esto se ha hecho siempre, pero realmente nos interesa solo hasta el muestreo 11, ya que a partir del 12 empezamos a contar individuos. 
+
+flora_nind <- flora_raw %>%
+  filter(!sampling %in% c("12", "13", "14", "15", "16", "17", "18", "19", "20"))  %>%
+  group_by(sampling, plot, code) %>%
+  mutate(n_individuals = n())
+
+flora_nind <- flora_nind %>%
+    group_by(sampling, plot, code,abundance) %>%
+  summarize(n_individuals_mean = mean(n_individuals, na.rm = T))  #corrección de asteraceae y poaceae #corrección de asteraceae y poaceae
+
+n_individuals_old_data <- flora_nind %>%
+  filter(n_individuals_mean < 5)
+names(n_individuals_old_data)[names(n_individuals_old_data) == "n_individuals_mean"] <- "nind_m2"
+
+nind <- bind_rows(nind, n_individuals_old_data)
+
+```
+
+
+
+
+
+Once that we have the dataset for stablishing the estimation, we have applied a linear regression model where we plot the number of individuals per m$^2$ as a function of abundance. There are some species for which just one individual was found in one plot at different samplings, meaning that these won't be considered in the regression and their biomass will be the biomass of the measured individual. These species are *Rumex crispus*, *Amaranthus sp.*, *Kickxia supuria* and an unidentified species of the family *brasicaceae*. For the lineal regression we applied the code: lm(nind_m2 ~ abundance). On example of the output is the following:  
+
+
+```{r Lineal regression}
+#| echo: false
+#| warning: false
+
+
+### Regresión lineal. 
+
+
+nind$code <- as.character(nind$code)
+
+#The lm model is actually no needed for species "rucr", "amsp", "kips" and "brasicaceae" since these are
+# just one individual found in one plot at different times. So the estimated biomass will be for 1 square meter
+
+nind <- nind %>% 
+  filter(!code %in% c("rucr", "amsp", "kisp","brasicaceae"))
+
+
+code_levels <- unique(nind$code)
+gglist <- list()
+
+nind_lm_data <- matrix(nrow = length(code_levels), ncol = 6)
+colnames(nind_lm_data) <- c("code", "intercept", "slope", "r_squared", "p_value", "n_observations")
+nind_lm_data <- as.data.frame(nind_lm_data)
+
+counter <- 0
+
+for (i in 1: length(code_levels)) {
+  
+  nind_i <- subset(nind, code == code_levels[i])
+  lm_i <- lm(nind_m2 ~ abundance, data = nind_i)
+  
+  # Extract coefficients, R^2, and p-value
+  lm_i_summary <- summary(lm_i)
+  lm_i_tidy <- tidy(lm_i)
+  lm_i_glance <- glance(lm_i)
+  
+  intercept_i <- lm_i_tidy$estimate[1]
+  slope_i <- lm_i_tidy$estimate[2]
+  r_squared_i <- lm_i_glance$r.squared
+  p_value_i <- lm_i_tidy$p.value[2]
+  n_observations_i <- nrow(nind_i)
+  
+  counter <- counter + 1
+  
+  gglist[[counter]] <- ggplot(nind_i, aes(x = abundance, y = nind_m2)) +
+    geom_point() +
+    geom_smooth(method = "lm", se = FALSE, color = "blue") +
+    labs(title = paste("Linear Relationship for", code_levels[i]),
+         subtitle = paste("Equation: y =", round(intercept_i, 2), "+", round(slope_i, 2), "* x\n",
+                          "R^2:", round(r_squared_i, 2), ", p-value:", round(p_value_i, 4), "\n",
+         "Number of observations", n_observations_i),
+         x = "Abundance",
+         y = "Numbers of individual per m2") +
+    theme_minimal()
+  
+  nind_lm_data$code[counter] <- code_levels[i]
+  nind_lm_data$intercept[counter] <- intercept_i
+  nind_lm_data$slope[counter] <- slope_i
+  nind_lm_data$r_squared[counter] <- r_squared_i
+  nind_lm_data$p_value[counter] <- p_value_i
+  nind_lm_data$n_observations[counter] <- n_observations_i
+
+  
+}
+
+print(gglist[[6
+        ]])
+
+
+
+```
+
+
+As we can see, for this example the R$^2$ is quite low ( R$^2$ = 0.23). The fact is that, if we take a look to how well the model fit for all of our species, there are many considerations. 
+```{r Checking results}
+#| echo: false
+#| warning: false
+#| fig-cap: "Plot showing R$^2$ and *p-value* of the linar model for all species. Dotted lines at *R$^2$* = 0.3 and *p-value* = 0.1. Blue dots are those with positive slope and red dots those species with negative slope "
+
+nind_lm_data$posneg_slope <- ifelse(nind_lm_data$slope < 0, paste("negative"), paste("positive"))
+#hist(nind_lm_data$slope)
+
+
+#Let's check results
+results <- 
+  ggplot(nind_lm_data, aes( x = r_squared, y = p_value, 
+                          label = paste(code, n_observations, sep = ", "), color = posneg_slope))+
+  geom_point()+ 
+  geom_vline(xintercept = 0.3, linetype = "dashed", color = "gray40") +
+  geom_hline(yintercept = 0.1, linetype = "dashed", color = "gray40") +
+  
+  geom_text_repel(
+    size = 2,                # Text size
+    min.segment.length = 0.1,  # Ensures lines are always drawn
+    segment.color = "gray50",# Line color
+    segment.size = 0.5, 
+    max.overlaps = 15# Line thickness
+  )
+ 
+print(results)
+
+#The lm model fits well (R^2 >= 0.3 and p-value < 0.1) for a few species: 
+
+species_lm<- nind_lm_data %>% 
+  filter(r_squared > 0.3) %>% 
+  filter(p_value < 0.1)
+
+species_lm_codes <- species_lm$code
+
+nind_lm_species <- nind_lm_data %>% 
+  filter(code %in% species_lm )
+
+```
+
+The model fits well (R$^2$ >= 0.3 and *p-value* < 0.1) for the following species: `r species_lm_codes`. The idea is to try to fit these species into the equation model of @perronne2021. 
+
+## Applying biomass equation
+
+```{r}
+
+```
+
+
