@@ -1,1 +1,351 @@
+---
+title: "Sensitivity analysis of model parameters"
+date: "`r Sys.Date()`"
+output:
+  html_document: default
+bibliography: references.bib
+csl: citation_style/ecology.csl
+---
 
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, warning = FALSE, error = FALSE, message = FALSE)
+```
+
+```{r libraries}
+library(tidyverse)
+library(ggpubr)
+library(lubridate)
+library(stringr)
+library(ggplot2)
+library(dplyr)
+library(reshape2)
+library(readr)
+library(ggpubr)
+library(tidyverse)
+library(gridExtra)
+```
+
+### Model
+
+The allometric model described by is the following:
+
+$$
+B = d \left [ \frac{H}{2} \left ( A_{basal} + A_{half} \right ) \right ]^{z},
+$$ where $B$ is the biomass calculated by the allometric equation, $d$ is the bulk density of the plant species, $H$ is the measured height of the plant, $A_{basal}$ and $A_{half}$ are the basal area and the area at half the height of the plant, respectively; and $z$ is the power coefficient of a power law.
+
+### Problem
+
+In @perronne2020, the authors assign a value of 1.96 to $d$ and a value of $2/3$ to $z$; however, we do not know how those parameters interact with each other.
+
+### Approach
+
+To solve this, we will perform a sensitivity analysis in which we modify the values of $d$ and $z$ within a certain range. Importantly, to simplify the allometric equation and do a clear sensitivity analyses that works independently of the field data, we opt to include the parameter $x$ as:
+
+$$
+x = \left [ \frac{H}{2} \left ( A_{basal} + A_{half} \right ) \right ],
+$$ meaning that all allometric measurements are summarized now by $x$. Thus, the equation used for our sensitivity analysis is the following:
+
+$$
+B = dx^{z}
+$$
+
+
+
+### Distribution of $X$ and outliers management
+
+First, we have to take a look to an histogram and a boxplot of $X$ distribution: 
+
+```{r}
+library(dplyr)
+flora_raw <- read.csv("data/flora_db.csv")
+flora_raw <- flora_raw %>%
+  mutate(across(where(is.character), as.factor))
+desired_order <- c("s0_may", "s1_may", "s2_jun", "s3_jun", "s4_jul", "s5_jul", "s6_aug", 
+                   "s7_sep", "s8_sep", "s9_oct", "s10_oct", "s11_nov")
+flora_raw$sampling <- factor(flora_raw$sampling, levels = desired_order)
+
+#Sumar 0.01 cm a los diámetros por el error del calibre con el que medimos
+flora_raw$Dm <- flora_raw$Dm + 0.01
+flora_raw$Db <- flora_raw$Db + 0.01
+
+flora <- flora_raw %>% select(sampling, plot, treatment, species, abundance, height, Cb, Db, Cm, Dm)
+
+flora$cm <- round(ifelse(!is.na(flora$Dm), flora$Dm * pi, flora$Cm), 2)
+flora$cb <- round(ifelse(!is.na(flora$Db), flora$Db * pi, flora$Cb), 2)
+flora$Ah <- ((flora$cm)^2)/4*pi
+flora$Ab <- ((flora$cb)^2)/4*pi
+
+#Application of equation proposed by paper Perrone R. et al. 2020
+
+d_perrone <- 1.96
+z_perrone <- 2/3
+flora$x <- (flora$height/2)*(flora$Ab + flora$Ah)
+flora$biomass <- d_perrone*(flora$x^z_perrone)
+
+#Removing rows that contain NA's in X (sampling 0, 1 and 2)
+
+flora <- flora[complete.cases(flora$x), ]
+
+#Distribution of data
+
+par(mfrow = c(1,2))
+hist(flora$x)
+boxplot(flora$x)
+
+
+
+```
+
+As we can see, there is a problem with $X$ outliers. If we take a look to the quantiles:
+
+- 0%: `r quantile(flora$x, na.rm = TRUE, probs = 0)`
+- 25%:  `r quantile(flora$x, na.rm = TRUE, probs = 0.25)`
+- 50%:  `r quantile(flora$x, na.rm = TRUE, probs = 0.50)`
+- 75%: `r quantile(flora$x, na.rm = TRUE, probs = 0.75)`
+- 100%: `r quantile(flora$x, na.rm = TRUE, probs = 1)`
+
+```{r Removing outliers}
+
+flora1 <- flora[which(flora$x < (as.numeric(quantile(flora$x, na.rm = TRUE)[4] + (1.5 * IQR(flora$x, na.rm = TRUE))))),] 
+flora3 <- flora[which(flora$x < (as.numeric(quantile(flora$x, na.rm = TRUE)[4] + (3 * IQR(flora$x, na.rm = TRUE))))),] 
+flora20 <- flora[which(flora$x < (as.numeric(quantile(flora$x, na.rm = TRUE)[4] + (20 * IQR(flora$x, na.rm = TRUE))))),] 
+
+#Removing amaranthus: 
+
+flora_NoAm <- flora[flora$species != "am", ]
+
+#List of outliers: 
+flora1_outl <- flora[which(flora$x > (as.numeric(quantile(flora$x, na.rm = TRUE)[4] + (1.5 * IQR(flora$x, na.rm = TRUE))))),] 
+flora3_outl <- flora[which(flora$x > (as.numeric(quantile(flora$x, na.rm = TRUE)[4] + (3 * IQR(flora$x, na.rm = TRUE))))),] 
+flora20_outl <- flora[which(flora$x > (as.numeric(quantile(flora$x, na.rm = TRUE)[4] + (20 * IQR(flora$x, na.rm = TRUE))))),]
+
+#Limits 
+#Outliers: we would remove every value above...
+lim1 <- round(quantile(flora$x, na.rm = TRUE, probs = 0.75) + (1.5*(quantile(flora$x, na.rm = TRUE, probs = 0.75)-quantile(flora$x, na.rm = TRUE, probs = 0.25))), 2)
+#For extreme - outliers: ...
+lim3 <- round(quantile(flora$x, na.rm = TRUE, probs = 0.75) + (3*(quantile(flora$x, na.rm = TRUE, probs = 0.75)-quantile(flora$x, na.rm = TRUE, probs = 0.25))), 2)
+#For super extreme outliers
+lim20 <- round(quantile(flora$x, na.rm = TRUE, probs = 0.75) + (20*(quantile(flora$x, na.rm = TRUE, probs = 0.75)-quantile(flora$x, na.rm = TRUE, probs = 0.25))), 2)
+
+
+```
+
+
+Up to 75% there is no a significant jump in the magnitude, but, in the last quantile (75%-100%) there is an increase of 10^5. We can increase resolution between the last quantiles: 
+
+- 80%: `r quantile(flora$x, na.rm = TRUE, probs = 0.80)`
+- 85%: `r quantile(flora$x, na.rm = TRUE, probs = 0.85)`
+- 90%: `r quantile(flora$x, na.rm = TRUE, probs = 0.90)`
+- 95%: `r quantile(flora$x, na.rm = TRUE, probs = 0.95)`
+- 96%: `r quantile(flora$x, na.rm = TRUE, probs = 0.96)`
+- 97%: `r quantile(flora$x, na.rm = TRUE, probs = 0.97)`
+- 98%: `r quantile(flora$x, na.rm = TRUE, probs = 0.98)`
+- 99%: `r quantile(flora$x, na.rm = TRUE, probs = 0.99)`
+
+Hence, we have a series of outliers that are preventing us of observing the distribution of $x$. To manage outliers, we have several options: 
+
+
+- Removing the *outliers* that fall above $Q3 + 1.5·IQR$. We would remove everything above $x =$ `r lim1`, which are `r length(flora1_outl$x)`  data points out of
+`r length(flora$x)` (`r round((length(flora1_outl$x)/length(flora$x))*100, 2)` %).
+- Removing the *extreme outliers* that fall above $Q3 + 3·IQR$.We would remove everything above $x =$ `r lim3 `, which are `r length(flora3_outl$x)`  data points out of `r length(flora$x)` (`r round((length(flora3_outl$x)/length(flora$x))*100, 2)` %).
+- Removing outliers above a specific value that we consider more appropiate. For example, removing every data that falls above $Q3 + 20·IQR$ is removing everything above `r lim20`. Which are `r length(flora20_outl$x)`  data points out of `r length(flora$x)` (`r round((length(flora20_outl$x)/length(flora$x))*100, 2)` %).
+- Removing specific species. e.g. removing the species "Amaranthus sp." ("am"). We would remove 5 datapoints, but the maximum value would be `r max(flora_NoAm$x)`.
+ 
+
+The distribution of data once we reject different levels of outliers would be as follow: 
+
+```{r}
+
+print(ggarrange(
+ggplot(flora1, aes(y = x)) +
+  geom_boxplot(),
+ggplot(flora3, aes(y = x)) +
+  geom_boxplot(),
+ggplot(flora20, aes(y = x)) +
+  geom_boxplot(),
+ggplot(flora_NoAm, aes(y = x)) +
+  geom_boxplot(),
+labels = c("-outl", "-ext.outl", "-our.outl", "-am"),
+ncol = 4, nrow = 1))
+
+par(mfrow = c(1, 4))
+hist(flora1$x)
+hist(flora3$x)
+hist(flora20$x)
+hist(flora_NoAm$x)
+par(mfrow = c(1, 1))
+
+
+```
+
+*Boxplots and histograms of X*
+
+#### Questions about outliers
+
+- What is the ecological meaning of the outliers? And what would be the meaning of their removal? 
+- If we do remove outliers, which group of outliers should we take out? 
+
+
+
+
+## $d$ and $z$ influence on $x$
+
+At this point, we assign the following values to the different parameters in the model:
+
+
+```{r values}
+d <- c(0.98, 1.96, 3.92)
+xout <- round(as.numeric(quantile(flora1_outl$x)),2)
+x1 <- seq(round(min(flora1$x), 0), round(max(flora1$x), 0), 25)
+x3 <- seq(round(min(flora3$x), 0), round(max(flora3$x), 0), 25)
+x20 <- seq(round(min(flora20$x), 0), round(max(flora20$x), 0), 150)
+x_small <- seq(round(min(flora1$x), 0), round(quantile(flora$x, na.rm = TRUE, probs = 0.25), 0), 0.15)
+z <- seq(0.1, 1, 0.01)
+
+```
+
+-   $d$.  1.96 is the value proposed by @perronne2020. By the structure of the model, we know that $d$ will have an influence on the scale of biomass. Hence, we will only apply half of that value and its double. Therefore: for $d$, values of `r d`;
+-   $x$. We have seen how distribution of $x$ is influenced by the pressence of outliers. We will have 3 groups of $x$. 1) for $x1$ (without outliers), `r x1`; 2) for $xsmall$ (for the smallest values of x, going from the minimum value until the 25% quantile), `r x_small`; for $xout$, outliers of $x$ (outliers). 
+-   $z$. The value proposed for $z$ by the authors is 2/3. Since it is a power coefficient, we need to apply more values of $z$ in order to understand its influence on the biomass. Hence, we will have a list of values: `r z`.
+
+```{r}
+
+df_out <- expand.grid(d, xout, z)
+colnames(df_out) <- c("d", "x", "z")
+df_out$biomass <- df_out$d * (df_out$x ^df_out$z)
+
+df1 <- expand.grid(d, x1, z)
+colnames(df1) <- c("d", "x", "z")
+df1$biomass <- df1$d * (df1$x ^df1$z)
+
+df3 <- expand.grid(d, x3, z)
+colnames(df3) <- c("d", "x", "z")
+df3$biomass <- df3$d * (df3$x ^ df3$z)
+
+df20 <- expand.grid(d, x20, z)
+colnames(df20) <- c("d", "x", "z")
+df20$biomass <- df20$d * (df20$x ^ df20$z)
+
+
+df_small <- expand.grid(d, x_small, z)
+colnames(df_small) <- c("d", "x", "z")
+df_small$biomass <- df_small$d * (df_small$x ^ df_small$z)
+
+
+```
+
+
+### Dataviz
+
+Now, some visualizations to understand the relationship between the different parameters.
+
+#### $x$ and $z$
+
+The relationship between $x$ and $z$ for values of $d$ looks like this:
+
+```{r tilexz_mind}
+dvalue <- 0.98
+tilexz <- 
+  ggplot(df1[which(df1$d == dvalue),], aes(x = x, y = z)) +
+  geom_tile(aes(fill = biomass)) +
+  labs(fill = "Biomass", title = paste("d", "=", dvalue, sep = " ")) +
+  scale_x_continuous(expand = c(0, 0)) +
+  scale_y_continuous(expand = c(0, 0)) +
+  theme_bw()
+```
+
+```{r tilexz_d}
+dvalue <- 1.96
+tilexz_mind <- 
+  ggplot(df1[which(df1$d == dvalue),], aes(x = x, y = z)) +
+  geom_tile(aes(fill = biomass)) +
+  labs(fill = "Biomass", title = paste("d", "=", dvalue, sep = " ")) +
+  scale_x_continuous(expand = c(0, 0)) +
+  scale_y_continuous(expand = c(0, 0)) +
+  theme_bw()
+```
+
+```{r tilexz_maxd}
+dvalue <- 3.92
+tilexz_maxd <- 
+  ggplot(df1[which(df1$d == dvalue),], aes(x = x, y = z)) +
+  geom_tile(aes(fill = biomass)) +
+  labs(fill = "Biomass", title = paste("d", "=", dvalue, sep = " ")) +
+  scale_x_continuous(expand = c(0, 0)) +
+  scale_y_continuous(expand = c(0, 0)) +
+  theme_bw()
+```
+
+
+```{r arrange_d}
+ggarrange(tilexz, tilexz_mind, tilexz_maxd)
+```
+
+From these graphs we can conclude that: $d$ have an effect on magnitude of biomass and $z$ increases biomass proportionally to $X$. Since we do not want to exactly know the absolute values of biomass, but rather the relative contribution of each species, $d$ value is not as relevant. However, the relationship between $z$ and $x$ deserves further consideration. In this regard, we can first take a look to $x$ distribution. 
+
+### Expression "X" and its interaction with $Z$
+
+To check $z$ influence on $x$ we can display a graph where we can see how biomass change as a function of changes in $z$, for different values of $x$. In the following graphs we can see: 
+
+
+
+```{r d_biomass}
+dvalue <- 1.96
+
+ggplot(df1[which(df1$d == dvalue),], aes(x = z, y = biomass, color = as.factor(x))) +
+  labs(color = "x", title = paste("A.", "d", "=", dvalue, ".", "X values without outliers", sep = " ")) +
+  geom_vline(xintercept = 2/3, linetype = "dashed") +
+  geom_point() +
+  theme_classic()
+
+ggplot(df3[which(df3$d == dvalue),], aes(x = z, y = biomass, color = as.factor(x))) +
+  labs(color = "x", title = paste("B.", "d", "=", dvalue, ".", "X values without extreme outliers", sep = " ")) +
+  geom_vline(xintercept = 2/3, linetype = "dashed") +
+  geom_point() +
+  theme_classic()
+
+ggplot(df20[which(df20$d == dvalue),], aes(x = z, y = biomass, color = as.factor(x))) +
+  labs(color = "x", title = paste("B.", "d", "=", dvalue, ".", "X values without specific outliers", sep = " ")) +
+  geom_vline(xintercept = 2/3, linetype = "dashed") +
+  geom_point() +
+  theme_classic()
+
+ggplot(df_small[which(df_small$d == dvalue),], aes(x = z, y = biomass, color = as.factor(x))) +
+  labs(color = "x", title = paste("C.", "d", "=", dvalue, ".", "Smallest X values", sep = " ")) +
+  geom_vline(xintercept = 2/3, linetype = "dashed") +
+  geom_point() +
+  theme_classic()
+
+ggplot(df_out[which(df_out$d == dvalue),], aes(x = z, y = biomass, color = as.factor(x))) +
+  labs(color = "x", title = paste("D.", "d", "=", dvalue, ".", "Outliers of X",  sep = " ")) +
+  geom_vline(xintercept = 2/3, linetype = "dashed") +
+  geom_point() +
+  theme_classic()
+
+
+
+
+```
+
+The dotted line represents the value of $z = 2/3$. For the highest values of $x$, a bigger $z$ means a positive influence on biomass. Meanwhile, for those $x$ values below 1, $z$ has a negative influence on biomass. A `r round((length(which(flora1$x < 1))/length(flora1$x)),2) *100` % of x datapoints in the database are below 0. 
+
+## Conclusions
+
+- $d$ = 1.96. $d$ affects the magnitude (scale) of biomass, no matter the size of the species. It would influence the fact that we got mg, cg, g or kg of biomass. Since we are itnerested in the relative values, it is no so relevant. 
+
+- $z$ = 2/3. If it were higher, the differences estimated for biomass between small species and big species would be "too much" (when is too much?). If it were lower, some differences wouldn't be appreciated. hence, either we do not use a $z$ value or we use the proposed value. 
+
+
+## Further questions
+
+
+- Based on z influence on X and on data distribution, which outliers should we take out? Extreme outliers or just outliers? 
+- If we do remove outliers, which ecological/conceptual implications would have? 
+
+
+### References
+
+::: {#refs}
+:::
+
+<br>

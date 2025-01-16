@@ -3,7 +3,10 @@
 
 rm(list = ls(all.names = TRUE))  #Se limpia el environment
 pacman::p_unload(pacman::p_loaded(), character.only = TRUE) #se quitan todos los paquetes (limpiamos R)
-pacman::p_load(dplyr, tidyr, tidyverse, ggplot2, BIEN, ape, maps, sf, rtry)
+pacman::p_load(dplyr, tidyr, tidyverse, ggplot2, BIEN, ape, maps, sf, rtry, ggrepel)
+
+
+
 
 #Outliers of TRAITS"
 
@@ -31,7 +34,6 @@ traits <- traits %>%
 traits <- left_join(traits, species_code, by = "species") 
 
 
-
  traits <- traits %>% 
    select(c("code", "species", "trait_name", "trait_ID", "database", "trait_value"))
 
@@ -41,24 +43,14 @@ traits <- traits %>%
   mutate(n_observations = n()) %>% 
   ungroup()
 
-str(traits)
 
 
 hist(traits$n_observations, breaks = 50)
 
 
-
-species_levels <- unique(traits$species)
-traits_levels <- unique(traits$trait_name)
-
 #Let's try
 
 traits$code_n_obs <- paste(traits$code, traits$n_observations, sep = ", ")
-
-ggplot (subset(traits, trait_name == traits_levels[1]), #change 1 by any number between 1 and 14 to check others traits
-        aes(x = trait_name, y = trait_value)) + 
-  facet_wrap(~ code_n_obs, ncol = 10, nrow = 5) +
-  geom_boxplot()
 
 
 # Remove outliers based on Z-scores
@@ -145,21 +137,21 @@ trait_na <- traits_mean %>%
 
 
 
-setdiff(unique(traits_mean$code), unique(flora$code))
-setdiff(unique(flora$code), unique(traits_mean$code))
+setdiff(unique(traits_mean$code), unique(flora_abrich$code))
+setdiff(unique(flora_abrich$code), unique(traits_mean$code))
 
-setdiff(unique(traits_mean$species), unique(flora$species))
-setdiff(unique(flora$species), unique(traits_mean$species))
+setdiff(unique(traits_mean$species), unique(flora_abrich$species))
+setdiff(unique(flora_abrich$species), unique(traits_mean$species))
 
 # I have to check on Myosotis, Sonchus and Cirsium. 
 
 #Changes that have been made: 
-# - Sonchus sp has been substituted by "asteraceae" in the flora database
+# - Sonchus sp has been substituted by "asteraceae" in the flora_abrich database
 # - For the species Cirsium sp, Myosotis discolor and Cardamine sp we do not have functional traits. 
 # What can I do about Cirsium? it is one of the most abudance species at the end of the samplings. 
 
 
-#Mirar Carmona et al. para ver con cuanto %NA's deberiamos desconsiderar usar un trait. 
+
 
 
 
@@ -185,12 +177,15 @@ traits_mean_wide <- traits_mean %>%
     values_from = trait_mean              # Values will come from trait_mean
   )
 
+
+#Transform all SLA traits into one 
 traits_mean_wide$SLA.inc <- ifelse(is.na(traits_mean_wide$SLA.inc), traits_mean_wide$SLA.ex, traits_mean_wide$SLA.inc) 
 
+#Transform all LA traits into one 
 traits_mean_wide$LA.inc <- ifelse(is.na(traits_mean_wide$LA.inc),traits_mean_wide$LA.ex, traits_mean_wide$LA.inc)
 traits_mean_wide$LA.inc <- ifelse(is.na(traits_mean_wide$LA.inc),traits_mean_wide$LA.un, traits_mean_wide$LA.inc)
 traits_mean_wide$LA.inc <- ifelse(is.na(traits_mean_wide$LA.inc),traits_mean_wide$LA, traits_mean_wide$LA.inc)
-## what about LA? hay varios
+
 
 traits_mean_wide <- traits_mean_wide %>% 
   select(!c("SLA.ex","LA.ex", "LA.un", "LA"))
@@ -199,129 +194,337 @@ traits_mean_wide <- traits_mean_wide %>%
   rename(SLA = SLA.inc ) %>% 
   rename(LA = LA.inc)
 
+
+missing_data_df <- data.frame(
+  code = traits_mean_wide$code,     # Species names from traits_mean_wide
+  missing_perc = rowSums(is.na(traits_mean_wide)) / ncol(traits_mean_wide) * 100 # Percentages of missing data
+)
+print(missing_data_df_sorted <- missing_data_df[order(missing_data_df$missing_perc), ])
+
+## According to Carmona et al. 2021, we have to remove the species with less than the 50% of the traits. 
+# These are: libi, amsp and rapa. 
+
+# Before deleting them, we can check the relevance of these species.  
+
+theme_set(theme_bw() +
+            theme(legend.position = "right",
+                  panel.grid = element_blank(),
+                  strip.background = element_blank(),
+                  strip.text = element_text(face = "bold"),
+                  text = element_text(size = 11)))
+
+flora_abrich_nobs <- flora_abrich %>% 
+  group_by(code) %>% 
+  summarize(n_observations= n(),
+            mean_abundance = mean(abundance))
+
+flora_abrich_nobs$abnobs <- flora_abrich_nobs$mean_abundance * flora_abrich_nobs$n_observations
+
+ggplot(flora_abrich_nobs, aes(x = mean_abundance, y = n_observations, label = code, color = abnobs))+
+  geom_point() + 
+  scale_color_gradient(low = "blue4", high = "red2") +  
+  geom_text_repel(
+    size = 3,                # Text size
+    min.segment.length = 0.1,  # Ensures lines are always drawn
+    segment.color = "gray50",  # Line color
+    segment.size = 0.5         # Line thickness
+  )
+
+#rapa is a species with a lot of abundance and n_observations, but not one of the highest
+
 traits_mean_wide <- traits_mean_wide %>% 
-  select(c("code", "LDMC", "leafN", "SLA", "LA", "vegetation.height", "seed.mass", "SRL"))
+  filter(!code %in% c("libi", "amsp", "rapa")) %>% 
+  droplevels()
 
-
-traits_mean_wide <- as.data.frame(traits_mean_wide)
-
-rownames(traits_mean_wide) <- traits_mean_wide$code
+#Now we have 2 traits with NA's above 50%, 1 that is = 50% and 1 that is 44%. I would detele all
+# given that the following one is only 14%
+missing_perc <- colSums(is.na(traits_mean_wide)) / nrow(traits_mean_wide) * 100
+print(missing_perc)
 
 traits_mean_wide <- traits_mean_wide %>% 
+  select(!c("rootN", "RTD", "SRL", "SSD"))
+
+# We now have only 5 NA in trait leafN 
+
+
+# Prepare the database for the FD function: 
+
+traits_matrix <- as.data.frame(traits_mean_wide)
+
+rownames(traits_matrix) <- traits_matrix$code
+
+traits_matrix <- traits_matrix %>% 
+  arrange(code)
+
+traits_matrix <- traits_matrix %>% 
   select(!code)
 
 
-# Reorder the levels of 'code' alphabetically
+# We can try to impute the NAs with missforest
+library(missForest)
 
-traits_mean_wide <- traits_mean_wide %>% 
-  arrange(code)
+imputed_data <- missForest(traits_matrix) #default ntrees = 100
+# Access the imputed data
+imputed_traits <- imputed_data$ximp
+imputed_data$OOBerror # Very low error. Acceptable imputation!
 
-#Preparing abundance matrix: 
+boxplot(traits_mean_wide$leafN)
+boxplot(imputed_traits$leafN)
 
-flora <- flora %>% 
-  filter(!code %in% c("cisp", "casp", "mydi")) #Deleting the species for which we do not have traits
+head(imputed_traits)
+summary(imputed_traits)
 
 
-flora_wide_reference <- flora %>% 
+
+
+### Preparing abundance matrix: 
+
+flora_abrich <- flora_abrich %>% 
+  filter(!code %in% c("cisp", "casp", "mydi",  #Deleting the species for which we do not have traits
+                      "libi", "amsp", "rapa"))  #Deleting the species for which we had more than 50% of NAs
+
+flora_abrich_wide_reference <- flora_abrich %>% 
   ungroup() %>% 
-  select(sampling, treatment, plot, abundance, code)
-flora_wide_reference$com <- paste(flora_wide_reference$sampling, flora_wide_reference$treatment, flora_wide_reference$plot, sep = "/")
+  select(sampling, date, treatment, plot, abundance, code)
+
+flora_abrich_wide_reference$com <- paste(flora_abrich_wide_reference$sampling, flora_abrich_wide_reference$treatment, flora_abrich_wide_reference$plot, sep = "/")
 
 
-flora_wide <- flora_wide_reference %>% 
+flora_abrich_wide <- flora_abrich_wide_reference %>% 
   select(com, abundance, code)
-flora_wide$abundance <- flora_wide$abundance/100
+flora_abrich_wide$abundance <- flora_abrich_wide$abundance/100
 
-flora_wide <- flora_wide %>% 
+flora_abrich_wide <- flora_abrich_wide %>% 
   pivot_wider(
     names_from = code, 
     values_from = abundance) %>%
   select(com, sort(setdiff(names(.), "com")))
 
 
-#############TRANSFORMAR TODOS NAs en 0s
-codes <- unique(traits_mean$code)
-for(i in 1:codes){
-  flora_wide
+# transformation NA into 0 
+codes <- unique(flora_abrich$code)
+for(i in 1:length(codes)){
+  flora_abrich_wide[[paste0(codes[i])]] <- ifelse(is.na(flora_abrich_wide[[paste0(codes[i])]]), 0, flora_abrich_wide[[paste0(codes[i])]])
 }
   
 
-
-flora_wide <- as.data.frame(flora_wide)
-rownames(flora_wide) <- flora_wide$com
-flora_wide <- flora_wide %>% 
+abundance_matrix <- as.data.frame(flora_abrich_wide)
+rownames(abundance_matrix) <- abundance_matrix$com
+abundance_matrix <- abundance_matrix %>% 
   select(!com)
 
 
 
 
-rownames(data_frame) <- data_frame$col1
-cmw <- functcomp(as.matrix(traits_mean_wide), as.matrix(flora_wide))
+#Calculation of CMW with function functcomp
+
+cmw <- functcomp(as.matrix(traits_matrix), as.matrix(abundance_matrix))
+
+cmw$com <- rownames(cmw); rownames(cmw) <- NULL
+
+cmw$sampling <- sapply(strsplit(cmw$com, "/"), function(x) x[1])
+cmw$treatment <- sapply(strsplit(cmw$com, "/"), function(x) x[2])
+cmw$plot <- sapply(strsplit(cmw$com, "/"), function(x) x[3])
+
+cmw <- cmw %>% 
+  select(!com)
 
 
-dummy$trait
-dummy$abun
+# Plotting 
+
+cmw_long <- cmw %>% 
+  pivot_longer(cols = c("LDMC", "leafN", "SLA", "LA", "vegetation.height", "seed.mass"),
+               names_to = "trait_name",
+               values_to = "trait_value")
 
 
+sampling_dates <- read.csv("data/sampling_dates.csv")
+sampling_dates$sampling <- factor(sampling_dates$sampling)
 
+sampling_dates$datenew <-  ymd(sampling_dates$date)
+sampling_dates$month <- month(sampling_dates$datenew, label = TRUE)
+sampling_dates$day <- day(sampling_dates$datenew)
+sampling_dates$year <- year(sampling_dates$datenew)
+sampling_dates$date <- sampling_dates$datenew
+sampling_dates$micro_sampling <- NULL
+sampling_dates$label_micro <- NULL
 
-traits_flora0 <- merge(flora, traits_mean, by = "code")
-traits_flora0$abundance <- traits_flora0$abundance/100
+sampling_dates <- sampling_dates %>% 
+  select(c("sampling", "date"))
 
-traits_flora <- traits_flora0 %>% 
-  group_by(sampling, sampling_date, date, treatment, plot, trait_name) %>% 
-  summarize(CWM = sum(abundance*trait_mean), na.rm = T)
+cmw_long <- merge(cmw_long, sampling_dates)
 
-mean_sd_traits <- traits_flora %>%
-  group_by(treatment, sampling, sampling_date, date, trait_name) %>%
-  summarize(mean_CWM = mean(CWM),
-            sd_CWM = sd(CWM))
-
-
-# set theme for the plot
-theme_set(theme_bw() +
-            theme(axis.title.x = element_blank(),
-                  legend.position = "NULL",
-                  panel.grid = element_blank(),
-                  strip.background = element_blank(),
-                  strip.text = element_text(face = "bold"),
-                  text = element_text(size = 11)))
-
-treatment_labs_dynamics <- c("Control", "Warming", "Perturbation", "Warming and perturbation")
-names(treatment_labs_dynamics) <- c("c","w", "p", "wp")
-
-source("code/plots_functions_flora/plot_traits_dynamics.R")
-
-plot_traits_dynamics(subset(traits_flora, trait_name == traits_levels[1]),
-                     subset(mean_sd_traits, trait_name == traits_levels[1]),
-                              traits_levels[1])
-
-
-for (i in 1:14) {
-  plot <- plot_traits_dynamics(
-    subset(traits_flora, trait_name == traits_levels[i]),
-    subset(mean_sd_traits, trait_name == traits_levels[i]),
-    traits_levels[i]
+cmw_mean_sd <- cmw_long %>% 
+  group_by(sampling, treatment, plot, trait_name) %>% 
+  summarize(
+    mean_trait_value = mean(mean_trait_value, na.rm = TRUE), 
+    sd_trait_value = sd(sd_trait_value, na.rm = TRUE)
   )
-  
-  print(plot)
-}
 
-i = 3 ; ggplot(
-  subset(traits_flora, trait_name == traits_levels[i]),
-       aes(x = date, y = CWM, color = treatment)) +
-  geom_point() +
-  geom_smooth(method = "loess", se = T, aes(color = treatment, fill = treatment)) +
+#Añadir mean y sd a la base de datos para lugo añadir las barras de eror y añadir lo de dodge point para cambiarlos de lugar. 
+
+
+
+
+library(ggplot2)
+library(grid)
+
+# Line plot
+a_LDMC <- ggplot(subset(cmw_long, trait_name == trait_levels[1]),
+                 aes(x = date, y = trait_value)) + 
+  geom_smooth(
+    se = TRUE, aes(color = treatment, fill = treatment),
+    method = "loess", span = 0.6, alpha = 0.2 # Adjust alpha for transparency
+  ) +
+  geom_point(aes(color = treatment, shape = treatment)) +
   scale_colour_manual(values = c("c" = "#48A597", "w" = "#D94E47", "p" = "#3A7CA5", "wp" = "#6D4C7D")) +
   scale_fill_manual(values = c("c" = "#48A597", "w" = "#D94E47", "p" = "#3A7CA5", "wp" = "#6D4C7D")) +
-  labs(title = paste(traits_levels[i]))
+  scale_x_date(
+    date_breaks = "4 weeks", # Specify the interval (e.g., every 2 weeks)
+    date_labels = "%d-%b-%y" # Customize the date format (e.g., "04-May-23")
+  ) +
+  geom_vline(xintercept = as.Date("2023-05-11"), linetype = "dashed", color = "gray40") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  labs(title = trait_levels[1]) # Rotate x-axis labels
+
+# Box plot
+b_LDMC <- ggplot(subset(cmw_long, trait_name == trait_levels[1]), aes(y = trait_value)) +
+  geom_boxplot(aes(fill = treatment), colour = "black", alpha = 0.5) + # Set the outline color to black
+  scale_fill_manual(values = c("c" = "#48A597", "w" = "#D94E47", "p" = "#3A7CA5", "wp" = "#6D4C7D")) +
+  theme(legend.position = "none",
+        axis.text.x = element_blank(),
+        panel.background = element_rect(fill = NA, colour = NA), # Transparent background
+        plot.background = element_rect(fill = NA, colour = NA)) + # Transparent plot background+ 
+  labs(y = NULL)
+
+# Scale down the box plot
+scaled_box_grob <- grobTree(
+  ggplotGrob(b_LDMC),
+  vp = viewport(width = 0.3, height = 0.3) # Scale down to 30% of the original size
+)
+
+# Combine plots
+ggcomb_LDMC <- a_LDMC +
+  annotation_custom(
+    grob = scaled_box_grob,
+    xmin = as.Date("2023-06-20"), # Adjust position: left boundary
+    xmax = as.Date("2023-11-05"), # Adjust position: right boundary
+    ymin = 5, # Adjust position: bottom boundary
+    ymax = 15 # Adjust position: top boundary
+  )
+
+# Render combined plot
+ggcomb_LDMC
+
+
+
+
+ggplot(subset(cmw_long, trait_name == trait_levels[1]),
+       aes(x = date, y = trait_value)) + 
+  geom_smooth(
+    se = TRUE, aes(color = treatment, fill = treatment),
+    method = "loess", span = 0.6, alpha = 0.2 # Adjust alpha for transparency
+  ) +
+  geom_point(aes(color = treatment, shape = treatment)) +
+  scale_colour_manual(values = c("c" = "#48A597", "w" = "#D94E47", "p" = "#3A7CA5", "wp" = "#6D4C7D")) +
+  scale_fill_manual(values = c("c" = "#48A597", "w" = "#D94E47", "p" = "#3A7CA5", "wp" = "#6D4C7D")) +
+  scale_x_date(
+    date_breaks = "4 weeks", # Specify the interval (e.g., every 2 weeks)
+    date_labels = "%d-%b-%y" # Customize the date format (e.g., "04-May-23")
+  ) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  labs(title = trait_levels[1])# Rotate x-axis labels
+
+
+
+
+ggplot(subset(cmw_long, trait_name == trait_levels[2]),
+       aes(x = date, y = trait_value)) + 
+  geom_smooth(
+    se = TRUE, aes(color = treatment, fill = treatment),
+    method = "loess", span = 0.6, alpha = 0.2 # Adjust alpha for transparency
+  ) +
+  geom_point(aes(color = treatment, shape = treatment)) +
+  scale_colour_manual(values = c("c" = "#48A597", "w" = "#D94E47", "p" = "#3A7CA5", "wp" = "#6D4C7D")) +
+  scale_fill_manual(values = c("c" = "#48A597", "w" = "#D94E47", "p" = "#3A7CA5", "wp" = "#6D4C7D")) +
+  scale_x_date(
+    date_breaks = "4 weeks", # Specify the interval (e.g., every 2 weeks)
+    date_labels = "%d-%b-%y" # Customize the date format (e.g., "04-May-23")
+  ) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  labs(title = trait_levels[2])# Rotate x-axis labels
+#
+
+ggplot(subset(cmw_long, trait_name == trait_levels[3]),
+       aes(x = date, y = trait_value)) + 
+  geom_smooth(
+    se = TRUE, aes(color = treatment, fill = treatment),
+    method = "loess", span = 0.6, alpha = 0.2 # Adjust alpha for transparency
+  ) +
+  geom_point(aes(color = treatment, shape = treatment)) +
+  scale_colour_manual(values = c("c" = "#48A597", "w" = "#D94E47", "p" = "#3A7CA5", "wp" = "#6D4C7D")) +
+  scale_fill_manual(values = c("c" = "#48A597", "w" = "#D94E47", "p" = "#3A7CA5", "wp" = "#6D4C7D")) +
+  scale_x_date(
+    date_breaks = "4 weeks", # Specify the interval (e.g., every 2 weeks)
+    date_labels = "%d-%b-%y" # Customize the date format (e.g., "04-May-23")
+  ) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  labs(title = trait_levels[3])# Rotate x-axis labels
+#
+
+ggplot(subset(cmw_long, trait_name == trait_levels[4]),
+       aes(x = date, y = trait_value)) + 
+  geom_smooth(
+    se = TRUE, aes(color = treatment, fill = treatment),
+    method = "loess", span = 0.6, alpha = 0.2 # Adjust alpha for transparency
+  ) +
+  geom_point(aes(color = treatment, shape = treatment)) +
+  scale_colour_manual(values = c("c" = "#48A597", "w" = "#D94E47", "p" = "#3A7CA5", "wp" = "#6D4C7D")) +
+  scale_fill_manual(values = c("c" = "#48A597", "w" = "#D94E47", "p" = "#3A7CA5", "wp" = "#6D4C7D")) +
+  scale_x_date(
+    date_breaks = "4 weeks", # Specify the interval (e.g., every 2 weeks)
+    date_labels = "%d-%b-%y" # Customize the date format (e.g., "04-May-23")
+  ) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  labs(title = trait_levels[4])# Rotate x-axis labels
+
+
+
+ggplot(subset(cmw_long, trait_name == trait_levels[5]),
+       aes(x = date, y = trait_value)) + 
+  geom_smooth(
+    se = TRUE, aes(color = treatment, fill = treatment),
+    method = "loess", span = 0.6, alpha = 0.2 # Adjust alpha for transparency
+  ) +
+  geom_point(aes(color = treatment, shape = treatment)) +
+  scale_colour_manual(values = c("c" = "#48A597", "w" = "#D94E47", "p" = "#3A7CA5", "wp" = "#6D4C7D")) +
+  scale_fill_manual(values = c("c" = "#48A597", "w" = "#D94E47", "p" = "#3A7CA5", "wp" = "#6D4C7D")) +
+  scale_x_date(
+    date_breaks = "4 weeks", # Specify the interval (e.g., every 2 weeks)
+    date_labels = "%d-%b-%y" # Customize the date format (e.g., "04-May-23")
+  ) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  labs(title = trait_levels[5])# Rotate x-axis labels
+##
+
+ggplot(subset(cmw_long, trait_name == trait_levels[6]),
+       aes(x = date, y = trait_value)) + 
+  geom_smooth(
+    se = TRUE, aes(color = treatment, fill = treatment),
+    method = "loess", span = 0.6, alpha = 0.2 # Adjust alpha for transparency
+  ) +
+  geom_point(aes(color = treatment, shape = treatment)) +
+  scale_colour_manual(values = c("c" = "#48A597", "w" = "#D94E47", "p" = "#3A7CA5", "wp" = "#6D4C7D")) +
+  scale_fill_manual(values = c("c" = "#48A597", "w" = "#D94E47", "p" = "#3A7CA5", "wp" = "#6D4C7D")) +
+  scale_x_date(
+    date_breaks = "4 weeks", # Specify the interval (e.g., every 2 weeks)
+    date_labels = "%d-%b-%y" # Customize the date format (e.g., "04-May-23")
+  ) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  labs(title = trait_levels[6])# Rotate x-axis labels
 
 
 
 
 
-
-
-
-
-
+#

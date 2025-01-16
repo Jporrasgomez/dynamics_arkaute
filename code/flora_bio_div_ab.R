@@ -731,7 +731,8 @@ RR_cv_wp_ab <- pivot_longer(flora_cv, cols = c("RR_CV_abundance_W", "RR_CV_abund
 RR_cv_wp_rich <- pivot_longer(flora_cv, cols = c("RR_CV_richness_W", "RR_CV_richness_P"), 
                               names_to = "RR_rich_treatment", values_to = "RR_rich_values")
 
-
+RR_cv_wp_yzipf <- pivot_longer(flora_cv, cols = c("RR_CV_yzipf_W", "RR_CV_yzipf_P"), 
+                            names_to = "RR_yzipf_treatment", values_to = "RR_yzipf_values")
 
 RR_cv_wp_mulog <- pivot_longer(flora_cv, cols = c("RR_CV_mulog_W", "RR_CV_mulog_P"), 
                             names_to = "RR_mulog_treatment", values_to = "RR_mulog_values")

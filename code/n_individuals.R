@@ -3,6 +3,7 @@ rm(list = ls(all.names = TRUE))
 library(dplyr)
 library(ggplot2)
 library(broom)
+library(ggrepel)
 
 
 nind <- read.csv("data/n_individuals.csv")
@@ -17,7 +18,6 @@ nind <- nind %>%
   group_by(sampling, plot, code) %>%
   summarize(nind_m2 = sum(nind_m2), abundance = sum(abundance))  ## Las especies de asteraceaes que hemos agrupado por familia se recalculan sus individuos y abundancias aquí
 
-#PODEMOS AÑADIR MÁS INFORMACIÓN DE NUMERO DE INDIVIDUOS!!!
 
 flora_raw <- read.csv("data/flora_db_raw.csv")
 flora_raw <- select(flora_raw, -date, -category, -OBS, -ni.agrupado, -familia, -species_old_1, -species_old_2, -height, - Cb, -Cm, -Db, -Dm)
@@ -41,11 +41,18 @@ names(n_individuals_old_data)[names(n_individuals_old_data) == "n_individuals_me
 nind <- bind_rows(nind, n_individuals_old_data)
 
 
-
 ### Regresión lineal. 
 
 
 nind$code <- as.character(nind$code)
+
+#The lm model is actually no needed for species "rucr", "amsp", "kips" and "brasicaceae" since these are
+# just one individual found in one plot at different times. So the estimated biomass will be for 1 square meter
+
+nind <- nind %>% 
+  filter(!code %in% c("rucr", "amsp", "kisp","brasicaceae"))
+
+
 
 code_levels <- unique(nind$code)
 gglist <- list()
@@ -106,7 +113,7 @@ hist(nind_lm_data$slope)
 ggplot(nind_lm_data, aes( x = r_squared, y = p_value, 
                           label = paste(code, n_observations, sep = ", "), color = posneg_slope))+
   geom_point()+ 
-  geom_vline(xintercept = 0.4, linetype = "dashed", color = "gray40") +
+  geom_vline(xintercept = 0.3, linetype = "dashed", color = "gray40") +
   geom_hline(yintercept = 0.1, linetype = "dashed", color = "gray40") +
   
   geom_text_repel(
@@ -117,18 +124,25 @@ ggplot(nind_lm_data, aes( x = r_squared, y = p_value,
     max.overlaps = 15# Line thickness
   )
  
-#The lm model fits well for a few species: 
-species_lm <- c("melu", "apar", "gedi", "rapa", "gemo", "mydi", "cegl", "trfr", "casp", "lapu", "poaceae")
+#The lm model fits well (R^2 >= 0.3 and p-value < 0.1) for a few species: 
+
+species_lm<- nind_lm_data %>% 
+  filter(r_squared > 0.3) %>% 
+  filter(p_value < 0.1)
+
+species_lm_codes <- species_lm$code
 
 nind_lm_species <- nind_lm_data %>% 
   filter(code %in% species_lm )
+
+nind_lm_species %>%  write.csv("data/nind_lm_species.csv")
 
 
 # What can we do with the rest of species? 
 
 #Let's try with hoe reliable would be to use a mean value of nind_m2
 species_nolm <- nind %>% 
-  filter(!code %in% species_lm) %>% 
+  filter(!code %in% species_lm_code) %>% 
   group_by(code) %>% 
   summarize(nind_m2_mean = mean(nind_m2, na.rm = T),
             nind_m2_sd = sd(nind_m2, na.rm = T),

@@ -14,18 +14,18 @@ radcoeff_df <- read.csv("data/radcoeff_df.csv")
 
 # Database for abundance and richness analysis
 
-ab_rich_dynamics <-  flora %>%
-  group_by(sampling, sampling_date, omw_date, date, month, treatment, plot) %>%
+ab_rich_dynamics <-  flora_abrich %>%
+  group_by(sampling, omw_date, date, month, treatment, plot) %>%
   reframe(richness = richness,  #total number of species per plot
           abundance = abundance_total) %>% # total coverage of plot
-  distinct(sampling, sampling_date, omw_date, date, month, plot, treatment, richness, abundance)
+  distinct(sampling, omw_date, date, month, plot, treatment, richness, abundance)
 
 
 
 ab_rich_dynamics <- merge(ab_rich_dynamics, radcoeff_df)   ## Algo pasa aquí. Se reduce la base de datos. REVISAR!
 
 mean_sd_abrich_dynamics<- ab_rich_dynamics %>%
-  group_by(treatment, sampling, sampling_date, month) %>%
+  group_by(treatment, sampling, date, month) %>%
   summarize(mean_richness = mean(richness),
             sd_richness = sd(richness),
             mean_abundance = mean(abundance),
@@ -41,30 +41,30 @@ mean_sd_abrich_dynamics<- ab_rich_dynamics %>%
 
 # Database for biomass
 
-biomass_dynamics <- flora %>%
+biomass_dynamics <- flora_biomass_lm %>%
   filter(!sampling %in% c("0", "1", "2", "12"))  %>%
   rename(biomass = biomass_total) %>%
-  group_by(sampling, sampling_date, omw_date,  date, month, treatment, plot) %>%
+  group_by(sampling, omw_date,  date, month, treatment, plot) %>%
   reframe(biomass = biomass) %>% # total coverage of plot
-  distinct(sampling, sampling_date, omw_date, date, month, plot, treatment, biomass)
+  distinct(sampling, omw_date, date, month, plot, treatment, biomass)
 
 
 
 mean_sd_biomass_dynamics<- biomass_dynamics %>%
-  group_by(treatment, sampling, sampling_date, month) %>%
+  group_by(treatment, sampling, date, month) %>%
   summarize(mean_biomass = mean(biomass),
             sd_biomass = sd(biomass))
 
 
 
-dynamics <- full_join (ab_rich_dynamics, biomass_dynamics)
-
-dynamics <- dynamics %>%
-  pivot_longer(
-    cols = - c(sampling, plot, treatment, sampling_date, omw_date, date, month),
-    names_to = "variable", 
-    values_to = "var_value"
-  )
+#dynamics <- full_join (ab_rich_dynamics, biomass_dynamics)
+#
+#dynamics <- dynamics %>%
+#  pivot_longer(
+#    cols = - c(sampling, plot, treatment, sampling_date, omw_date, date, month),
+#    names_to = "variable", 
+#    values_to = "var_value"
+#  )
 
 
 
