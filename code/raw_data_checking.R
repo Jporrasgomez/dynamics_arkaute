@@ -239,17 +239,20 @@ flora_medium$biomass_i <- d*(flora_medium$x^z)
 
 # RICHNESSS ########
 
-flora_richness <- summarise(group_by(flora_medium, plot, sampling),
-                            richness = n_distinct(code, na.rm = T)) ##adding number of species
-
-flora_medium <- merge(flora_medium, flora_richness)
+flora_medium <- flora_medium %>% 
+  group_by(plot, sampling) %>% 
+  mutate(richness = n_distinct(code, na.rm = T)) %>% 
+  ungroup()
+  
 
 # ABUNDANCE ########
 
-flora_abundance <- summarise(group_by(flora_medium, sampling, date, treatment, plot),
-                             abundance_community = sum(abundance, na.rm = T)) ##adding number of species
 
-flora_medium <- merge(flora_medium, flora_abundance)
+flora_medium <- flora_medium %>% 
+  group_by(plot, sampling) %>% 
+  mutate(abundance_community = sum(abundance, na.rm = T)) %>% 
+  ungroup()
+
 
 flora_abrich <- flora_medium
 
@@ -343,12 +346,12 @@ flora_biomass_raw <- flora_medium %>%
 
 one_ind_species <- c("rucr", "amsp", "kisp","brasicaceae")
 
-flora_biomass_raw_oneind <- flora_biomass_raw %>% 
+flora_biomass_oneind <- flora_biomass_raw %>% 
   filter(code %in% one_ind_species)
 
-flora_biomass_raw_oneind$biomass_s <- flora_biomass_raw_oneind$biomass_i
+flora_biomass_oneind$biomass_s <- flora_biomass_oneind$biomass_i
 
-flora_biomass_raw_oneind <- flora_biomass_raw_oneind %>% 
+flora_biomass_oneind <- flora_biomass_oneind %>% 
   group_by(sampling, plot, code) %>% 
   mutate(n_observations = n()) %>% 
   ungroup()
