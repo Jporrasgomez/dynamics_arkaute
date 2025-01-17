@@ -258,18 +258,18 @@ flora_abrich <- flora_medium
 
 # !!Checking abundance
 
-hist(flora_abundance$abundance_total, breaks = 100)
-boxplot(flora_abundance$abundance_total)
+hist(flora_abrich$abundance_community, breaks = 100)
+boxplot(flora_abrich$abundance_community)
 
 
-ggplot(flora_abundance, aes(x = date, y = abundance_total,
+ggplot(flora_abrich, aes(x = date, y = abundance_community,
              color = treatment, fill = treatment,
              group = treatment, label = sampling))+
   facet_wrap( ~ plot) + 
   
   #geom_point(alpha = 0.7, size = 1.2) +
   
-  geom_path(alpha = 0.7) +
+  geom_line(alpha = 0.7) +
   
   geom_text(size = 3) +
   
@@ -356,6 +356,8 @@ flora_biomass_oneind <- flora_biomass_oneind %>%
   mutate(n_observations = n()) %>% 
   ungroup()
   
+flora_biomass_raw <- flora_biomass_raw %>% 
+  filter(!code %in% one_ind_species)
 ## Estimating number of individuals
 
 # To be able to estimate abundance based on the number of individuals we need data were abundance and number of individuals per species,
@@ -509,162 +511,129 @@ species_lm<- nind_lm_data %>%
   filter(r_squared > 0.3) %>% 
   filter(p_value < 0.1)
 
+#There are some species for which its intercept is negative. This means that the lm consider that nind_m2 <0 when abundance = 0. And that
+# cannot be the case. There are 3 species. We can either delete these species or make this "shitty" correction: 
+# Shitty correction ?????????????????????????????????????
+species_lm <- species_lm %>%
+  mutate(nind_m2 = ifelse(nind_m2 < 0, 0.1, nind_m2))
+#We are basically manually mofifying the lm and Im not quite sure about this. 
+
+
 species_lm_codes <- unique(species_lm$code)
 
 nind_lm_species <- nind_lm_data %>% 
   filter(code %in% species_lm_codes )
 
+excluded_species_lm <- {nind_lm_data %>% 
+  filter(!code %in% species_lm_codes )}$code
+
+
+flora_nobs$excluded <- ifelse(flora_nobs$code %in% excluded_species_lm, "excluded", "included")
+
+# Update the plot
+ggplot(flora_nobs, aes(x = mean_abundance, y = n_observations, label = code)) +
+  geom_point(aes(color = excluded)) +  # Color based on the exclusion status
+  scale_color_manual(
+    values = c("included" = "black", "excluded" = "red")  # Specify colors
+  ) +
+  geom_text_repel(
+    size = 3,                # Text size
+    min.segment.length = 0.1,  # Ensures lines are always drawn
+    segment.color = "gray50",  # Line color
+    segment.size = 0.5         # Line thickness
+  )+
+  labs(color = "LM inclusion") 
+
+
+(length(species_lm_codes)+ length(one_ind_species))/(length(unique(flora_raw$code))) *100
+#51% of species have been excluded from biomass
+
 
 
 flora_biomass_lm <- merge(flora_biomass_raw, nind_lm_species)
+
+
 #calculation of number of indivuals per m2 with the regression data for each species
 flora_biomass_lm$nind_m2 <- flora_biomass_lm$intercept + flora_biomass_lm$abundance * flora_biomass_lm$slope
 
-# Shitty correction ??????????????????????????????????????????????????????????????????
-flora_biomass_lm <- flora_biomass_lm %>%
-  mutate(nind_m2 = ifelse(nind_m2 < 0, 0.1, nind_m2))
 
 # Calculation of species biomass per square meter by multiplying biomass at individual (biomass_i) level by the 
 # number of individuals per square meter (nind_m2)
 flora_biomass_lm$biomass_s <- flora_biomass_lm$biomass_i * flora_biomass_lm$nind_m2
 
 
-
+#Putting together lm species and one ind species
 flora_biomass <- bind_rows(flora_biomass_oneind, flora_biomass_lm)
 
+nabiomass <- which(is.na(flora_biomass$biomass_s))
+View(flora_biomass[nabiomass, ]) 
+# There are some NAs comming from sampling 3, where we did not measure morphological data from species with very low abundance (decisions of
+# tired Javi and Laura :( ))
+
+# Removing outliers from biomass_s
+# At this point, it is worth considering the removal of outlier for biomass_s. To reach this information we have: 
+# 1) Use abundance data gathered from the field by direct observations
+# 2) Use morphological measurements taken in the field in the application of a biomass equation
+# 3) Use the available data of number of individuals / m2 and species that was gathered in the field by visual estimation
+# 4) use a linear model to estimate the number of individuals per m2 for all species, samplings and plots. 
+# 5) Calculate the biomass at species level by biomass_i * nind_m2. 
+# So, here there is an accumulation of calculations that has undoubtfully led to error accumulation. 
+
+
+boxplot(flora_biomass$biomass_s)
+ggplot(flora_biomass, aes( y = biomass_s, x = date, label = paste(sampling, plot, sep = ","), color = treatment)) + 
+  geom_point() + 
+  geom_text_repel(
+    size = 3, 
+    min.segment.length = 1,
+    segment.color = "gray50", 
+    segment.size = 0.5
+  )
+
+
+# Temporal way of removing outliers
+
+
+flora_biomass_cleaned<- flora_biomass %>% 
+  mutate(
+    median_biomass_s = median(biomass_s, na.rm = T), 
+    mad_biomass_s = mad(biomass_s, na.rm = T), 
+    z_score = (biomass_s - median_biomass_s) /mad_biomass_s
+  ) %>% 
+  filter(
+    abs(z_score) <=3
+  ) 
+
+boxplot(biomass_cleaned$biomass_s)
+
+outliers <- anti_join(flora_biomass, flora_biomass_cleaned)
+
+
+
+
+
+
 #Calculation of total biomasss (community biomass) by summing all biomass at species level per square meter
+# I will keep the flora_biomass not cleaned in order to compare results with and without outliers
 
 flora_biomass <- flora_biomass %>% 
+  group_by(plot, sampling, treatment) %>% 
+  mutate(biomass_community =  sum(biomass_s, na.rm = TRUE)) %>%
+  ungroup()
+
+flora_biomass_cleaned <- flora_biomass_cleaned %>% 
   group_by(plot, sampling, treatment) %>% 
   mutate(biomass_community =  sum(biomass_s, na.rm = TRUE)) %>%
   ungroup()
   
 
 
-## dO Z SCORE REMOVAL Of outliers like in the functional traits. 
+# Final database
+
+flora_cleanedbiomass <- merge(flora_abrich, flora_biomass_cleaned)
+flora <- merge(flora_abrich, flora_biomass)
 
 
-
-
-#hist(flora_medium$x, breaks = 100)
-#boxplot <- boxplot(flora_medium$x)
-#hist(log(flora_medium$x), breaks = 100)
-#boxplot(log(flora_medium$x))
-#boxplot(exp(log(flora_medium$x)))
-#
-#boxplot$out
-
-
-
-# Incluimos numero de individuos/m2 medidos posteriormente en el campo
-
-
-flora_well_complete <- flora_well %>%
-  select(sampling, sampling_date, one_month_window, omw_date, date, month, treatment, plot, abundance, code, species, family, genus_level,
-         species_level, height, Ah, Ab, biomass_i, nind_m2, intercept, slope, r_squared,
-         p_value, biomass, richness, abundance_total, biomass_total)
-flora_well <- flora_well %>%
-  select(sampling, sampling_date, one_month_window, omw_date, date, month, treatment, plot, abundance, code, species, family,
-         genus_level, species_level, richness, abundance_total, biomass_total)
-
-
-hist(flora_well$abundance_total, breaks = 80)
-boxplot(flora_well$abundance_total)
-hist(flora_well$richness, breaks = 80)
-boxplot(flora_well$richness)
-hist(flora_well$biomass_total, breaks = 80)
-hist(log(flora_well$biomass_total), breaks = 80)
-boxplot(flora_well$biomass_total)
-boxplot(log(flora_well$biomass_total))
-
-
-ggplot(flora_well, aes(x = sampling, y = biomass_total, color = treatment, label = paste(sampling, plot, sep = ", "))) +
-  geom_point(size = 0.02) +                # Add points with size 3
-  geom_text(vjust = -1, hjust = 0.5, size = 3) +  # Add labels slightly above the points
-  labs(
-    x = "Sampling Date",                # Label for x-axis
-    y = "Biomass Total",                # Label for y-axis
-    color = "Treatment"                 # Legend title
-  ) +
-  theme_minimal() +                     # Use a minimal theme
-  theme(axis.text.x = element_text(angle = 45, hjust = 1))
-
-
-#Without outliers
-
-flora_well1 <- merge(flora_medium1, nind_lm_data, by = "code")
-
-flora_well1$nind_m2 <- flora_well1$intercept + flora_well1$abundance * flora_well1$slope
-flora_well1 <- flora_well1 %>%
-  mutate(nind_m2 = ifelse(nind_m2 < 0, 0.1, nind_m2))
-flora_well1$biomass <- flora_well1$biomass_i *flora_well1$nind_m2
-flora_well1_biomass_total <- summarise(group_by(flora_well1, plot, sampling),
-                                       biomass_total =  sum(biomass, na.rm = TRUE))
-flora_well1 <- merge(flora_well1, flora_well1_biomass_total)
-flora_well1_complete <- flora_well1 %>%
-  select(sampling, sampling_date, one_month_window, omw_date, date, month, treatment, plot, abundance, code, species, family, genus_level,
-         species_level, height, Ah, Ab, biomass_i, nind_m2, intercept, slope, r_squared,
-         p_value, biomass, richness, abundance_total, biomass_total)
-flora_well1 <- flora_well1 %>%
-  select(sampling, sampling_date, one_month_window, omw_date, date, month, treatment, plot, abundance, code, species, family,
-         genus_level, species_level, richness, abundance_total, biomass_total)
-
-
-#hist(flora_well1$abundance_total, breaks = 30)
-#boxplot(flora_well1$abundance_total)
-#hist(flora_well1$richness, breaks = 20)
-#boxplot(flora_well1$richness)
-#hist(flora_well1$biomass_total, breaks = 30)
-#hist(log(flora_well1$biomass_total), breaks = 30)
-#boxplot(flora_well1$biomass_total)
-#boxplot(log(flora_well1$biomass_total))
-
-#Without extreme outliers
-
-flora_well3 <- merge(flora_medium3, nind_lm_data, by = "code")
-
-flora_well3$nind_m2 <- flora_well3$intercept + flora_well3$abundance * flora_well3$slope
-flora_well3 <- flora_well3 %>%
-  mutate(nind_m2 = ifelse(nind_m2 < 0, 0.1, nind_m2))
-flora_well3$biomass <- flora_well3$biomass_i *flora_well3$nind_m2
-flora_well3_biomass_total <- summarise(group_by(flora_well3, plot, sampling),
-                                       biomass_total =  sum(biomass, na.rm = TRUE))
-flora_well3 <- merge(flora_well3, flora_well3_biomass_total)
-flora_well3_complete <- flora_well3 %>%
-  select(sampling, sampling_date, one_month_window, omw_date, date, month, treatment, plot, abundance, code, species, family, genus_level,
-         species_level, height, Ah, Ab, biomass_i, nind_m2, intercept, slope, r_squared,
-         p_value, biomass, richness, abundance_total, biomass_total)
-flora_well3 <- flora_well3 %>%
-  select(sampling, sampling_date, one_month_window, omw_date, date, month, treatment, plot, abundance, code, species, family,
-         genus_level, species_level, richness, abundance_total, biomass_total)
-
-
-#hist(flora_well1$abundance_total, breaks = 30)
-#boxplot(flora_well1$abundance_total)
-#hist(flora_well1$richness, breaks = 20)
-#boxplot(flora_well1$richness)
-#hist(flora_well1$biomass_total, breaks = 30)
-#hist(log(flora_well1$biomass_total), breaks = 30)
-#boxplot(flora_well1$biomass_total)
-#boxplot(log(flora_well1$biomass_total))
-
-flora <- flora_well
-flora_complete <- flora_well_complete
-flora1 <- flora_well1
-flora1_complete <- flora_well1_complete
-flora3 <- flora_well3
-flora3_complete <- flora_well3_complete
-
-#Mirar si la distribución de los datos de biomasa tienen sentido una vez aplicada la estimacion en base a la abundancia
-
-
-#Especies para las cuales no tenemos datos
-
-#flora %>% write.csv("data/flora_db.csv", row.names  = F)
-#flora_complete %>% write.csv("data/flora_complete_db.csv", row.names  = F)
-
-
-
-rm(list = setdiff(ls(), c("flora", "flora1", "flora3", "flora_complete", "flora1_complete", "flora3_complete")))
+rm(list = setdiff(ls(), c("flora", "flora_cleanedbiomass")))
 
 #Aqui quieres acabar con: flora, una base de datos que tenga flora_biomass and flora_abrich together y que sea como "flora_complete"
