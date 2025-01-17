@@ -137,11 +137,12 @@ trait_na <- traits_mean %>%
 
 
 
-setdiff(unique(traits_mean$code), unique(flora_abrich$code))
-setdiff(unique(flora_abrich$code), unique(traits_mean$code))
+setdiff(unique(traits_mean$code), unique(flora$code))
+setdiff(unique(flora$code), unique(traits_mean$code))
 
-setdiff(unique(traits_mean$species), unique(flora_abrich$species))
-setdiff(unique(flora_abrich$species), unique(traits_mean$species))
+#The function checks which species are present in traits_mean$species but not present in flora$species.
+setdiff(unique(traits_mean$species), unique(flora$species))
+setdiff(unique(flora$species), unique(traits_mean$species))
 
 # I have to check on Myosotis, Sonchus and Cirsium. 
 
@@ -149,12 +150,6 @@ setdiff(unique(flora_abrich$species), unique(traits_mean$species))
 # - Sonchus sp has been substituted by "asteraceae" in the flora_abrich database
 # - For the species Cirsium sp, Myosotis discolor and Cardamine sp we do not have functional traits. 
 # What can I do about Cirsium? it is one of the most abudance species at the end of the samplings. 
-
-
-
-
-
-
 
 
 #### CWM analysis RAW ####
@@ -213,7 +208,7 @@ theme_set(theme_bw() +
                   strip.text = element_text(face = "bold"),
                   text = element_text(size = 11)))
 
-flora_abrich_nobs <- flora_abrich %>% 
+flora_abrich_nobs <- flora %>% 
   group_by(code) %>% 
   summarize(n_observations= n(),
             mean_abundance = mean(abundance))
@@ -279,7 +274,7 @@ summary(imputed_traits)
 
 ### Preparing abundance matrix: 
 
-flora_abrich <- flora_abrich %>% 
+flora_abrich <- flora %>% 
   filter(!code %in% c("cisp", "casp", "mydi",  #Deleting the species for which we do not have traits
                       "libi", "amsp", "rapa"))  #Deleting the species for which we had more than 50% of NAs
 
@@ -341,190 +336,411 @@ cmw_long <- cmw %>%
 sampling_dates <- read.csv("data/sampling_dates.csv")
 sampling_dates$sampling <- factor(sampling_dates$sampling)
 
-sampling_dates$datenew <-  ymd(sampling_dates$date)
-sampling_dates$month <- month(sampling_dates$datenew, label = TRUE)
-sampling_dates$day <- day(sampling_dates$datenew)
-sampling_dates$year <- year(sampling_dates$datenew)
-sampling_dates$date <- sampling_dates$datenew
-sampling_dates$micro_sampling <- NULL
-sampling_dates$label_micro <- NULL
+sampling_dates$date <-  ymd(sampling_dates$date)
+sampling_dates$month <- month(sampling_dates$date, label = TRUE)
+sampling_dates$day <- day(sampling_dates$date)
+sampling_dates$year <- year(sampling_dates$date)
 
 sampling_dates <- sampling_dates %>% 
-  select(c("sampling", "date"))
+  select(sampling, date, day, month, year, one_month_window, omw_date)
+
+sampling_dates <- sampling_dates %>%
+  mutate(across(where(is.character), as.factor))
 
 cmw_long <- merge(cmw_long, sampling_dates)
 
-cmw_mean_sd <- cmw_long %>% 
-  group_by(sampling, treatment, plot, trait_name) %>% 
-  summarize(
-    mean_trait_value = mean(mean_trait_value, na.rm = TRUE), 
-    sd_trait_value = sd(sd_trait_value, na.rm = TRUE)
-  )
+cmw_db<- cmw_long %>% 
+  group_by(sampling, treatment, trait_name) %>% 
+  mutate(
+    mean_trait_value = mean(trait_value, na.rm = TRUE), 
+    sd_trait_value = sd(trait_value, na.rm = TRUE)
+  ) %>% 
+  ungroup()
 
 #Añadir mean y sd a la base de datos para lugo añadir las barras de eror y añadir lo de dodge point para cambiarlos de lugar. 
-
-
 
 
 library(ggplot2)
 library(grid)
 
-# Line plot
-a_LDMC <- ggplot(subset(cmw_long, trait_name == trait_levels[1]),
+trait_levels <- unique(cmw_db$trait_name)
+
+
+a_LDMC <-
+  ggplot(subset(cmw_db, trait_name == trait_levels[1]),
                  aes(x = date, y = trait_value)) + 
+    
   geom_smooth(
     se = TRUE, aes(color = treatment, fill = treatment),
-    method = "loess", span = 0.6, alpha = 0.2 # Adjust alpha for transparency
+    method = "loess", span = 0.6, alpha = 0.2 
   ) +
-  geom_point(aes(color = treatment, shape = treatment)) +
+    
+  geom_point(aes(color = treatment),
+             alpha = 0.5, position = position_dodge(width = 8)) +
+    
+  geom_errorbar(aes(ymax = mean_trait_value + sd_trait_value, ymin = mean_trait_value - sd_trait_value, color = treatment),
+                , alpha = 0.2, position = position_dodge(width = 8)) + 
+    
+  geom_point(aes(x = date, y = mean_trait_value, , color = treatment), fill = "white", 
+             shape = 21, size = 2, position = position_dodge(width = 8))+
+    
   scale_colour_manual(values = c("c" = "#48A597", "w" = "#D94E47", "p" = "#3A7CA5", "wp" = "#6D4C7D")) +
+    
   scale_fill_manual(values = c("c" = "#48A597", "w" = "#D94E47", "p" = "#3A7CA5", "wp" = "#6D4C7D")) +
+    
   scale_x_date(
     date_breaks = "4 weeks", # Specify the interval (e.g., every 2 weeks)
     date_labels = "%d-%b-%y" # Customize the date format (e.g., "04-May-23")
   ) +
+    
   geom_vline(xintercept = as.Date("2023-05-11"), linetype = "dashed", color = "gray40") +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
-  labs(title = trait_levels[1]) # Rotate x-axis labels
+    
+  theme(axis.text.x = element_text(angle = 45, hjust = 1), legend.position = "none",
+        ) +
+    
+  labs(y = trait_levels[1], x = NULL) #
 
 # Box plot
-b_LDMC <- ggplot(subset(cmw_long, trait_name == trait_levels[1]), aes(y = trait_value)) +
+b_LDMC <- ggplot(subset(cmw_db, trait_name == trait_levels[1]), aes(y = trait_value)) +
   geom_boxplot(aes(fill = treatment), colour = "black", alpha = 0.5) + # Set the outline color to black
   scale_fill_manual(values = c("c" = "#48A597", "w" = "#D94E47", "p" = "#3A7CA5", "wp" = "#6D4C7D")) +
   theme(legend.position = "none",
-        axis.text.x = element_blank(),
+        axis.text.x = element_blank(), axis.text.y = element_blank(),
         panel.background = element_rect(fill = NA, colour = NA), # Transparent background
         plot.background = element_rect(fill = NA, colour = NA)) + # Transparent plot background+ 
   labs(y = NULL)
 
-# Scale down the box plot
-scaled_box_grob <- grobTree(
-  ggplotGrob(b_LDMC),
-  vp = viewport(width = 0.3, height = 0.3) # Scale down to 30% of the original size
-)
+
 
 # Combine plots
 ggcomb_LDMC <- a_LDMC +
   annotation_custom(
-    grob = scaled_box_grob,
-    xmin = as.Date("2023-06-20"), # Adjust position: left boundary
-    xmax = as.Date("2023-11-05"), # Adjust position: right boundary
-    ymin = 5, # Adjust position: bottom boundary
-    ymax = 15 # Adjust position: top boundary
+    grob = ggplotGrob(b_LDMC),
+    xmin = as.Date("2023-04-20"), # Adjust position: left boundary
+    xmax = as.Date("2023-09-01"), # Adjust position: right boundary
+    ymin = 170, # Adjust position: bottom boundary
+    ymax = 200 # Adjust position: top boundary
   )
 
 # Render combined plot
+#ggcomb_LDMC
+
+
+
+a_leafN <-
+  ggplot(subset(cmw_db, trait_name == trait_levels[2]),
+         aes(x = date, y = trait_value)) + 
+  
+  geom_smooth(
+    se = TRUE, aes(color = treatment, fill = treatment),
+    method = "loess", span = 0.6, alpha = 0.2 
+  ) +
+  
+  geom_point(aes(color = treatment),
+             alpha = 0.5, position = position_dodge(width = 8)) +
+  
+  geom_errorbar(aes(ymax = mean_trait_value + sd_trait_value, ymin = mean_trait_value - sd_trait_value, color = treatment),
+                , alpha = 0.2, position = position_dodge(width = 8)) + 
+  
+  geom_point(aes(x = date, y = mean_trait_value, , color = treatment), fill = "white", 
+             shape = 21, size = 2, position = position_dodge(width = 8))+
+  
+  scale_colour_manual(values = c("c" = "#48A597", "w" = "#D94E47", "p" = "#3A7CA5", "wp" = "#6D4C7D")) +
+  
+  scale_fill_manual(values = c("c" = "#48A597", "w" = "#D94E47", "p" = "#3A7CA5", "wp" = "#6D4C7D")) +
+  
+  scale_x_date(
+    date_breaks = "4 weeks", # Specify the interval (e.g., every 2 weeks)
+    date_labels = "%d-%b-%y" # Customize the date format (e.g., "04-May-23")
+  ) +
+  
+  geom_vline(xintercept = as.Date("2023-05-11"), linetype = "dashed", color = "gray40") +
+  
+  theme(axis.text.x = element_text(angle = 45, hjust = 1), legend.position = "none",
+  ) +
+  
+  labs(y = trait_levels[2], x = NULL) #
+
+# Box plot
+b_leafN <- ggplot(subset(cmw_db, trait_name == trait_levels[2]), aes(y = trait_value)) +
+  geom_boxplot(aes(fill = treatment), colour = "black", alpha = 0.5) + # Set the outline color to black
+  scale_fill_manual(values = c("c" = "#48A597", "w" = "#D94E47", "p" = "#3A7CA5", "wp" = "#6D4C7D")) +
+  theme(legend.position = "none",
+        axis.text.x = element_blank(), axis.text.y = element_blank(),
+        panel.background = element_rect(fill = NA, colour = NA), # Transparent background
+        plot.background = element_rect(fill = NA, colour = NA)) + # Transparent plot background+ 
+  labs(y = NULL)
+
+
+
+# Combine plots
+ggcomb_leafN <- a_leafN +
+  annotation_custom(
+    grob = ggplotGrob(b_leafN),
+    xmin = as.Date("2024-06-01"), # Adjust position: left boundary
+    xmax = as.Date("2024-11-05"), # Adjust position: right boundary
+    ymin = 33, # Adjust position: bottom boundary
+    ymax = 37 # Adjust position: top boundary
+  )
+
+# Render combined plot
+#ggcomb_leafN
+
+
+
+a_SLA <-
+  ggplot(subset(cmw_db, trait_name == trait_levels[3]),
+         aes(x = date, y = trait_value)) + 
+  
+  geom_smooth(
+    se = TRUE, aes(color = treatment, fill = treatment),
+    method = "loess", span = 0.6, alpha = 0.2 
+  ) +
+  
+  geom_point(aes(color = treatment),
+             alpha = 0.5, position = position_dodge(width = 8)) +
+  
+  geom_errorbar(aes(ymax = mean_trait_value + sd_trait_value, ymin = mean_trait_value - sd_trait_value, color = treatment),
+                , alpha = 0.2, position = position_dodge(width = 8)) + 
+  
+  geom_point(aes(x = date, y = mean_trait_value, , color = treatment), fill = "white", 
+             shape = 21, size = 2, position = position_dodge(width = 8))+
+  
+  scale_colour_manual(values = c("c" = "#48A597", "w" = "#D94E47", "p" = "#3A7CA5", "wp" = "#6D4C7D")) +
+  
+  scale_fill_manual(values = c("c" = "#48A597", "w" = "#D94E47", "p" = "#3A7CA5", "wp" = "#6D4C7D")) +
+  
+  scale_x_date(
+    date_breaks = "4 weeks", # Specify the interval (e.g., every 2 weeks)
+    date_labels = "%d-%b-%y" # Customize the date format (e.g., "04-May-23")
+  ) +
+  
+  geom_vline(xintercept = as.Date("2023-05-11"), linetype = "dashed", color = "gray40") +
+  
+  theme(axis.text.x = element_text(angle = 45, hjust = 1), legend.position = "none",
+  ) +
+  
+  labs(y = trait_levels[3], x = NULL) #
+
+# Box plot
+b_SLA <- ggplot(subset(cmw_db, trait_name == trait_levels[3]), aes(y = trait_value)) +
+  geom_boxplot(aes(fill = treatment), colour = "black", alpha = 0.5) + # Set the outline color to black
+  scale_fill_manual(values = c("c" = "#48A597", "w" = "#D94E47", "p" = "#3A7CA5", "wp" = "#6D4C7D")) +
+  theme(legend.position = "none",
+        axis.text.x = element_blank(), axis.text.y = element_blank(),
+        panel.background = element_rect(fill = NA, colour = NA), # Transparent background
+        plot.background = element_rect(fill = NA, colour = NA)) + # Transparent plot background+ 
+  labs(y = NULL)
+
+
+
+# Combine plots
+ggcomb_SLA <- a_SLA +
+  annotation_custom(
+    grob = ggplotGrob(b_SLA),
+    xmin = as.Date("2024-06-01"), # Adjust position: left boundary
+    xmax = as.Date("2024-11-05"), # Adjust position: right boundary
+    ymin = 33, # Adjust position: bottom boundary
+    ymax = 39 # Adjust position: top boundary
+  )
+
+# Render combined plot
+#ggcomb_SLA
+
+
+
+a_LA <-
+  ggplot(subset(cmw_db, trait_name == trait_levels[4]),
+         aes(x = date, y = trait_value)) + 
+  
+  geom_smooth(
+    se = TRUE, aes(color = treatment, fill = treatment),
+    method = "loess", span = 0.6, alpha = 0.2 
+  ) +
+  
+  geom_point(aes(color = treatment),
+             alpha = 0.5, position = position_dodge(width = 8)) +
+  
+  geom_errorbar(aes(ymax = mean_trait_value + sd_trait_value, ymin = mean_trait_value - sd_trait_value, color = treatment),
+                , alpha = 0.2, position = position_dodge(width = 8)) + 
+  
+  geom_point(aes(x = date, y = mean_trait_value, , color = treatment), fill = "white", 
+             shape = 21, size = 2, position = position_dodge(width = 8))+
+  
+  scale_colour_manual(values = c("c" = "#48A597", "w" = "#D94E47", "p" = "#3A7CA5", "wp" = "#6D4C7D")) +
+  
+  scale_fill_manual(values = c("c" = "#48A597", "w" = "#D94E47", "p" = "#3A7CA5", "wp" = "#6D4C7D")) +
+  
+  scale_x_date(
+    date_breaks = "4 weeks", # Specify the interval (e.g., every 2 weeks)
+    date_labels = "%d-%b-%y" # Customize the date format (e.g., "04-May-23")
+  ) +
+  
+  geom_vline(xintercept = as.Date("2023-05-11"), linetype = "dashed", color = "gray40") +
+  
+  theme(axis.text.x = element_text(angle = 45, hjust = 1), legend.position = "none",
+  ) +
+  
+  labs(y = trait_levels[4], x = NULL) #
+
+# Box plot
+b_LA <- ggplot(subset(cmw_db, trait_name == trait_levels[4]), aes(y = trait_value)) +
+  geom_boxplot(aes(fill = treatment), colour = "black", alpha = 0.5) + # Set the outline color to black
+  scale_fill_manual(values = c("c" = "#48A597", "w" = "#D94E47", "p" = "#3A7CA5", "wp" = "#6D4C7D")) +
+  theme(legend.position = "none",
+        axis.text.x = element_blank(), axis.text.y = element_blank(),
+        panel.background = element_rect(fill = NA, colour = NA), # Transparent background
+        plot.background = element_rect(fill = NA, colour = NA)) + # Transparent plot background+ 
+  labs(y = NULL)
+
+
+
+# Combine plots
+ggcomb_LA <- a_LA +
+  annotation_custom(
+    grob = ggplotGrob(b_LA),
+    xmin = as.Date("2024-06-01"), # Adjust position: left boundary
+    xmax = as.Date("2024-11-05"), # Adjust position: right boundary
+    ymin = 1500, # Adjust position: bottom boundary
+    ymax = 1900 # Adjust position: top boundary
+  )
+
+# Render combined plot
+#ggcomb_LA
+
+
+
+
+a_height <-
+  ggplot(subset(cmw_db, trait_name == trait_levels[5]),
+         aes(x = date, y = trait_value)) + 
+  
+  geom_smooth(
+    se = TRUE, aes(color = treatment, fill = treatment),
+    method = "loess", span = 0.6, alpha = 0.2 
+  ) +
+  
+  geom_point(aes(color = treatment),
+             alpha = 0.5, position = position_dodge(width = 8)) +
+  
+  geom_errorbar(aes(ymax = mean_trait_value + sd_trait_value, ymin = mean_trait_value - sd_trait_value, color = treatment),
+                , alpha = 0.2, position = position_dodge(width = 8)) + 
+  
+  geom_point(aes(x = date, y = mean_trait_value, , color = treatment), fill = "white", 
+             shape = 21, size = 2, position = position_dodge(width = 8))+
+  
+  scale_colour_manual(values = c("c" = "#48A597", "w" = "#D94E47", "p" = "#3A7CA5", "wp" = "#6D4C7D")) +
+  
+  scale_fill_manual(values = c("c" = "#48A597", "w" = "#D94E47", "p" = "#3A7CA5", "wp" = "#6D4C7D")) +
+  
+  scale_x_date(
+    date_breaks = "4 weeks", # Specify the interval (e.g., every 2 weeks)
+    date_labels = "%d-%b-%y" # Customize the date format (e.g., "04-May-23")
+  ) +
+  
+  geom_vline(xintercept = as.Date("2023-05-11"), linetype = "dashed", color = "gray40") +
+  
+  theme(axis.text.x = element_text(angle = 45, hjust = 1), legend.position = "none",
+  ) +
+  
+  labs(y = trait_levels[5], x = NULL) #
+
+# Box plot
+b_height <- ggplot(subset(cmw_db, trait_name == trait_levels[5]), aes(y = trait_value)) +
+  geom_boxplot(aes(fill = treatment), colour = "black", alpha = 0.5) + # Set the outline color to black
+  scale_fill_manual(values = c("c" = "#48A597", "w" = "#D94E47", "p" = "#3A7CA5", "wp" = "#6D4C7D")) +
+  theme(legend.position = "none",
+        axis.text.x = element_blank(), axis.text.y = element_blank(),
+        panel.background = element_rect(fill = NA, colour = NA), # Transparent background
+        plot.background = element_rect(fill = NA, colour = NA)) + # Transparent plot background+ 
+  labs(y = NULL)
+
+
+
+# Combine plots
+ggcomb_height <- a_height +
+  annotation_custom(
+    grob = ggplotGrob(b_height),
+    xmin = as.Date("2024-06-01"), # Adjust position: left boundary
+    xmax = as.Date("2024-11-05"), # Adjust position: right boundary
+    ymin = 0.52, # Adjust position: bottom boundary
+    ymax = 0.63 # Adjust position: top boundary
+  )
+
+# Render combined plot
+#ggcomb_height
+
+
+
+
+
+
+
+a_seed_mass <-
+  ggplot(subset(cmw_db, trait_name == trait_levels[6]),
+         aes(x = date, y = trait_value)) + 
+  
+  geom_smooth(
+    se = TRUE, aes(color = treatment, fill = treatment),
+    method = "loess", span = 0.6, alpha = 0.2 
+  ) +
+  
+  geom_point(aes(color = treatment),
+             alpha = 0.5, position = position_dodge(width = 8)) +
+  
+  geom_errorbar(aes(ymax = mean_trait_value + sd_trait_value, ymin = mean_trait_value - sd_trait_value, color = treatment),
+                , alpha = 0.2, position = position_dodge(width = 8)) + 
+  
+  geom_point(aes(x = date, y = mean_trait_value, , color = treatment), fill = "white", 
+             shape = 21, size = 2, position = position_dodge(width = 8))+
+  
+  scale_colour_manual(values = c("c" = "#48A597", "w" = "#D94E47", "p" = "#3A7CA5", "wp" = "#6D4C7D")) +
+  
+  scale_fill_manual(values = c("c" = "#48A597", "w" = "#D94E47", "p" = "#3A7CA5", "wp" = "#6D4C7D")) +
+  
+  scale_x_date(
+    date_breaks = "4 weeks", # Specify the interval (e.g., every 2 weeks)
+    date_labels = "%d-%b-%y" # Customize the date format (e.g., "04-May-23")
+  ) +
+  
+  geom_vline(xintercept = as.Date("2023-05-11"), linetype = "dashed", color = "gray40") +
+  
+  theme(axis.text.x = element_text(angle = 45, hjust = 1), legend.position = "none",
+  ) +
+  
+  labs(y = "Seed mass", x = NULL) #
+
+# Box plot
+b_seed_mass <- ggplot(subset(cmw_db, trait_name == trait_levels[6]), aes(y = trait_value)) +
+  geom_boxplot(aes(fill = treatment), colour = "black", alpha = 0.5) + # Set the outline color to black
+  scale_fill_manual(values = c("c" = "#48A597", "w" = "#D94E47", "p" = "#3A7CA5", "wp" = "#6D4C7D")) +
+  theme(legend.position = "none",
+        axis.text.x = element_blank(), axis.text.y = element_blank(),
+        panel.background = element_rect(fill = NA, colour = NA), # Transparent background
+        plot.background = element_rect(fill = NA, colour = NA)) + # Transparent plot background+ 
+  labs(y = NULL)
+
+
+
+# Combine plots
+ggcomb_seed_mass <- a_seed_mass +
+  annotation_custom(
+    grob = ggplotGrob(b_seed_mass),
+    xmin = as.Date("2024-06-01"), # Adjust position: left boundary
+    xmax = as.Date("2024-11-05"), # Adjust position: right boundary
+    ymin = 7.5, # Adjust position: bottom boundary
+    ymax = 10 # Adjust position: top boundary
+  )
+
+# Render combined plot
+#ggcomb_seed_mass
+
+
+
+
+ggcomb_SLA
+ggcomb_LA
 ggcomb_LDMC
-
-
-
-
-ggplot(subset(cmw_long, trait_name == trait_levels[1]),
-       aes(x = date, y = trait_value)) + 
-  geom_smooth(
-    se = TRUE, aes(color = treatment, fill = treatment),
-    method = "loess", span = 0.6, alpha = 0.2 # Adjust alpha for transparency
-  ) +
-  geom_point(aes(color = treatment, shape = treatment)) +
-  scale_colour_manual(values = c("c" = "#48A597", "w" = "#D94E47", "p" = "#3A7CA5", "wp" = "#6D4C7D")) +
-  scale_fill_manual(values = c("c" = "#48A597", "w" = "#D94E47", "p" = "#3A7CA5", "wp" = "#6D4C7D")) +
-  scale_x_date(
-    date_breaks = "4 weeks", # Specify the interval (e.g., every 2 weeks)
-    date_labels = "%d-%b-%y" # Customize the date format (e.g., "04-May-23")
-  ) +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
-  labs(title = trait_levels[1])# Rotate x-axis labels
-
-
-
-
-ggplot(subset(cmw_long, trait_name == trait_levels[2]),
-       aes(x = date, y = trait_value)) + 
-  geom_smooth(
-    se = TRUE, aes(color = treatment, fill = treatment),
-    method = "loess", span = 0.6, alpha = 0.2 # Adjust alpha for transparency
-  ) +
-  geom_point(aes(color = treatment, shape = treatment)) +
-  scale_colour_manual(values = c("c" = "#48A597", "w" = "#D94E47", "p" = "#3A7CA5", "wp" = "#6D4C7D")) +
-  scale_fill_manual(values = c("c" = "#48A597", "w" = "#D94E47", "p" = "#3A7CA5", "wp" = "#6D4C7D")) +
-  scale_x_date(
-    date_breaks = "4 weeks", # Specify the interval (e.g., every 2 weeks)
-    date_labels = "%d-%b-%y" # Customize the date format (e.g., "04-May-23")
-  ) +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
-  labs(title = trait_levels[2])# Rotate x-axis labels
-#
-
-ggplot(subset(cmw_long, trait_name == trait_levels[3]),
-       aes(x = date, y = trait_value)) + 
-  geom_smooth(
-    se = TRUE, aes(color = treatment, fill = treatment),
-    method = "loess", span = 0.6, alpha = 0.2 # Adjust alpha for transparency
-  ) +
-  geom_point(aes(color = treatment, shape = treatment)) +
-  scale_colour_manual(values = c("c" = "#48A597", "w" = "#D94E47", "p" = "#3A7CA5", "wp" = "#6D4C7D")) +
-  scale_fill_manual(values = c("c" = "#48A597", "w" = "#D94E47", "p" = "#3A7CA5", "wp" = "#6D4C7D")) +
-  scale_x_date(
-    date_breaks = "4 weeks", # Specify the interval (e.g., every 2 weeks)
-    date_labels = "%d-%b-%y" # Customize the date format (e.g., "04-May-23")
-  ) +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
-  labs(title = trait_levels[3])# Rotate x-axis labels
-#
-
-ggplot(subset(cmw_long, trait_name == trait_levels[4]),
-       aes(x = date, y = trait_value)) + 
-  geom_smooth(
-    se = TRUE, aes(color = treatment, fill = treatment),
-    method = "loess", span = 0.6, alpha = 0.2 # Adjust alpha for transparency
-  ) +
-  geom_point(aes(color = treatment, shape = treatment)) +
-  scale_colour_manual(values = c("c" = "#48A597", "w" = "#D94E47", "p" = "#3A7CA5", "wp" = "#6D4C7D")) +
-  scale_fill_manual(values = c("c" = "#48A597", "w" = "#D94E47", "p" = "#3A7CA5", "wp" = "#6D4C7D")) +
-  scale_x_date(
-    date_breaks = "4 weeks", # Specify the interval (e.g., every 2 weeks)
-    date_labels = "%d-%b-%y" # Customize the date format (e.g., "04-May-23")
-  ) +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
-  labs(title = trait_levels[4])# Rotate x-axis labels
-
-
-
-ggplot(subset(cmw_long, trait_name == trait_levels[5]),
-       aes(x = date, y = trait_value)) + 
-  geom_smooth(
-    se = TRUE, aes(color = treatment, fill = treatment),
-    method = "loess", span = 0.6, alpha = 0.2 # Adjust alpha for transparency
-  ) +
-  geom_point(aes(color = treatment, shape = treatment)) +
-  scale_colour_manual(values = c("c" = "#48A597", "w" = "#D94E47", "p" = "#3A7CA5", "wp" = "#6D4C7D")) +
-  scale_fill_manual(values = c("c" = "#48A597", "w" = "#D94E47", "p" = "#3A7CA5", "wp" = "#6D4C7D")) +
-  scale_x_date(
-    date_breaks = "4 weeks", # Specify the interval (e.g., every 2 weeks)
-    date_labels = "%d-%b-%y" # Customize the date format (e.g., "04-May-23")
-  ) +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
-  labs(title = trait_levels[5])# Rotate x-axis labels
-##
-
-ggplot(subset(cmw_long, trait_name == trait_levels[6]),
-       aes(x = date, y = trait_value)) + 
-  geom_smooth(
-    se = TRUE, aes(color = treatment, fill = treatment),
-    method = "loess", span = 0.6, alpha = 0.2 # Adjust alpha for transparency
-  ) +
-  geom_point(aes(color = treatment, shape = treatment)) +
-  scale_colour_manual(values = c("c" = "#48A597", "w" = "#D94E47", "p" = "#3A7CA5", "wp" = "#6D4C7D")) +
-  scale_fill_manual(values = c("c" = "#48A597", "w" = "#D94E47", "p" = "#3A7CA5", "wp" = "#6D4C7D")) +
-  scale_x_date(
-    date_breaks = "4 weeks", # Specify the interval (e.g., every 2 weeks)
-    date_labels = "%d-%b-%y" # Customize the date format (e.g., "04-May-23")
-  ) +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
-  labs(title = trait_levels[6])# Rotate x-axis labels
-
-
-
-
-
-#
+ggcomb_leafN
+ggcomb_height
+ggcomb_seed_mass

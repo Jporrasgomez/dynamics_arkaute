@@ -511,13 +511,6 @@ species_lm<- nind_lm_data %>%
   filter(r_squared > 0.3) %>% 
   filter(p_value < 0.1)
 
-#There are some species for which its intercept is negative. This means that the lm consider that nind_m2 <0 when abundance = 0. And that
-# cannot be the case. There are 3 species. We can either delete these species or make this "shitty" correction: 
-# Shitty correction ?????????????????????????????????????
-species_lm <- species_lm %>%
-  mutate(nind_m2 = ifelse(nind_m2 < 0, 0.1, nind_m2))
-#We are basically manually mofifying the lm and Im not quite sure about this. 
-
 
 species_lm_codes <- unique(species_lm$code)
 
@@ -555,6 +548,13 @@ flora_biomass_lm <- merge(flora_biomass_raw, nind_lm_species)
 
 #calculation of number of indivuals per m2 with the regression data for each species
 flora_biomass_lm$nind_m2 <- flora_biomass_lm$intercept + flora_biomass_lm$abundance * flora_biomass_lm$slope
+
+# Since there are some species for which its intercept is negative, the lm consider that nind_m2 <0 when abundance = 0. And that
+# cannot be the case. There are 3 species. We can either delete these species or make this "shitty" correction by sayin that if
+# nind_m2 < 0 , then nind_m2 = 0
+# Shitty correction ?????????????????????????????????????
+flora_biomass_lm <- flora_biomass_lm %>%
+  mutate(nind_m2 = ifelse(nind_m2 < 0, 0.1, nind_m2))
 
 
 # Calculation of species biomass per square meter by multiplying biomass at individual (biomass_i) level by the 
@@ -630,8 +630,8 @@ flora_biomass_cleaned <- flora_biomass_cleaned %>%
 
 # Final database
 
-flora_cleanedbiomass <- merge(flora_abrich, flora_biomass_cleaned)
-flora <- merge(flora_abrich, flora_biomass)
+flora_cleanedbiomass <- full_join(flora_abrich, flora_biomass_cleaned)
+flora <- full_join(flora_abrich, flora_biomass)
 
 
 rm(list = setdiff(ls(), c("flora", "flora_cleanedbiomass")))
