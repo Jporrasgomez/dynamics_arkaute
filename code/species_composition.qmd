@@ -1,0 +1,51 @@
+---
+title: "Species composition"
+author: "JPG"
+format: html
+format:
+  html:
+    toc: true
+    toc-depth: 3
+    code-fold: true
+    number-sections: true
+editor: visual
+bibliography: "C:/Users/javier.porras/Documents/arkaute_/code/experiment_references.bib"
+---
+
+
+```{r}
+#| echo: false
+#| warning: false
+
+rm(list = ls(all.names = TRUE))
+pacman::p_load(dplyr, tidyverse, DT, viridis, ggrepel, codyn, vegan, eulerr, ggplot2, ggthemes, ggpubr, ggforce )
+
+setwd("C:/Users/javier.porras/Documents/dynamics_arkaute")
+
+theme_set(theme_bw() +
+            theme(axis.title.x = element_blank(),
+                  legend.position = "right",
+                  panel.grid = element_blank(),
+                  strip.background = element_blank(),
+                  strip.text = element_text(face = "bold"),
+                  text = element_text(size = 11)))
+
+
+```
+
+# Species composition
+
+To
+
+
+```{r}
+
+spcies_ab <- flora %>% 
+  group_by(treatment, sampling, date, month) %>% 
+  mutate(mean_richness = mean(richness),
+         mean_abundance = mean(abundance_community)) %>% 
+  ungroup()
+
+```
+
+\`\`\`

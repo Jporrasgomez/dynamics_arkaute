@@ -24,6 +24,9 @@ flora_raw <- read.csv("data/flora_db_raw.csv") # Opening and transforming data(o
 flora_raw <- flora_raw %>%
   mutate(across(where(is.character), as.factor))
 
+flora_raw <- flora_raw %>% 
+  rename(abundance_s = abundance)
+
 flora_raw$plot <- factor(flora_raw$plot)
 
 
@@ -51,7 +54,7 @@ sampling_dates <- sampling_dates %>%
 
 flora_raw <- right_join(flora_raw, sampling_dates, by = join_by(sampling))
 
-flora_rare <- flora_raw %>% select(sampling, one_month_window, omw_date, plot, treatment, code, abundance, height, Cb, Db, Cm, Dm, date, month)
+flora_rare <- flora_raw %>% select(sampling, one_month_window, omw_date, plot, treatment, code, abundance_s, height, Cb, Db, Cm, Dm, date, month)
 
 
 
@@ -94,7 +97,7 @@ nrow({checkingNA <- flora_rare %>%
 taxongroups <- flora_rare %>%
   filter(code %in% c("poaceae", "asteraceae", "tosp", "orchidaceae"))%>%
   group_by(code, sampling, one_month_window, omw_date, plot, treatment, date, month, species, family, genus_level, species_level) %>%
-  summarize(abundance = sum(unique(abundance), na.rm = T), #here we sum abundances 
+  summarize(abundance_s = sum(unique(abundance_s), na.rm = T), #here we sum abundances 
             height = mean(height, na.rm = T),
             Ah = mean(Ah, na.rm = T),
             Ab = mean(Ab, na.rm = T))
@@ -102,7 +105,7 @@ taxongroups <- flora_rare %>%
 
 species <- anti_join(flora_rare, taxongroups, by = "code") %>%
   group_by(code, sampling, one_month_window, omw_date, plot, treatment, date, month, species, family, genus_level, species_level) %>%
-  summarize(abundance = mean(abundance, na.rm = T), #here we mean abundances (fake mean, species in the same plot and sampling have the same abundance info)
+  summarize(abundance_s = mean(abundance_s, na.rm = T), #here we mean abundances (fake mean, species in the same plot and sampling have the same abundance info)
             height = mean(height, na.rm = T),
             Ah = mean(Ah, na.rm = T),
             Ab = mean(Ab, na.rm = T))
@@ -130,7 +133,7 @@ flora_medium <- flora_medium %>%
 
 flora_medium <- flora_medium %>% 
   group_by(plot, sampling) %>% 
-  mutate(abundance_community = sum(abundance, na.rm = T)) %>% 
+  mutate(abundance_community = sum(abundance_s, na.rm = T)) %>% 
   ungroup()
 
 
@@ -182,20 +185,23 @@ flora_biomass_raw <- flora_biomass_raw %>%
 nind1 <- read.csv("data/n_individuals.csv")
 #source("code/first_script_old.R")
 
+nind1 <- nind1 %>% 
+  rename(abundance_s = abundance)
+
 nind1$code <- as.factor(nind1$code)
 
-nind1 <- select(nind1, sampling, plot, code, nind_m2, abundance)
+nind1 <- select(nind1, sampling, plot, code, nind_m2, abundance_s)
 #flora_nind <-  flora %>% select(code, family) %>% distinct(code, .keep_all = TRUE)
 
 nind1 <- nind1 %>%
   group_by(sampling, plot, code) %>%
-  summarize(nind_m2 = sum(nind_m2), abundance = sum(abundance))
+  summarize(nind_m2 = sum(nind_m2), abundance_s = sum(abundance_s))
 
 nind1$sampling <- as.factor(nind1$sampling)
 nind1$plot <- as.factor(nind1$plot)
 nind1$code <- as.factor(nind1$code)
 nind1$nind_m2 <- as.numeric(nind1$nind_m2)
-nind1$abundance <- as.numeric(nind1$abundance)
+nind1$abundance_s <- as.numeric(nind1$abundance_s)
 
 ## Las especies de asteraceae que hemos agrupado por familia se recalculan sus individuos y abundancias aquí
 
@@ -208,7 +214,7 @@ nind2 <- flora_raw %>%
   mutate(n_individuals = n())
 
 nind2 <- nind2 %>%
-  group_by(sampling, plot, code,abundance) %>%
+  group_by(sampling, plot, code,abundance_s) %>%
   summarize(n_individuals_mean = mean(n_individuals, na.rm = T))  #corrección de asteraceae y poaceae #corrección de asteraceae y poaceae
 
 nind2 <- nind2 %>%
@@ -254,7 +260,7 @@ library(broom)
 for (i in 1: length(code_levels)) {
   
   nind_i <- subset(nind, code == code_levels[i])
-  lm_i <- lm(nind_m2 ~ abundance, data = nind_i)
+  lm_i <- lm(nind_m2 ~ abundance_s, data = nind_i)
   
   # Extract coefficients, R^2, and p-value
   lm_i_summary <- summary(lm_i)
@@ -269,7 +275,7 @@ for (i in 1: length(code_levels)) {
   
   counter <- counter + 1
   
-  gglist[[counter]] <- ggplot(nind_i, aes(x = abundance, y = nind_m2)) +
+  gglist[[counter]] <- ggplot(nind_i, aes(x = abundance_s, y = nind_m2)) +
     geom_point() +
     geom_smooth(method = "lm", se = FALSE, color = "blue") +
     labs(title = paste("Linear Relationship for", code_levels[i]),
@@ -319,7 +325,7 @@ flora_biomass_lm <- merge(flora_biomass_raw, nind_lm_species)
 
 
 #calculation of number of indivuals per m2 with the regression data for each species
-flora_biomass_lm$nind_m2 <- flora_biomass_lm$intercept + flora_biomass_lm$abundance * flora_biomass_lm$slope
+flora_biomass_lm$nind_m2 <- flora_biomass_lm$intercept + flora_biomass_lm$abundance_s * flora_biomass_lm$slope
 
 
 # Since there are some species for which its intercept is negative, the lm consider that nind_m2 <0 when abundance = 0. And that
@@ -396,7 +402,7 @@ flora_cleanedbiomass <- full_join(flora_abrich, flora_biomass_cleaned)
 flora <- full_join(flora_abrich, flora_biomass)
 
 
-#rm(list = setdiff(ls(), c("flora", "flora_cleanedbiomass")))
+rm(list = setdiff(ls(), c("flora", "flora_cleanedbiomass")))
 
 
 

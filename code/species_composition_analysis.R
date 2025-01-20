@@ -5,33 +5,30 @@
 # Al gráfico de turnover, añadire un ratio encima appearance/disappearance
 
 
-library(tidyverse) # manage data
-library(DT) # visualise tables in html
-library(viridis) # use color-blind friendly palettes
-library(ggrepel) # avoid overlapping texts in the figures
-library(codyn) # calculate community dynamics metrics
-library(vegan) # calculate community ecology metrics
-library(eulerr) # calculate Venn and Euler diagrams
-library(ggplot2)
-library(ggthemes)
-library(ggpubr)
-library(ggforce)
-
-#theme_set(theme_bw()+ theme(legend.position = "NULL"))
-
+rm(list = ls(all.names = TRUE))
+pacman::p_load(dplyr, tidyverse, DT, viridis, ggrepel, codyn, vegan, eulerr, ggplot2, ggthemes, ggpubr, ggforce )
 
 source("code/first_script.R")
 
+theme_set(theme_bw() +
+            theme(
+                  legend.position = "right",
+                  panel.grid = element_blank(),
+                  strip.background = element_blank(),
+                  strip.text = element_text(face = "bold"),
+                  text = element_text(size = 11)))
 
 
-#Calcular, para cada especie, su abundancia media por tratamiento y muestreo 
 species_ab <-  summarise(group_by(flora, date, month, code, sampling, treatment, family,  genus_level, species_level),
-                              abundance = (sum(abundance, na.rm = T)/4)) #mean abundance by treatment and sampling in a square meter (mean abundance of 4 plots) (?)
+                         abundance = mean(abundance_s, na.rm = T)) #mean abundance of species per treatment and sampling  
+
+
 totals_df <- summarise(group_by(species_ab, sampling, treatment), #adding number of species per treatment and sampling to species_ab
-                          n_species = n_distinct(code),
-                          total_abundance = sum(abundance))
+                       n_species = n_distinct(code),
+                       total_abundance = sum(abundance))
+
+
 species_ab <- merge(species_ab, totals_df)
-  
 
 
 # Hacer otro día los RADs con ID debajo #####
@@ -84,8 +81,8 @@ ggturnover <-
   labs(title = "Community turnover relative to the preceding sampling",
        x = "Sampling",
        y = "Turnover") +
-  theme(axis.text.x = element_text(angle = 30, vjust = 1, hjust = 1))+
-  theme_bw()
+  theme(axis.text.x = element_text(angle = 30, vjust = 1, hjust = 1))
+
 
 
 
@@ -140,16 +137,16 @@ for(i in 1: length(treats)){
     geom_point(data = pcoa_samplings_hell %>% 
                  rownames_to_column(var = "sampling"),
                aes(x = V1, y = V2),
-               size = 2) +
+               size = 1.5) +
     geom_text_repel(data = pcoa_samplings_hell %>% 
                       rownames_to_column(var = "sampling"),
                     aes(x = V1, y = V2, label = sampling),
-                    max.overlaps = 13) +
+                    max.overlaps = 9) +
     geom_path(data = pcoa_samplings_hell %>% 
                 rownames_to_column(var = "sampling"),
               aes(x = V1, y = V2)) +
-    geom_hline(aes(yintercept = 0), color = "red", linetype = "dashed") +
-    geom_vline(aes(xintercept = 0), color = "red", linetype = "dashed") +
+    geom_hline(aes(yintercept = 0), color = "gray52", linetype = "dashed") +
+    geom_vline(aes(xintercept = 0), color = "gray52", linetype = "dashed") +
     labs(title = paste("PCoA using Hellinger distance:", treats[i], sep = " "),
          subtitle = paste0("Variance explained = ", round(sum(var_exp_hell)*100), "%"),
          x = paste0(round(var_exp_hell[1]*100), "% var"),
@@ -201,17 +198,22 @@ pcoa_df <- pcoa_df %>% arrange(sampling)
 ggpcoa_hell_alltreatments<- 
   
 ggplot(pcoa_df, aes(x = PC1, y = PC2, color = treatment)) +
-  geom_point(size = 2) +
-  geom_text_repel(aes(x = PC1, y = PC2, label = sampling), max.overlaps = 100) +
+  stat_ellipse(geom = "polygon", aes(fill = treatment),
+               alpha = 0.1,
+               show.legend = FALSE,
+               level = 0.7) +  # % of dots that is included by the ellipse. Which percentage???
+  geom_point(size = 1.5) +
+  geom_text_repel(aes(x = PC1, y = PC2, label = sampling), max.overlaps = 100, size = 3) +
   geom_path()+ #no  funciona
-  geom_hline(aes(yintercept = 0), color = "black", linetype = "dashed") +
-  geom_vline(aes(xintercept = 0), color = "black", linetype = "dashed") +
-  scale_color_manual(values = c("c" = "darkolivegreen4", "p" = "#1C86EE", "w" = "red3", "wp" = "purple"))+
+  geom_hline(aes(yintercept = 0), color = "gray52", linetype = "dashed") +
+  geom_vline(aes(xintercept = 0), color = "gray52", linetype = "dashed") +
+  scale_colour_manual(values = c("c" = "#48A597", "w" = "#D94E47", "p" = "#3A7CA5", "wp" = "#6D4C7D")) +
+  scale_fill_manual(values = c("c" = "#48A597", "w" = "#D94E47", "p" = "#3A7CA5", "wp" = "#6D4C7D")) +
   labs(title = "PCoA using Hellinger distance",
        subtitle = paste0("Variance explained = ", round(sum(var_exp_hell)*100), "%"),
        x = paste0(round(var_exp_hell[1]*100), "% var"),
        y = paste0(round(var_exp_hell[2]*100), "% var"))+
-  theme(legend.position = "bottom")
+  theme(legend.position = "null")
 
 
 
@@ -224,8 +226,8 @@ ggplot(pcoa_df, aes(x = PC1, y = PC2, color = treatment)) +
 sp_wide_treat <- flora %>%
   pivot_wider(id_cols = c(plot, treatment, sampling),
               names_from = code,
-              values_from = abundance,
-              values_fill = list(abundance = 0))
+              values_from = abundance_s,
+              values_fill = list(abundance_s = 0))
 
 # create a distance matrix using Hellinger distances
 abundance_data_treat <- sp_wide_treat %>% select(-treatment, -sampling, -plot)
@@ -254,8 +256,8 @@ ggpcoa_clouds <-
                  level = 0.6) + # % de datos que abarcan las elipses
     geom_hline(aes(yintercept = 0), color = "black", linetype = "dashed") +
     geom_vline(aes(xintercept = 0), color = "black", linetype = "dashed") +
-    scale_color_manual(values = c("c" = "darkolivegreen4", "p" = "#1C86EE", "w" = "red3", "wp" = "purple"))+
-    scale_fill_manual(values = c("c" = "darkolivegreen4", "p" = "#1C86EE", "w" = "red3", "wp" = "purple"))+
+  scale_colour_manual(values = c("c" = "#48A597", "w" = "#D94E47", "p" = "#3A7CA5", "wp" = "#6D4C7D")) +
+  scale_fill_manual(values = c("c" = "#48A597", "w" = "#D94E47", "p" = "#3A7CA5", "wp" = "#6D4C7D")) +
     labs(title = "PCoA, Hellinger",
          subtitle = paste0("Variance explained = ", round(sum(var_exp_hell_treat)*100), "%"),
          x = paste0(round(var_exp_hell_treat[1]*100), "% var"),
@@ -281,8 +283,8 @@ for (i in 1:length(samps)){
   list2[[count]] <-  subset(flora, sampling == samps[i]) %>%
     pivot_wider(id_cols = c(plot, treatment, sampling),
                 names_from = code,
-                values_from = abundance,
-                values_fill = list(abundance = 0))
+                values_from = abundance_s,
+                values_fill = list(abundance_s = 0))
   
   
   abundance_data <- list2[[count]] %>% select(-treatment, -plot, -sampling)
@@ -313,14 +315,20 @@ for (i in 1:length(samps)){
     stat_ellipse(geom = "polygon", aes(fill = treatment),
                  alpha = 0.2,
                  show.legend = FALSE,
-                 level = 0.95) +
+                 level = 0.7) +
     geom_hline(aes(yintercept = 0), color = "black", linetype = "dashed") +
     geom_vline(aes(xintercept = 0), color = "black", linetype = "dashed") +
-    scale_color_manual(values = c("c" = "darkolivegreen4", "p" = "#1C86EE", "w" = "red3", "wp" = "purple"))+
-    scale_fill_manual(values = c("c" = "darkolivegreen4", "p" = "#1C86EE", "w" = "red3", "wp" = "purple"))+
+    scale_colour_manual(values = c("c" = "#48A597", "w" = "#D94E47", "p" = "#3A7CA5", "wp" = "#6D4C7D")) +
+    scale_fill_manual(values = c("c" = "#48A597", "w" = "#D94E47", "p" = "#3A7CA5", "wp" = "#6D4C7D")) +
     labs(title = paste("Sampling", list2[[count]]$sampling, sep = " "),
          x = paste0(round(var_exp_hell[1]*100), "% var"),
-         y = paste0(round(var_exp_hell[2]*100), "% var")) 
+         y = paste0(round(var_exp_hell[2]*100), "% var"))+
+    theme(
+      legend.position = "null",
+      plot.title = element_text(size = 10),       # Adjust title size
+      axis.title.x = element_text(size = 10),    # Adjust x-axis label size
+      axis.title.y = element_text(size = 10)     # Adjust y-axis label size
+    )
   
   
   
@@ -329,7 +337,7 @@ for (i in 1:length(samps)){
 
 
 
-cloudspersampling<- ggarrange(
+ggpcoa_cloudspersampling<- ggarrange(
   gglist2[[1]], gglist2[[2]], gglist2[[3]], gglist2[[4]], 
   gglist2[[5]], gglist2[[6]], gglist2[[7]], gglist2[[8]], 
   gglist2[[9]], gglist2[[10]], gglist2[[11]], gglist2[[12]],
@@ -347,11 +355,11 @@ cloudspersampling<- ggarrange(
 
 #Plots : 
 
-#ggturnover
-#ggpcoa_hell
-#ggpcoa_hell_alltreatments
-#ggpcoa_clouds 
-#ggpcoa_cloudspersampling
+ggturnover
+ggpcoa_hell
+ggpcoa_hell_alltreatments
+ggpcoa_clouds 
+ggpcoa_cloudspersampling
 
 
 #Removing all elements from the environment but the ggplots
