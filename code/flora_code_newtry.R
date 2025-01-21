@@ -37,15 +37,20 @@ ab_rich_dynamics <- ab_rich_dynamics %>%
 # Database for biomass
 
 biomass_dynamics_cleaned <- flora_cleanedbiomass %>% 
-  group_by(treatment, sampling) %>% 
-  mutate(mean_biomass = mean(biomass_community),
-         sd_biomass = sd(biomass_community))
+  filter(!sampling %in% c("0", "1", "2", "12")) %>% 
+  group_by(treatment, sampling, date, month) %>% 
+  mutate(mean_biomass = mean(biomass_community, na.rm = T),
+         sd_biomass = sd(biomass_community, na.rm = T)) %>% 
+  ungroup()
 
 
-biomass_dynamics <- flora %>% 
-  group_by(treatment, sampling) %>% 
-  mutate(mean_biomass = mean(biomass_community),
-         sd_biomass = sd(biomass_community))
+biomass_dynamics <- flora %>%
+  filter(!sampling %in% c("0", "1", "2", "12")) %>% 
+  group_by(treatment, sampling, date, month) %>% 
+  mutate(mean_biomass = mean(biomass_community, na.rm = T),
+         sd_biomass = sd(biomass_community, na.rm = T)) %>% 
+  ungroup()
+
 
 
 
@@ -229,12 +234,13 @@ a_biomass <-
   
   theme(axis.text.x = element_text(angle = 45, hjust = 1), legend.position = "none",
   ) +
+  scale_y_log10() +
   
-  labs(y = "Biomass", x = NULL) #
+  labs(y = "log(Community biomass)", x = NULL) #
 
 # Box plot
 b_biomass <- 
-  ggplot(biomass_dynamics, aes(y = biomass_community)) +
+  ggplot(biomass_dynamics, aes(y = log(biomass_community))) +
   geom_boxplot(aes(fill = treatment), colour = "black", alpha = 0.5) + # Set the outline color to black
   scale_fill_manual(values = c("c" = "#48A597", "w" = "#D94E47", "p" = "#3A7CA5", "wp" = "#6D4C7D")) +
   theme(legend.position = "none",
@@ -249,10 +255,10 @@ b_biomass <-
 ggcomb_biomass <- a_biomass +
   annotation_custom(
     grob = ggplotGrob(b_biomass),
-    xmin = as.Date("2024-07-01"), # Adjust position: left boundary
-    xmax = as.Date("2024-11-20"), # Adjust position: right boundary
-    ymin = 6000, # Adjust position: bottom boundary
-    ymax = 9900 # Adjust position: top boundary
+    xmin = as.Date("2023-12-01"), # Adjust position: left boundary
+    xmax = as.Date("2024-04-20"), # Adjust position: right boundary
+    ymin = 10, # Adjust position: bottom boundary
+    ymax = 1000 # Adjust position: top boundary
   )
 
 # Render combined plot

@@ -34,6 +34,8 @@ flora_raw$plot <- factor(flora_raw$plot, levels = sort(unique(flora_raw$plot)))
 
 flora_raw <- select(flora_raw, -date, -category, -OBS, -ni.agrupado, -familia, -species_old_1, -species_old_2)
 
+boxplot(flora_raw$abundance, main = "Abundance")
+boxplot(flora_raw$height, main = "Height")
 boxplot(flora_raw$Dm, main = "Dm")
 boxplot(flora_raw$Cm, main = "Cm")
 boxplot(flora_raw$Db, main = "Db")
@@ -84,6 +86,7 @@ ggplot( flora_raw %>% filter(!is.na(Cm) & !is.na(Db)),
     segment.color = "gray50",# Line color
     segment.size = 0.5       # Line thickness
   ) +
+  
   labs(
     x = "Log(Cm)",       # Label for x-axis
     y = "Db",            # Label for y-axis
@@ -495,7 +498,7 @@ results <-
   geom_hline(yintercept = 0.1, linetype = "dashed", color = "gray40") +
   
   geom_text_repel(
-    size = 2,                # Text size
+    size = 3,                # Text size
     min.segment.length = 0.1,  # Ensures lines are always drawn
     segment.color = "gray50",# Line color
     segment.size = 0.5, 
@@ -566,29 +569,49 @@ flora_biomass_lm$biomass_s <- flora_biomass_lm$biomass_i * flora_biomass_lm$nind
 flora_biomass <- bind_rows(flora_biomass_oneind, flora_biomass_lm)
 
 nabiomass <- which(is.na(flora_biomass$biomass_s))
-View(flora_biomass[nabiomass, ]) 
+print(flora_biomass[nabiomass, ]) 
 # There are some NAs comming from sampling 3, where we did not measure morphological data from species with very low abundance (decisions of
 # tired Javi and Laura :( ))
 
 # Removing outliers from biomass_s
 # At this point, it is worth considering the removal of outlier for biomass_s. To reach this information we have: 
-# 1) Use abundance data gathered from the field by direct observations
-# 2) Use morphological measurements taken in the field in the application of a biomass equation
-# 3) Use the available data of number of individuals / m2 and species that was gathered in the field by visual estimation
-# 4) use a linear model to estimate the number of individuals per m2 for all species, samplings and plots. 
-# 5) Calculate the biomass at species level by biomass_i * nind_m2. 
+# 1) Used abundance data gathered from the field by direct observations
+# 2) Used morphological measurements taken in the field in the application of a biomass equation
+# 3) Used the available data of number of individuals / m2 and species that was gathered in the field by visual estimation
+# 4) Used a linear model to estimate the number of individuals per m2 for all species, samplings and plots. 
+# 5) Calculated the biomass at species level by biomass_i * nind_m2. 
 # So, here there is an accumulation of calculations that has undoubtfully led to error accumulation. 
 
 
-boxplot(flora_biomass$biomass_s)
-ggplot(flora_biomass, aes( y = biomass_s, x = date, label = paste(sampling, plot, sep = ","), color = treatment)) + 
-  geom_point() + 
-  geom_text_repel(
-    size = 3, 
-    min.segment.length = 1,
-    segment.color = "gray50", 
-    segment.size = 0.5
-  )
+par(mfrow = c(2,2))
+boxplot(flora_biomass$biomass_s, main = "biomass_s")
+hist(flora_biomass$biomass_s, breaks = 50, main = "biomass_s")
+
+boxplot(log(flora_biomass$biomass_s), main = "log(biomass_s)")
+hist(log(flora_biomass$biomass_s), breaks = 50, main = "log(biomass_s)")
+
+
+
+# Step 1: Calculate IQR for log-transformed biomass_s
+Q1 <- quantile(log(flora_biomass$biomass_s), 0.25, na.rm = TRUE)
+Q3 <- quantile(log(flora_biomass$biomass_s), 0.75, na.rm = TRUE)
+IQR <- Q3 - Q1
+
+# Step 2: Remove outliers
+flora_biomass_clean <- flora_biomass %>%
+  filter(log(biomass_s) >= Q1 - 1.5 * IQR & log(biomass_s) <= Q3 + 1.5 * IQR)
+
+# View the cleaned data
+
+
+boxplot(flora_biomass_clean$biomass_s, main = "Without ouliers")
+hist(flora_biomass_clean$biomass_s, breaks = 50, main = "Without outliers")
+
+boxplot(log(flora_biomass_clean$biomass_s), main = "No outliers (log(biomass_s))")
+hist(log(flora_biomass_clean$biomass_s), breaks = 50, main = "Without outliers (log(biomass_S))")
+
+#There is no difference. Mark proposes to work on biomass as log(biomass) since it is the most common way of working
+# in ecology
 
 
 # Temporal way of removing outliers
@@ -604,7 +627,7 @@ flora_biomass_cleaned<- flora_biomass %>%
     abs(z_score) <=3
   ) 
 
-boxplot(biomass_cleaned$biomass_s)
+boxplot(flora_biomass_cleaned$biomass_s)
 
 outliers <- anti_join(flora_biomass, flora_biomass_cleaned)
 
@@ -634,6 +657,6 @@ flora_cleanedbiomass <- full_join(flora_abrich, flora_biomass_cleaned)
 flora <- full_join(flora_abrich, flora_biomass)
 
 
-rm(list = setdiff(ls(), c("flora", "flora_cleanedbiomass")))
+rm(list = setdiff(ls(), c("flora", "flora_cleanedbiomass", "flora_biomass", "flora_biomass_cleaned")))
 
 #Aqui quieres acabar con: flora, una base de datos que tenga flora_biomass and flora_abrich together y que sea como "flora_complete"
