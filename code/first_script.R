@@ -361,23 +361,37 @@ flora_biomass <- bind_rows(flora_biomass_oneind, flora_biomass_lm)
 
 # Temporal way of removing outliers
 
-hist(log(flora_biomass$biomass_s), breaks = 50)
-boxplot(flora_biomass$biomass_s)
-#Transform it to log and then remove outliers as it is a normal distribution. Then, transform it again
+par(mfrow = c(1,2))
+boxplot(flora_biomass$biomass_s, main = "biomass_s")
+hist(flora_biomass$biomass_s, breaks = 50, main = "biomass_s")
 
-flora_biomass_cleaned<- flora_biomass %>% 
-  mutate(
-    median_biomass_s = median(biomass_s, na.rm = T), 
-    mad_biomass_s = mad(biomass_s, na.rm = T), 
-    z_score = (biomass_s - median_biomass_s) /mad_biomass_s
-  ) %>% 
-  filter(
-    abs(z_score) <=3
-  ) 
+#With log transformation
+boxplot(log(flora_biomass$biomass_s), main = "log(biomass_s)")
+hist(log(flora_biomass$biomass_s), breaks = 50, main = "log(biomass_s)")
 
 
-outliers <- anti_join(flora_biomass, flora_biomass_cleaned)
 
+# Step 1: Calculate IQR for log-transformed biomass_s
+Q1 <- quantile(log(flora_biomass$biomass_s), 0.25, na.rm = TRUE)
+Q3 <- quantile(log(flora_biomass$biomass_s), 0.75, na.rm = TRUE)
+IQR <- Q3 - Q1
+
+# Step 2: Remove outliers
+flora_biomass_clean <- flora_biomass %>%
+  filter(log(biomass_s) >= Q1 - 1.5 * IQR & log(biomass_s) <= Q3 + 1.5 * IQR)
+
+# View the cleaned data
+
+# Without ouliers 
+boxplot(flora_biomass_clean$biomass_s, main = "Without ouliers")
+hist(flora_biomass_clean$biomass_s, breaks = 50, main = "Without outliers")
+
+# Without ouliers + logtrasnform
+boxplot(log(flora_biomass_clean$biomass_s), main = "No outliers (log(biomass_s))")
+hist(log(flora_biomass_clean$biomass_s), breaks = 50, main = "Without outliers (log(biomass_S))")
+
+#There is almost no difference. Mark proposes to work on biomass as log(biomass) since it is the most common way of working
+# in ecology
 
 
 
@@ -389,22 +403,17 @@ flora_biomass <- flora_biomass %>%
   mutate(biomass_community =  sum(biomass_s, na.rm = TRUE)) %>%
   ungroup()
 
-flora_biomass_cleaned <- flora_biomass_cleaned %>% 
+flora_biomass_clean <- flora_biomass_clean %>% 
   group_by(plot, sampling, treatment) %>% 
   mutate(biomass_community =  sum(biomass_s, na.rm = TRUE)) %>%
   ungroup()
 
 
 
-# Final database
-
-flora_cleanedbiomass <- full_join(flora_abrich, flora_biomass_cleaned)
-flora <- full_join(flora_abrich, flora_biomass)
 
 
-rm(list = setdiff(ls(), c("flora", "flora_cleanedbiomass")))
 
-
+rm(list = setdiff(ls(), c("flora_abrich", "flora_biomass", "flora_biomass_clean")))
 
 
 

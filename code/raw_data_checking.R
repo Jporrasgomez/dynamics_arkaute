@@ -6,7 +6,7 @@
 
 
 rm(list = ls(all.names = TRUE))
-pacman::p_load(dplyr, reshape2, tidyverse, lubridate, ggplot2, ggpubr, rpivotTable)
+pacman::p_load(dplyr, reshape2, tidyverse, lubridate, ggplot2, ggpubr, rpivotTable, ggrepel)
 
 theme_set(theme_bw() +
             theme(
@@ -336,7 +336,7 @@ ggplot(flora_nobs, aes(x = code_abnobs, y = abnobs, fill = abnobs)) +
 
 #For biomass, we do not have information for samplings 0, 1, 2 and 12. 
 
-flora_biomass_raw <- flora_medium %>% 
+{flora_biomass_raw <- flora_medium %>% 
   filter(!sampling %in% c("0", "1", "2", "12"))
 
 # To calculate the biomass at species level (biomass_s) on a plot at sampling based on the biomass at individual level (biomass_i) we
@@ -479,7 +479,7 @@ for (i in 1: length(code_levels)) {
   nind_lm_data$n_observations[counter] <- n_observations_i
   
   
-}
+}}
 
 print(gglist[[6]])
 
@@ -583,10 +583,11 @@ print(flora_biomass[nabiomass, ])
 # So, here there is an accumulation of calculations that has undoubtfully led to error accumulation. 
 
 
-par(mfrow = c(2,2))
+par(mfrow = c(1,2))
 boxplot(flora_biomass$biomass_s, main = "biomass_s")
 hist(flora_biomass$biomass_s, breaks = 50, main = "biomass_s")
 
+#With log transformation
 boxplot(log(flora_biomass$biomass_s), main = "log(biomass_s)")
 hist(log(flora_biomass$biomass_s), breaks = 50, main = "log(biomass_s)")
 
@@ -603,33 +604,17 @@ flora_biomass_clean <- flora_biomass %>%
 
 # View the cleaned data
 
-
+# Without ouliers 
 boxplot(flora_biomass_clean$biomass_s, main = "Without ouliers")
 hist(flora_biomass_clean$biomass_s, breaks = 50, main = "Without outliers")
 
+# Without ouliers + logtrasnform
 boxplot(log(flora_biomass_clean$biomass_s), main = "No outliers (log(biomass_s))")
 hist(log(flora_biomass_clean$biomass_s), breaks = 50, main = "Without outliers (log(biomass_S))")
 
-#There is no difference. Mark proposes to work on biomass as log(biomass) since it is the most common way of working
+#There is almost no difference. Mark proposes to work on biomass as log(biomass) since it is the most common way of working
 # in ecology
 
-
-# Temporal way of removing outliers
-
-
-flora_biomass_cleaned<- flora_biomass %>% 
-  mutate(
-    median_biomass_s = median(biomass_s, na.rm = T), 
-    mad_biomass_s = mad(biomass_s, na.rm = T), 
-    z_score = (biomass_s - median_biomass_s) /mad_biomass_s
-  ) %>% 
-  filter(
-    abs(z_score) <=3
-  ) 
-
-boxplot(flora_biomass_cleaned$biomass_s)
-
-outliers <- anti_join(flora_biomass, flora_biomass_cleaned)
 
 
 
@@ -644,19 +629,15 @@ flora_biomass <- flora_biomass %>%
   mutate(biomass_community =  sum(biomass_s, na.rm = TRUE)) %>%
   ungroup()
 
-flora_biomass_cleaned <- flora_biomass_cleaned %>% 
+flora_biomass_clean <- flora_biomass_clean %>% 
   group_by(plot, sampling, treatment) %>% 
   mutate(biomass_community =  sum(biomass_s, na.rm = TRUE)) %>%
   ungroup()
   
 
 
-# Final database
 
-flora_cleanedbiomass <- full_join(flora_abrich, flora_biomass_cleaned)
-flora <- full_join(flora_abrich, flora_biomass)
+rm(list = setdiff(ls(), c("flora_abrich", "flora_biomass", "flora_biomass_clean")))
 
 
-rm(list = setdiff(ls(), c("flora", "flora_cleanedbiomass", "flora_biomass", "flora_biomass_cleaned")))
 
-#Aqui quieres acabar con: flora, una base de datos que tenga flora_biomass and flora_abrich together y que sea como "flora_complete"
