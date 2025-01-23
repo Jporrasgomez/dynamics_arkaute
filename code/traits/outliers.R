@@ -318,53 +318,137 @@ abundance_matrix_dynamics <- abundance_matrix_dynamics %>%
   select(!com)
 
 
-#Abunance matrix 2: treatment level
-
-
-abundance_ref_treatment <- flora_abrich %>% 
-  ungroup() %>% 
-  select(treatment, abundance_s, code)
-
-abundance_ref_treatment$abundance_s <- abundance_ref_treatment$abundance_s/100
-
-abundance_ref_treatment <- abundance_ref_treatment %>% 
-  group_by(treatment, code) %>% 
-  summarize(mean_abundance = mean(abundance_s, na.rm = T))
-
-abundance_wide_treatments <- abundance_ref_treatment %>% 
-  pivot_wider(
-    names_from = code, 
-    values_from = mean_abundance) %>%
-  select(treatment, sort(setdiff(names(.), "treatment")))
-
-
-# transformation NA into 0 
-codes <- unique(flora_abrich$code)
-for(i in 1:length(codes)){
-  abundance_wide_treatments[[paste0(codes[i])]] <- 
-    ifelse(is.na(abundance_wide_treatments[[paste0(codes[i])]]), 0, abundance_wide_treatments[[paste0(codes[i])]])
-}
-
-
-abundance_matrix_treatment <- as.data.frame(abundance_wide_treatments)
-rownames(abundance_matrix_treatment) <- abundance_matrix_treatment$treatment
-abundance_matrix_treatment <- abundance_matrix_treatment %>% 
-  select(!treatment)
 
 
 # Calculation of cwm with function functcomp
 
 #cwm at sampling level (dynamics)
 
-cwm_dynamics0 <- functcomp(as.matrix(traits_matrix), as.matrix(abundance_matrix_dynamics))
+cwm_dynamics <- functcomp(as.matrix(traits_matrix), as.matrix(abundance_matrix_dynamics))
+cwm_dynamics$com <- rownames(cwm_dynamics); rownames(cwm_dynamics) <- NULL
 
 
-# PCA
+cwm_dynamics$sampling <- sapply(strsplit(cwm_dynamics$com, "/"), function(x) x[1])
+cwm_dynamics$treatment <- sapply(strsplit(cwm_dynamics$com, "/"), function(x) x[2])
+cwm_dynamics$plot <- sapply(strsplit(cwm_dynamics$com, "/"), function(x) x[3])
+
+
+cwm_alltreatments <- cwm_dynamics %>% 
+  select(-treatment, - sampling, -plot, -com, -vegetation.height)
+pca_alltreatments <- prcomp(cwm_alltreatments, center = T, scale. = T)
+pca_alltreatments <- fviz_pca_biplot(pca_alltreatments, geom = "point", repel = T, title = " ",
+                         ggthem = theme_test())
+pca_alltreatments
+
+cwm_c <- cwm_dynamics %>% 
+  filter(treatment %in% "c") %>% 
+  select(-treatment, - sampling, -plot, -com, -vegetation.height)
+pca_c <- prcomp(cwm_c, center = T, scale. = T)
+pca_c <- fviz_pca_biplot(pca_c, geom = "point", repel = T, title = " ",
+                         ggthem = theme_test())
+
+
+cwm_w <- cwm_dynamics %>% 
+  filter(treatment %in% "w")%>% 
+  select(-treatment, - sampling, -plot, -com, -vegetation.height)
+pca_w <- prcomp(cwm_w, center = T, scale. = T)
+pca_w <- fviz_pca_biplot(pca_w, geom = "point", repel = T, title = " ",
+                         ggthem = theme_test())
+
+
+cwm_p <- cwm_dynamics %>% 
+  filter(treatment %in% "p")%>% 
+  select(-treatment, - sampling, -plot, -com, -vegetation.height)
+pca_p <- prcomp(cwm_p, center = T, scale. = T)
+pca_p <- fviz_pca_biplot(pca_p, geom = "point", repel = T, title = " ",
+                         ggthem = theme_test())
+
+
+cwm_wp <- cwm_dynamics %>% 
+  filter(treatment %in% "wp")%>% 
+  select(-treatment, - sampling, -plot, -com, -vegetation.height)
+pca_wp <- prcomp(cwm_wp, center = T, scale. = T)
+pca_wp <- fviz_pca_biplot(pca_wp, geom = "point", repel = T, title = " ",
+                         ggthem = theme_test())
+
+
+ggarrange(
+labels = c("Control", "Warming", "Perturbation", "Warming + perturbation"),
+pca_c,
+pca_w,
+pca_p,
+pca_wp,
+ncol = 2, nrow = 2)
+
+
+
+
+
+# PCA with ggplot
 #Dividir por tratamientos la base de datos
 
-pca1 <- prcomp(cwm_dynamics0, center = T, scale. = T)
-pca <- fviz_pca_biplot(pca1, geom = "point", repel = T, title = " ",
-                       ggthem = theme_test())
+library(factoextra)
+
+
+cwm_c <- cwm_dynamics_pca %>% 
+  filter(treatment %in% "c")
+rownames(cwm_c) <- cwm_c$com
+cwm_c <- cwm_c %>% 
+  select(-com, -treatment)
+pca_c <- prcomp(cwm_c, center = T, scale. = T)
+
+
+# Extract scores (coordinates of individuals)
+individuals <- as.data.frame(pca_c$x)  # Principal components for individuals
+individuals$ID <- rownames(cwm_c)   # Add IDs for individuals
+
+# Extract loadings (coordinates of variables)
+variables <- as.data.frame(pca$rotation)  # Loadings for variables
+variables$Variable <- rownames(variables)
+
+# Plot PCA with ggplot2
+#pca_plot <- 
+  
+  ggplot() +
+  
+  # Plot individuals
+  geom_point(data = individuals, 
+             aes(x = PC1, y = PC2), 
+             size = 2, alpha = 0.7) +
+  
+  # Plot variable loadings as arrows
+  geom_segment(data = variables, 
+               aes(x = 0, y = 0, xend = PC1, yend = PC2), 
+               arrow = arrow(length = unit(0.2, "cm")), 
+               color = "blue4", size = 0.5) +
+  
+  # Add labels for variables
+  geom_text(data = variables, 
+            aes(x = PC1, y = PC2, label = Variable), 
+            color = "blue4", vjust = -0.5, size = 4) +
+  
+  # Customize the plot
+  theme_minimal() +
+  labs(x = "PC1 (Variance %)", 
+       y = "PC2 (Variance %)", 
+       title = "PCA Biplot") +
+  theme(legend.position = "none")
+
+# Display the plot
+pca_plot
+
+ggplot(variables, ae(y = ))
+
+
+
+
+
+
+
+
+
+
+
 pca
 cwmpca1 <- as.data.frame(pca1$x)
 
@@ -379,18 +463,7 @@ cwm_all = full_join(cwmpca1, CWM_ID, by = 'ID')
 
 
 
-
-
 # Plotting cwm dynamics
-
-cwm_dynamics$com <- rownames(cwm_dynamics); rownames(cwm_dynamics) <- NULL
-
-cwm_dynamics$sampling <- sapply(strsplit(cwm_dynamics$com, "/"), function(x) x[1])
-cwm_dynamics$treatment <- sapply(strsplit(cwm_dynamics$com, "/"), function(x) x[2])
-cwm_dynamics$plot <- sapply(strsplit(cwm_dynamics$com, "/"), function(x) x[3])
-
-cwm_dynamics <- cwm_dynamics %>% 
-  select(!com)
 
 
 cwm_long_dynamics <- cwm_dynamics %>% 
@@ -818,18 +891,6 @@ ggcomb_seed_mass
 
 
 
-#cwm at treatment level 
-
-cwm_treatment <- functcomp(as.matrix(traits_matrix), as.matrix(abundance_matrix_treatment))
-
-cwm_treatment$treatment <- rownames(cwm_treatment); rownames(cwm_treatment) <- NULL
-
-cwm_treatment_db <- cwm_treatment %>% 
-  pivot_longer(cols = c("LDMC", "leafN", "SLA", "LA", "vegetation.height", "seed.mass"),
-               names_to = "trait_name",
-               values_to = "cwm_value")
-
-
 
 # PCA
 #Necesito bases de dato con col = trait_names y ya
@@ -837,7 +898,56 @@ cwm_treatment_db <- cwm_treatment %>%
 #CWM1 = CWM1 %>% drop_na(CWM_N) #only the CWM trait columns; remove NA in rows 
 
 
-cmw_
+
+#Abunance matrix 2: treatment level
+
+
+abundance_ref_treatment <- flora_abrich %>% 
+  ungroup() %>% 
+  select(treatment, abundance_s, code)
+
+abundance_ref_treatment$abundance_s <- abundance_ref_treatment$abundance_s/100
+
+abundance_ref_treatment <- abundance_ref_treatment %>% 
+  group_by(treatment, code) %>% 
+  summarize(mean_abundance = mean(abundance_s, na.rm = T))
+
+abundance_wide_treatments <- abundance_ref_treatment %>% 
+  pivot_wider(
+    names_from = code, 
+    values_from = mean_abundance) %>%
+  select(treatment, sort(setdiff(names(.), "treatment")))
+
+
+# transformation NA into 0 
+codes <- unique(flora_abrich$code)
+for(i in 1:length(codes)){
+  abundance_wide_treatments[[paste0(codes[i])]] <- 
+    ifelse(is.na(abundance_wide_treatments[[paste0(codes[i])]]), 0, abundance_wide_treatments[[paste0(codes[i])]])
+}
+
+
+abundance_matrix_treatment <- as.data.frame(abundance_wide_treatments)
+rownames(abundance_matrix_treatment) <- abundance_matrix_treatment$treatment
+abundance_matrix_treatment <- abundance_matrix_treatment %>% 
+  select(!treatment)
+
+
+
+
+#cwm at treatment level 
+
+cwm_treatment <- functcomp(as.matrix(traits_matrix), as.matrix(abundance_matrix_treatment))
+
+cwm_treatment$treatment <- rownames(cwm_treatment); rownames(cwm_treatment) <- NULL
+
+#cwm_treatment_db <- cwm_treatment %>% 
+#  pivot_longer(cols = c("LDMC", "leafN", "SLA", "LA", "vegetation.height", "seed.mass"),
+#               names_to = "trait_name",
+#               values_to = "cwm_value")
+
+
+
 
 cwm_c <- cwm_treatment %>% 
   filter(treatment %in% "c")
@@ -869,4 +979,4 @@ cwm_treatment <- cwm_treatment %>%
   select(!treatment)
 
 
-library(factoextra)
+
