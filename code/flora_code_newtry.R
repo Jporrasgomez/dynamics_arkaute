@@ -4,11 +4,20 @@
 
 rm(list = ls(all.names = TRUE))  #Se limpia el environment
 pacman::p_unload(pacman::p_loaded(), character.only = TRUE) #se quitan todos los paquetes (limpiamos R)
-pacman::p_load(dplyr,reshape2,tidyverse, lubridate, ggplot2, ggpubr, gridExtra, car, ggsignif) #Cargamos los paquetes que necesitamos
+pacman::p_load(dplyr,reshape2,tidyverse, lubridate, ggplot2, ggpubr, gridExtra,
+               car, ggsignif, dunn.test) #Cargamos los paquetes que necesitamos
 
 #Scripts 
 source("code/first_script.R")
 radcoeff_df <- read.csv("data/radcoeff_df.csv")
+
+{theme_set(theme_bw() +
+            theme(axis.title.x = element_blank(),
+                  legend.position = "right",
+                  panel.grid = element_blank(),
+                  strip.background = element_blank(),
+                  strip.text = element_text(face = "bold"),
+                  text = element_text(size = 11)))}
 
 # Organizing database ####
 
@@ -45,7 +54,8 @@ biomass_dynamics_cleaned <- flora_biomass_clean %>%
   mutate(mean_biomass = mean(biomass_community, na.rm = T),
          sd_biomass = sd(biomass_community, na.rm = T)) %>% 
   ungroup() %>% 
-  select(jajja)
+  select(treatment, sampling, plot, code, biomass_s, biomass_community, mean_biomass, 
+         sd_biomass)
 
 
 biomass_dynamics <- flora_biomass %>%
@@ -53,25 +63,154 @@ biomass_dynamics <- flora_biomass %>%
   group_by(treatment, sampling, date, month) %>% 
   mutate(mean_biomass = mean(biomass_community, na.rm = T),
          sd_biomass = sd(biomass_community, na.rm = T)) %>% 
-  ungroup()
+  ungroup() %>% 
+  select(treatment, sampling, plot, code, biomass_s, biomass_community, mean_biomass, 
+         sd_biomass)
 
 
 
-
-
-
-theme_set(theme_bw() +
-            theme(axis.title.x = element_blank(),
-                  legend.position = "right",
-                  panel.grid = element_blank(),
-                  strip.background = element_blank(),
-                  strip.text = element_text(face = "bold"),
-                  text = element_text(size = 11)))
 
 treatment_labs_dynamics <- c("Control", "Warming", "Perturbation", "Warming and perturbation")
 names(treatment_labs_dynamics) <- c("c","w", "p", "wp")
 
 
+# General differences between treatments
+
+#Statistical tests
+
+# RICHNES 
+# Shapiro-Wilk test to check normality. If p-value <0.01 that means the distribution is not normal
+shapiro.test(ab_rich_dynamics$richness)
+#To check the homoscedasticity (this is, the homogeinity of the variance ((how the variance varies between treatment)))
+# We use the leveneTest
+car::leveneTest(richness ~ treatment, data = ab_rich_dynamics)
+
+# Kruskal-Wallis test for richness
+kruskal.test(richness ~ treatment, data = ab_rich_dynamics)
+
+#Since there are significant differences between treatments, we have to check which treatment are different to the others
+dunn_rich <- dunn.test::dunn.test(ab_rich_dynamics$richness, ab_rich_dynamics$treatment, method = "bonferroni")
+
+#Visualization of richness
+ggplot(ab_rich_dynamics, aes(x = treatment, y = richness)) +
+  geom_boxplot(aes(fill = treatment), colour = "black", alpha = 0.5) + # Set the outline color to black
+  scale_fill_manual(values = c("c" = "#48A597", "w" = "#D94E47", "p" = "#3A7CA5", "wp" = "#6D4C7D")) +
+  ggsignif::geom_signif(
+    comparisons = list(c("c", "wp")),  # Significant comparisons
+    annotations = c("***"),  # Asterisks for significance
+    map_signif_level = TRUE,  # Automatically map significance levels if p-values provided
+    y_position = c(24),  # Adjust bracket positions
+    tip_length = 0.01,  # Length of bracket tips
+    textsize = 4  # Size of asterisks
+  )
+
+
+# ABUNDANCE
+
+shapiro.test(ab_rich_dynamics$abundance_community)
+car::leveneTest(abundance_community ~ treatment, data = ab_rich_dynamics)
+kruskal.test(abundance_community ~ treatment, data = ab_rich_dynamics)
+dunn.test(ab_rich_dynamics$abundance_community, ab_rich_dynamics$treatment, method = "bonferroni")
+
+ggplot(ab_rich_dynamics, aes(x = treatment, y = abundance_community)) +
+  geom_boxplot(aes(fill = treatment), colour = "black", alpha = 0.5) + # Set the outline color to black
+  scale_fill_manual(values = c("c" = "#48A597", "w" = "#D94E47", "p" = "#3A7CA5", "wp" = "#6D4C7D")) +
+  ggsignif::geom_signif(
+    comparisons = list(c("c","p"), c("c", "w"), c("w", "p"), c("c", "wp"), c("wp", "p"), c("wp", "w")),  # Significant comparisons
+    annotations = c("***", "*", "***", "*", "NS", "***" ), # Asterisks for significance
+    map_signif_level = TRUE,  # Automatically map significance levels if p-values provided
+    y_position = c(150, 160, 170, 180, 190, 200),  # Adjust bracket positions
+    tip_length = 0.01,  # Length of bracket tips
+    textsize = 4  # Size of asterisks
+  )
+
+
+
+# Perform the Dunn test
+dunn_results <- dunn.test(
+  ab_rich_dynamics$abundance_community, 
+  ab_rich_dynamics$treatment, 
+  method = "bonferroni", 
+  kw = TRUE
+)
+
+# Extract pairwise comparisons and p-values
+pairwise_results <- data.frame(
+  Comparison = dunn_results$comparisons,
+  P_value = dunn_results$P.adjusted
+)
+
+# Split comparisons into individual groups
+pairwise_results <- pairwise_results %>%
+  mutate(
+    Group1 = sub(" - .*", "", Comparison),
+    Group2 = sub(".* - ", "", Comparison),
+    Significance = case_when(
+      P_value <= 0.001 ~ "***",
+      P_value <= 0.01  ~ "**",
+      P_value <= 0.05  ~ "*",
+      TRUE             ~ "NS"
+    )
+  )
+
+# Prepare comparisons and annotations for geom_signif
+comparisons <- pairwise_results %>%
+  select(Group1, Group2) %>%
+  apply(1, as.list) %>%
+  lapply(unlist)  # Ensure each comparison is a character vector
+
+annotations <- pairwise_results$Significance
+
+# Create the plot
+ggplot(ab_rich_dynamics, aes(x = treatment, y = abundance_community)) +
+  geom_boxplot(aes(fill = treatment), colour = "black", alpha = 0.5) +  # Set the outline color to black
+  scale_fill_manual(values = c("c" = "#48A597", "w" = "#D94E47", "p" = "#3A7CA5", "wp" = "#6D4C7D")) +
+  ggsignif::geom_signif(
+    comparisons = comparisons,  # Use dynamically generated comparisons
+    annotations = annotations,  # Use dynamically generated annotations
+    y_position = seq(150, 150 + 10 * nrow(pairwise_results), by = 10),  # Dynamically adjust y-positions
+    tip_length = 0.01,  # Length of bracket tips
+    textsize = 4  # Size of asterisks
+  ) +
+  theme_minimal() +
+  labs(
+    title = "Abundance Community by Treatment",
+    x = "Treatment",
+    y = "Abundance Community"
+  )
+
+
+
+
+
+
+
+
+
+
+
+
+
+shapiro.test(biomass_dynamics$biomass_community)
+shapiro.test(log(biomass_dynamics$biomass_community))
+# In our case, the normality is not happening for either variables
+
+
+
+
+car::leveneTest(abundance_community ~ treatment, data = biomass_community)
+
+#If p-value < 0.01 there is no homoscedasticity
+
+
+
+
+# Kruskal-Wallis test for abundance_community
+
+
+
+
+dunn.test(biomass_dynamics$biomass_community, biomass_dynamics$treatment, method = "bonferroni")
 
 
 
@@ -344,34 +483,6 @@ ggcomb_biomass_cleaned
 
 
 
-#Statistical tests
-# Shapiro-Wilk test to check normality. If p-value <0.01 that means the distribution is not normal
-shapiro.test(ab_rich_dynamics$richness)
-shapiro.test(ab_rich_dynamics$abundance_community)
-shapiro.test(biomass_dynamics$biomass_community)
-shapiro.test(log(biomass_dynamics$biomass_community))
-# In our case, the normality is not happening for either variables
-
-
-#To check the homoscedasticity (this is, the homogeinity of the variance ((how the variance varies between treatment)))
-# We use the leveneTest
-car::leveneTest(richness ~ treatment, data = ab_rich_dynamics)
-car::leveneTest(abundance_community ~ treatment, data = ab_rich_dynamics)
-car::leveneTest(abundance_community ~ treatment, data = biomass_community)
-
-#If p-value < 0.01 there is no homoscedasticity
-
-
-# Kruskal-Wallis test for richness
-kruskal.test(richness ~ treatment, data = ab_rich_dynamics)
-
-# Kruskal-Wallis test for abundance_community
-kruskal.test(abundance_community ~ treatment, data = ab_rich_dynamics)
-
-#Since there are significant differences between treatments, we have to check which treatment are different to the others
-dunn_rich <- dunn.test(ab_rich_dynamics$richness, ab_rich_dynamics$treatment, method = "bonferroni")
-dunn.test(ab_rich_dynamics$abundance_community, ab_rich_dynamics$treatment, method = "bonferroni")
-dunn.test(biomass_dynamics$biomass_community, biomass_dynamics$treatment, method = "bonferroni")
 
 
 library(ggsignif)
