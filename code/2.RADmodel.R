@@ -9,7 +9,7 @@ source("code/first_script.R")
 #flora <- flora[which(flora$sampling == "sampling 2"),]
 
 #reshape df (species as columns, treatments as rows)
-flora_rad <- flora %>% select(plot,sampling, treatment, code, abundance)
+flora_rad <- flora_abrich %>% select(plot,sampling, treatment, code, abundance)
 
 #We've detected that "radfit" does not like decimals. THe only decimal numbers that we have in the
 #database are between 0 and 1. So we round these numbers to 1. 

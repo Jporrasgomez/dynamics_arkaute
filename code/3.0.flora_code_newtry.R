@@ -8,7 +8,7 @@ pacman::p_load(dplyr,reshape2,tidyverse, lubridate, ggplot2, ggpubr, gridExtra,
                car, ggsignif, dunn.test) #Cargamos los paquetes que necesitamos
 
 #Scripts 
-source("code/first_script.R")
+source("code/1.first_script.R")
 radcoeff_df <- read.csv("data/radcoeff_df.csv")
 
 {theme_set(theme_bw() +
@@ -54,7 +54,7 @@ biomass_dynamics_cleaned <- flora_biomass_clean %>%
   mutate(mean_biomass = mean(biomass_community, na.rm = T),
          sd_biomass = sd(biomass_community, na.rm = T)) %>% 
   ungroup() %>% 
-  select(treatment, sampling, plot, code, biomass_s, biomass_community, mean_biomass, 
+  select(treatment, sampling, date, plot, code, biomass_s, biomass_community, mean_biomass, 
          sd_biomass)
 
 
@@ -64,7 +64,7 @@ biomass_dynamics <- flora_biomass %>%
   mutate(mean_biomass = mean(biomass_community, na.rm = T),
          sd_biomass = sd(biomass_community, na.rm = T)) %>% 
   ungroup() %>% 
-  select(treatment, sampling, plot, code, biomass_s, biomass_community, mean_biomass, 
+  select(treatment, sampling, date, plot, code, biomass_s, biomass_community, mean_biomass, 
          sd_biomass)
 
 
@@ -79,13 +79,22 @@ names(treatment_labs_dynamics) <- c("c","w", "p", "wp")
 #Statistical tests
 
 # RICHNES 
+
+
+#ab_rich_dynamics <- ab_rich_dynamics %>% 
+#  filter(code %in% species_biomass_lm)
+
+
 # Shapiro-Wilk test to check normality. If p-value <0.01 that means the distribution is not normal
 shapiro.test(ab_rich_dynamics$richness)
+hist((ab_rich_dynamics$richness), breaks = 20)
 shapiro.test(log(ab_rich_dynamics$richness))
+
 
 #To check the homoscedasticity (this is, the homogeinity of the variance ((how the variance varies between treatment)))
 # We use the leveneTest
 car::leveneTest(richness ~ treatment, data = ab_rich_dynamics)
+#If p-value < 0.01 there is no homoscedasticity
 
 # Kruskal-Wallis test for richness
 kruskal.test(richness ~ treatment, data = ab_rich_dynamics)
@@ -94,15 +103,16 @@ kruskal.test(richness ~ treatment, data = ab_rich_dynamics)
 dunn_rich <- dunn.test::dunn.test(ab_rich_dynamics$richness, ab_rich_dynamics$treatment, method = "bonferroni")
 
 #Visualization of richness
+
 ggplot(ab_rich_dynamics, aes(x = treatment, y = richness)) +
   geom_boxplot(aes(fill = treatment), colour = "black", alpha = 0.5) + # Set the outline color to black
   scale_fill_manual(values = c("c" = "#48A597", "w" = "#D94E47", "p" = "#3A7CA5", "wp" = "#6D4C7D")) +
   ggsignif::geom_signif(
-    comparisons = list(c("c", "wp")),  # Significant comparisons
-    annotations = c("***"),  # Asterisks for significance
+    comparisons = list(c("c","w"), c("c", "p"), c("c", "wp"), c("wp", "w"), c("wp", "p")),  # Significant comparisons
+    annotations = c("***", "***", "NS", "***", "***"),,  # Asterisks for significance
     map_signif_level = TRUE,  # Automatically map significance levels if p-values provided
-    y_position = c(24),  # Adjust bracket positions
-    tip_length = 0,  # Length of bracket tips
+    y_position = c(24, 26, 28, 30, 32, 34),  # Adjust bracket positions
+    tip_length = 0.01,  # Length of bracket tips
     textsize = 4  # Size of asterisks
   )
 
@@ -110,16 +120,24 @@ ggplot(ab_rich_dynamics, aes(x = treatment, y = richness)) +
 # ABUNDANCE
 
 shapiro.test(ab_rich_dynamics$abundance_community)
+hist((ab_rich_dynamics$abundance_community), breaks = 50)
+shapiro.test(log(ab_rich_dynamics$abundance_community))
+hist(log(ab_rich_dynamics$abundance_community), breaks = 50)
+
+hist(sqrt(ab_rich_dynamics$abundance_community), breaks = 50)
+hist((ab_rich_dynamics$abundance_community)^(1/3), breaks = 50)
+
+
 car::leveneTest(abundance_community ~ treatment, data = ab_rich_dynamics)
 kruskal.test(abundance_community ~ treatment, data = ab_rich_dynamics)
 dunn.test(ab_rich_dynamics$abundance_community, ab_rich_dynamics$treatment, method = "bonferroni")
 
 ggplot(ab_rich_dynamics, aes(x = treatment, y = abundance_community)) +
-  geom_boxplot(aes(fill = treatment), colour = "black", alpha = 0.5) + # Set the outline color to black
+  geom_violin(aes(fill = treatment), colour = "black", alpha = 0.5) + # Set the outline color to black
   scale_fill_manual(values = c("c" = "#48A597", "w" = "#D94E47", "p" = "#3A7CA5", "wp" = "#6D4C7D")) +
   ggsignif::geom_signif(
     comparisons = list(c("c","w"), c("c", "p"), c("c", "wp"), c("wp", "w"), c("wp", "p")),  # Significant comparisons
-    annotations = c("*", "***", "***", "***", "NS"), # Asterisks for significance
+    annotations = c("NS", "***", "***", "***", "NS"), # Asterisks for significance
     map_signif_level = TRUE,  # Automatically map significance levels if p-values provided
     y_position = c(150, 160, 170, 180, 190, 200),  # Adjust bracket positions
     tip_length = 0.01,  # Length of bracket tips
@@ -131,9 +149,11 @@ ggplot(ab_rich_dynamics, aes(x = treatment, y = abundance_community)) +
 
 #BIOMASS
 hist(biomass_dynamics$biomass_community, breaks = 50)
-hist(log(biomass_dynamics$biomass_community), breaks = 50)
-
 shapiro.test(biomass_dynamics$biomass_community)
+
+hist(log(biomass_dynamics$biomass_community), breaks = 50)
+shapiro.test(log(biomass_dynamics$biomass_community))
+
 car::leveneTest(biomass_community ~ treatment, data = biomass_dynamics)
 kruskal.test(biomass_community ~ treatment, data = biomass_dynamics)
 dunn.test(biomass_dynamics$biomass_community, biomass_dynamics$treatment, method = "bonferroni")
@@ -165,7 +185,7 @@ hist(biomass_dynamics$biomass_community[which(biomass_dynamics$treatment == "wp"
 
 
 
-#If p-value < 0.01 there is no homoscedasticity
+
 
 
 
@@ -294,14 +314,14 @@ a_richness <-
 # Box plot
 b_richness <- 
   ggplot(ab_rich_dynamics, aes(x = treatment, y = richness)) +
-  geom_boxplot(aes(fill = treatment), colour = "black", alpha = 0.5) + # Set the outline color to black
+  geom_violin(aes(fill = treatment), colour = "black", alpha = 0.5) + # Set the outline color to black
   scale_fill_manual(values = c("c" = "#48A597", "w" = "#D94E47", "p" = "#3A7CA5", "wp" = "#6D4C7D")) +
   ggsignif::geom_signif(
-    comparisons = list(c("c", "wp")),  # Significant comparisons
-    annotations = c("***"),  # Asterisks for significance
+    comparisons = list(c("c","w"), c("c", "p"), c("c", "wp"), c("wp", "w"), c("wp", "p")),  # Significant comparisons
+    annotations = c("***", "***", "NS", "***", "***"),,  # Asterisks for significance
     map_signif_level = TRUE,  # Automatically map significance levels if p-values provided
-    y_position = c(24),  # Adjust bracket positions
-    tip_length = 0,  # Length of bracket tips
+    y_position = c(24, 26, 28, 30, 32, 34),  # Adjust bracket positions
+    tip_length = 0.01,  # Length of bracket tips
     textsize = 4  # Size of asterisks
   ) +
   theme(legend.position = "none",
@@ -365,7 +385,7 @@ a_biomass <-
 
 # Box plot
 b_biomass <- 
-  ggplot(biomass_dynamics, aes(y = log(biomass_community))) +
+  ggplot(biomass_dynamics, aes(y = biomass_community)) +
   geom_boxplot(aes(fill = treatment), colour = "black", alpha = 0.5) + # Set the outline color to black
   scale_fill_manual(values = c("c" = "#48A597", "w" = "#D94E47", "p" = "#3A7CA5", "wp" = "#6D4C7D")) +
   theme(legend.position = "none",

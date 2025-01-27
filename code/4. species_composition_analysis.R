@@ -19,7 +19,7 @@ theme_set(theme_bw() +
                   text = element_text(size = 11)))
 
 
-species_ab <-  summarise(group_by(flora, date, month, code, sampling, treatment, family,  genus_level, species_level),
+species_ab <-  summarise(group_by(flora_abrich, date, month, code, sampling, treatment, family,  genus_level, species_level),
                          abundance = mean(abundance_s, na.rm = T)) #mean abundance of species per treatment and sampling  
 
 
@@ -41,6 +41,7 @@ species_ab <- merge(species_ab, totals_df)
 
 species_ab$sampling <- as.numeric(species_ab$sampling) # fuction codyn::turnover needs time variable to be numeric
 species_ab$sampling <- species_ab$sampling - 1 # when transforming to numeric, it transform factor into their position. And sampling 0 goes into position 1
+
 
 sp_total_turnover <- species_ab %>% 
   codyn::turnover(time.var = "sampling",
@@ -89,7 +90,7 @@ ggturnover <-
 
 #ABUNDANCE-BASED ANALYSIS. Package "vegan" #####
 
-treats <- unique(flora$treatment)
+treats <- unique(flora_abrich$treatment)
 list1 <- list()
 gglist1 <- list()
 count = 0
@@ -271,7 +272,7 @@ ggpcoa_clouds <-
 
 #A PCoA per SAMPLING
 
-samps <- sort(unique(flora$sampling))
+samps <- sort(unique(flora_abrich$sampling))
 list2 <- list()
 gglist2 <- list()
 count = 0
@@ -280,7 +281,7 @@ for (i in 1:length(samps)){
   
   count = count + 1
   
-  list2[[count]] <-  subset(flora, sampling == samps[i]) %>%
+  list2[[count]] <-  subset(flora_abrich, sampling == samps[i]) %>%
     pivot_wider(id_cols = c(plot, treatment, sampling),
                 names_from = code,
                 values_from = abundance_s,

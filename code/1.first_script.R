@@ -309,8 +309,6 @@ species_lm<- nind_lm_data %>%
 
 
 
-
-
 species_lm_codes <- unique(species_lm$code)
 
 nind_lm_species <- nind_lm_data %>% 
@@ -361,13 +359,13 @@ flora_biomass <- bind_rows(flora_biomass_oneind, flora_biomass_lm)
 
 # Temporal way of removing outliers
 
-par(mfrow = c(1,2))
-boxplot(flora_biomass$biomass_s, main = "biomass_s")
-hist(flora_biomass$biomass_s, breaks = 50, main = "biomass_s")
-
-#With log transformation
-boxplot(log(flora_biomass$biomass_s), main = "log(biomass_s)")
-hist(log(flora_biomass$biomass_s), breaks = 50, main = "log(biomass_s)")
+#par(mfrow = c(1,2))
+#boxplot(flora_biomass$biomass_s, main = "biomass_s")
+#hist(flora_biomass$biomass_s, breaks = 50, main = "biomass_s")
+#
+##With log transformation
+#boxplot(log(flora_biomass$biomass_s), main = "log(biomass_s)")
+#hist(log(flora_biomass$biomass_s), breaks = 50, main = "log(biomass_s)")
 
 
 
@@ -383,12 +381,12 @@ flora_biomass_clean <- flora_biomass %>%
 # View the cleaned data
 
 # Without ouliers 
-boxplot(flora_biomass_clean$biomass_s, main = "Without ouliers")
-hist(flora_biomass_clean$biomass_s, breaks = 50, main = "Without outliers")
-
-# Without ouliers + logtrasnform
-boxplot(log(flora_biomass_clean$biomass_s), main = "No outliers (log(biomass_s))")
-hist(log(flora_biomass_clean$biomass_s), breaks = 50, main = "Without outliers (log(biomass_S))")
+#boxplot(flora_biomass_clean$biomass_s, main = "Without ouliers")
+#hist(flora_biomass_clean$biomass_s, breaks = 50, main = "Without outliers")
+#
+## Without ouliers + logtrasnform
+#boxplot(log(flora_biomass_clean$biomass_s), main = "No outliers (log(biomass_s))")
+#hist(log(flora_biomass_clean$biomass_s), breaks = 50, main = "Without outliers (log(biomass_S))")
 
 #There is almost no difference. Mark proposes to work on biomass as log(biomass) since it is the most common way of working
 # in ecology
@@ -408,12 +406,12 @@ flora_biomass_clean <- flora_biomass_clean %>%
   mutate(biomass_community =  sum(biomass_s, na.rm = TRUE)) %>%
   ungroup()
 
+species_biomass_lm <- unique(flora_biomass$code)
 
 
 
 
-
-rm(list = setdiff(ls(), c("flora_abrich", "flora_biomass", "flora_biomass_clean")))
+rm(list = setdiff(ls(), c("flora_abrich", "flora_biomass", "flora_biomass_clean", "species_biomass_lm")))
 
 
 
