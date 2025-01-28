@@ -10,7 +10,7 @@ pacman::p_load(dplyr, tidyr, tidyverse, ggplot2, BIEN, ape, maps, sf, rtry, ggre
 
 #Outliers of TRAITS"
 
-source("code/first_script.R")  
+source("code/1.first_script.R")  
 traits <- read.csv('data/traits/all.indi.used.csv')
 
 traits <- traits %>%
@@ -332,6 +332,7 @@ cwm_dynamics$sampling <- sapply(strsplit(cwm_dynamics$com, "/"), function(x) x[1
 cwm_dynamics$treatment <- sapply(strsplit(cwm_dynamics$com, "/"), function(x) x[2])
 cwm_dynamics$plot <- sapply(strsplit(cwm_dynamics$com, "/"), function(x) x[3])
 
+library(factoextra)
 
 cwm_alltreatments <- cwm_dynamics %>% 
   select(-treatment, - sampling, -plot, -com, -vegetation.height)
@@ -387,7 +388,7 @@ ncol = 2, nrow = 2)
 # PCA with ggplot
 #Dividir por tratamientos la base de datos
 
-library(factoextra)
+
 
 
 cwm_c <- cwm_dynamics_pca %>% 

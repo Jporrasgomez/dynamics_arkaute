@@ -8,7 +8,7 @@
 rm(list = ls(all.names = TRUE))
 pacman::p_load(dplyr, tidyverse, DT, viridis, ggrepel, codyn, vegan, eulerr, ggplot2, ggthemes, ggpubr, ggforce )
 
-source("code/first_script.R")
+source("code/1.first_script.R")
 
 theme_set(theme_bw() +
             theme(
