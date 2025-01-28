@@ -4,16 +4,16 @@ library(vegan)
 library(ggpubr)
 
 #load database
-source("code/first_script.R")
+source("code/1.first_script.R")
 #subset df sampling (do not run if the whole database is needed)
 #flora <- flora[which(flora$sampling == "sampling 2"),]
 
 #reshape df (species as columns, treatments as rows)
-flora_rad <- flora_abrich %>% select(plot,sampling, treatment, code, abundance)
+flora_rad <- flora_abrich %>% select(plot,sampling, treatment, code, abundance_s)
 
 #We've detected that "radfit" does not like decimals. THe only decimal numbers that we have in the
 #database are between 0 and 1. So we round these numbers to 1. 
-flora_rad <- mutate(flora_rad, abundance = ifelse(abundance < 1, 1, abundance))
+flora_rad <- mutate(flora_rad, abundance = ifelse(abundance_s < 1, 1, abundance_s))
 
 
 # Which model we are going to use for the entire dataset? #########
@@ -73,8 +73,8 @@ for(i in 1:length(unique(flora_no1$sampling))){
     count <- count + 1
     subset_data <- subset(flora_no1, sampling == unique(flora_no1$sampling)[i] & plot == unique(flora_no1$plot)[j])
     subrad <- summarise(group_by(subset_data, code),
-                        abundance = round(mean(abundance), 0)) 
-    subrad <- pivot_wider(subrad, names_from = code, values_from = abundance, values_fill = 0)
+                        abundance_s = round(mean(abundance_s), 0)) 
+    subrad <- pivot_wider(subrad, names_from = code, values_from = abundance_s, values_fill = 0)
     subrad <- as.data.frame(subrad)
     rad_sub <- radfit(subrad)
     
@@ -123,8 +123,8 @@ for(i in 1:length(unique(flora_s1cw$plot))){
   count <- count + 1
   subset_data <- subset(flora_s1cw, sampling == "1" & plot == unique(flora_s1cw$plot)[i])
   subrad <- summarise(group_by(subset_data, code),
-                      abundance = round(mean(abundance), 0))
-  subrad <- pivot_wider(subrad, names_from = code, values_from = abundance, values_fill = 0)
+                      abundance_s = round(mean(abundance_s), 0))
+  subrad <- pivot_wider(subrad, names_from = code, values_from = abundance_s, values_fill = 0)
   subrad <- as.data.frame(subrad)
   rad_sub <- radfit(subrad)
   

@@ -47,14 +47,16 @@ sampling_dates$day <- day(sampling_dates$date)
 sampling_dates$year <- year(sampling_dates$date)
 
 sampling_dates <- sampling_dates %>% 
-  select(sampling, date, day, month, year, one_month_window, omw_date)
+  select(sampling, sampling_date, date, day, month, year, one_month_window, omw_date)
 
 sampling_dates <- sampling_dates %>%
   mutate(across(where(is.character), as.factor))
 
 flora_raw <- right_join(flora_raw, sampling_dates, by = join_by(sampling))
 
-flora_rare <- flora_raw %>% select(sampling, one_month_window, omw_date, plot, treatment, code, abundance_s, height, Cb, Db, Cm, Dm, date, month)
+flora_rare <- flora_raw %>% select(sampling, sampling_date, one_month_window,
+                                   omw_date, plot, treatment, code, abundance_s,
+                                   height, Cb, Db, Cm, Dm, date, month)
 
 
 
@@ -96,7 +98,8 @@ nrow({checkingNA <- flora_rare %>%
 
 taxongroups <- flora_rare %>%
   filter(code %in% c("poaceae", "asteraceae", "tosp", "orchidaceae"))%>%
-  group_by(code, sampling, one_month_window, omw_date, plot, treatment, date, month, species, family, genus_level, species_level) %>%
+  group_by(code, sampling, sampling_date, one_month_window, omw_date, plot, 
+           treatment, date, month, species, family, genus_level, species_level) %>%
   summarize(abundance_s = sum(unique(abundance_s), na.rm = T), #here we sum abundances 
             height = mean(height, na.rm = T),
             Ah = mean(Ah, na.rm = T),
@@ -104,7 +107,8 @@ taxongroups <- flora_rare %>%
 
 
 species <- anti_join(flora_rare, taxongroups, by = "code") %>%
-  group_by(code, sampling, one_month_window, omw_date, plot, treatment, date, month, species, family, genus_level, species_level) %>%
+  group_by(code, sampling, sampling_date, one_month_window, omw_date, plot,
+           treatment, date, month, species, family, genus_level, species_level) %>%
   summarize(abundance_s = mean(abundance_s, na.rm = T), #here we mean abundances (fake mean, species in the same plot and sampling have the same abundance info)
             height = mean(height, na.rm = T),
             Ah = mean(Ah, na.rm = T),

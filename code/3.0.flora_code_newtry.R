@@ -25,7 +25,7 @@ radcoeff_df <- read.csv("data/radcoeff_df.csv")
 
 
 
-ab_rich_dynamics <- merge(flora_abrich, radcoeff_df)   ## Algo pasa aquí. Se reduce la base de datos. REVISAR!
+ab_rich_dynamics <- merge(flora_abrich, radcoeff_df)   
 
 ab_rich_dynamics <- ab_rich_dynamics %>% 
   group_by(treatment, sampling, date, month) %>% 
@@ -40,7 +40,7 @@ ab_rich_dynamics <- ab_rich_dynamics %>%
          mean_sigma_log = mean(sigma_log),
          sd_sigma_log = sd(sigma_log)) %>% 
   ungroup() %>% 
-  select(plot, sampling, treatment, date, code, richness, mean_richness, sd_richness, 
+  select(plot, sampling, sampling_date, treatment, date, code, richness, mean_richness, sd_richness, 
          abundance_community, mean_abundance, sd_abundance, Y_zipf, mean_Y_zipf, sd_Y_zipf,
          mu_log, mean_mu_log, sd_mu_log, sigma_log, mean_sigma_log, sd_sigma_log)
 
@@ -54,7 +54,7 @@ biomass_dynamics_cleaned <- flora_biomass_clean %>%
   mutate(mean_biomass = mean(biomass_community, na.rm = T),
          sd_biomass = sd(biomass_community, na.rm = T)) %>% 
   ungroup() %>% 
-  select(treatment, sampling, date, plot, code, biomass_s, biomass_community, mean_biomass, 
+  select(treatment, sampling, sampling_date, date, plot, code, biomass_s, biomass_community, mean_biomass, 
          sd_biomass)
 
 
@@ -64,14 +64,13 @@ biomass_dynamics <- flora_biomass %>%
   mutate(mean_biomass = mean(biomass_community, na.rm = T),
          sd_biomass = sd(biomass_community, na.rm = T)) %>% 
   ungroup() %>% 
-  select(treatment, sampling, date, plot, code, biomass_s, biomass_community, mean_biomass, 
+  select(treatment, sampling, sampling_date, date, plot, code, biomass_s, biomass_community, mean_biomass, 
          sd_biomass)
 
 
 
 
-treatment_labs_dynamics <- c("Control", "Warming", "Perturbation", "Warming and perturbation")
-names(treatment_labs_dynamics) <- c("c","w", "p", "wp")
+
 
 
 # General differences between treatments
@@ -154,16 +153,16 @@ shapiro.test(biomass_dynamics$biomass_community)
 hist(log(biomass_dynamics$biomass_community), breaks = 50)
 shapiro.test(log(biomass_dynamics$biomass_community))
 
-car::leveneTest(biomass_community ~ treatment, data = biomass_dynamics)
-kruskal.test(biomass_community ~ treatment, data = biomass_dynamics)
-dunn.test(biomass_dynamics$biomass_community, biomass_dynamics$treatment, method = "bonferroni")
+car::leveneTest(log(biomass_community) ~ treatment, data = biomass_dynamics)
+kruskal.test(log(biomass_community) ~ treatment, data = biomass_dynamics)
+dunn.test(log(biomass_dynamics$biomass_community), biomass_dynamics$treatment, method = "bonferroni")
 
 ggplot(biomass_dynamics, aes(x = treatment, y = log(biomass_community))) +
   geom_boxplot(aes(fill = treatment), colour = "black", alpha = 0.5) + # Set the outline color to black
   scale_fill_manual(values = c("c" = "#48A597", "w" = "#D94E47", "p" = "#3A7CA5", "wp" = "#6D4C7D")) +
   ggsignif::geom_signif(
     comparisons = list(c("c","w"), c("c", "p"), c("c", "wp"), c("wp", "w"), c("wp", "p")),  # Significant comparisons
-    annotations = c("NS", "***", "***","***", "***"), # Asterisks for significance
+    annotations = c("NS", "***", "***","***", "**"), # Asterisks for significance
     map_signif_level = TRUE,  # Automatically map significance levels if p-values provided
     y_position = c(9, 10, 11, 12, 13, 14),  # Adjust bracket positions
     tip_length = 0.01,  # Length of bracket tips
@@ -176,24 +175,6 @@ hist(biomass_dynamics$biomass_community[which(biomass_dynamics$treatment == "c")
 hist(biomass_dynamics$biomass_community[which(biomass_dynamics$treatment == "w")], breaks = 25, main = "w")
 hist(biomass_dynamics$biomass_community[which(biomass_dynamics$treatment == "p")], breaks = 25, main = "p")
 hist(biomass_dynamics$biomass_community[which(biomass_dynamics$treatment == "wp")], breaks = 25, main = "wp")
-
-
-
-# In our case, the normality is not happening for either variables
-
-
-
-
-
-
-
-
-
-
-# Kruskal-Wallis test for abundance_community
-
-
-
 
 
 
@@ -385,13 +366,21 @@ a_biomass <-
 
 # Box plot
 b_biomass <- 
-  ggplot(biomass_dynamics, aes(y = biomass_community)) +
+  ggplot(biomass_dynamics, aes(y = log(biomass_community),x = treatment)) +
   geom_boxplot(aes(fill = treatment), colour = "black", alpha = 0.5) + # Set the outline color to black
   scale_fill_manual(values = c("c" = "#48A597", "w" = "#D94E47", "p" = "#3A7CA5", "wp" = "#6D4C7D")) +
   theme(legend.position = "none",
         axis.text.x = element_blank(), axis.text.y = element_blank(),
         panel.background = element_rect(fill = NA, colour = NA), # Transparent background
-        plot.background = element_rect(fill = NA, colour = NA)) + # Transparent plot background+ 
+        plot.background = element_rect(fill = NA, colour = NA)) +
+  ggsignif::geom_signif(
+    comparisons = list(c("c","w"), c("c", "p"), c("c", "wp"), c("wp", "w"), c("wp", "p")),  # Significant comparisons
+    annotations = c("NS", "***", "***","***", "**"), # Asterisks for significance
+    map_signif_level = TRUE,  # Automatically map significance levels if p-values provided
+    y_position = c(9, 10, 11, 12, 13, 14),  # Adjust bracket positions
+    tip_length = 0.01,  # Length of bracket tips
+    textsize = 4  # Size of asterisks
+  ) +# Transparent plot background+ 
   labs(y = NULL)
 
 
@@ -480,6 +469,141 @@ ggcomb_biomass_cleaned
 
 # Log response ratio to see differences dynamically 
 
+# Response ratio ####
+
+lrr <- ab_rich_dynamics 
+
+
+
+#Sampling 2 has several plots with very few species, which generates problems at RADs
+# At plot 15, we have only 1 species so there is no RAD
+# At plot 13, we have 2 species, so the RAD values are not reliable. Im deleting this data by hand: 
+lrr$Y_zipf[lrr$sampling == "2" & lrr$plot == "13"] <- NA
+lrr$mu_log[lrr$sampling == "2" & lrr$plot == "13"] <- NA
+lrr$sigma_log[lrr$sampling == "2" & lrr$plot == "13"] <- NA
+
+
+samps <- unique(lrr$sampling)
+
+for (i in 1:length(samps)) {
+  subset_c <- subset(lrr, sampling == samps[i] & treatment == "c")
+  lrr$ref_c_mean_richness[lrr$sampling == samps[i]] <- unique(subset_c$mean_richness)
+  lrr$ref_c_mean_abundance[lrr$sampling == samps[i]] <- unique(subset_c$mean_abundance)
+  lrr$ref_c_mean_Y_zipf[lrr$sampling == samps[i]] <- unique(subset_c$mean_Y_zipf)
+  lrr$ref_c_mean_mu_log[lrr$sampling == samps[i]] <- unique(subset_c$mean_mu_log)
+  lrr$ref_c_mean_sigma_log[lrr$sampling == samps[i]] <- unique(subset_c$mean_sigma_log)
+  
+  lrr$ref_c_sd_richness[lrr$sampling == samps[i]] <- unique(subset_c$sd_richness)
+  lrr$ref_c_sd_abundance[lrr$sampling == samps[i]] <- unique(subset_c$sd_abundance)
+  lrr$ref_c_sd_Y_zipf[lrr$sampling == samps[i]] <- unique(subset_c$sd_Y_zipf)
+  lrr$ref_c_sd_mu_log[lrr$sampling == samps[i]] <- unique(subset_c$sd_mu_log)
+  lrr$ref_c_sd_sigma_log[lrr$sampling == samps[i]] <- unique(subset_c$sd_sigma_log)
+  
+  
+  subset_w <- subset(lrr, sampling == samps[i] & treatment == "w")
+  lrr$ref_w_mean_richness[lrr$sampling == samps[i]] <- unique(subset_c$mean_richness)
+  lrr$ref_w_mean_abundance[lrr$sampling == samps[i]] <- unique(subset_c$mean_abundance)
+  lrr$ref_w_mean_Y_zipf[lrr$sampling == samps[i]] <- unique(subset_c$mean_Y_zipf)
+  lrr$ref_w_mean_mu_log[lrr$sampling == samps[i]] <- unique(subset_c$mean_mu_log)
+  lrr$ref_w_mean_sigma_log[lrr$sampling == samps[i]] <- unique(subset_c$mean_sigma_log)
+  
+  lrr$ref_w_sd_richness[lrr$sampling == samps[i]] <- unique(subset_c$sd_richness)
+  lrr$ref_w_sd_abundance[lrr$sampling == samps[i]] <- unique(subset_c$sd_abundance)
+  lrr$ref_w_sd_Y_zipf[lrr$sampling == samps[i]] <- unique(subset_c$sd_Y_zipf)
+  lrr$ref_w_sd_mu_log[lrr$sampling == samps[i]] <- unique(subset_c$sd_mu_log)
+  lrr$ref_w_sd_sigma_log[lrr$sampling == samps[i]] <- unique(subset_c$sd_sigma_log)
+  
+  
+  subset_p <- subset(lrr, sampling == samps[i] & treatment == "p")
+  lrr$ref_p_mean_richness[lrr$sampling == samps[i]] <- unique(subset_c$mean_richness)
+  lrr$ref_p_mean_abundance[lrr$sampling == samps[i]] <- unique(subset_c$mean_abundance)
+  lrr$ref_p_mean_Y_zipf[lrr$sampling == samps[i]] <- unique(subset_c$mean_Y_zipf)
+  lrr$ref_p_mean_mu_log[lrr$sampling == samps[i]] <- unique(subset_c$mean_mu_log)
+  lrr$ref_p_mean_sigma_log[lrr$sampling == samps[i]] <- unique(subset_c$mean_sigma_log)
+  
+  lrr$ref_p_sd_richness[lrr$sampling == samps[i]] <- unique(subset_c$sd_richness)
+  lrr$ref_p_sd_abundance[lrr$sampling == samps[i]] <- unique(subset_c$sd_abundance)
+  lrr$ref_p_sd_Y_zipf[lrr$sampling == samps[i]] <- unique(subset_c$sd_Y_zipf)
+  lrr$ref_p_sd_mu_log[lrr$sampling == samps[i]] <- unique(subset_c$sd_mu_log)
+  lrr$ref_p_sd_sigma_log[lrr$sampling == samps[i]] <- unique(subset_c$sd_sigma_log)
+  
+  
+  
+  rm(subset_c)
+  rm(subset_w)
+  rm(subset_p)
+  
+}
+
+lrr <- lrr %>%
+  mutate(
+    across(
+      .cols = c(mean_richness, mean_abundance, mean_Y_zipf, mean_mu_log, mean_sigma_log),
+      .fns = ~ log(. / get(paste0("ref_c_", cur_column()))),
+      .names = "lrr_{.col}_c"
+    )
+  )
+
+lrr$lrr_richness_c <- log(lrr$mean_richness/lrr$ref_c_mean_richness)
+lrr$lrr_abundance_c <- log(lrr$mean_abundance/lrr$ref_c_mean_abundance)
+lrr$lrr_Y_zipf_c <- log(lrr$mean_Y_zipf/lrr$ref_c_mean_Y_zipf)
+lrr$lrr_mu_log_c <- log(lrr$mean_mu_log/lrr$ref_c_mean_mu_log)
+lrr$lrr_sigma_log_c <- log(lrr$mean_sigma_log/lrr$ref_c_mean_sigma_log)
+
+
+# Calculating the varianc of the LRR. 4 is the population number. In our case is  
+# 4, since we have 4 replicates to compare. I should check if all samplings contain 4 replicates
+# This formula was gotten from Lajeunesse 2015, but it is originally from Hunter and Schmidt 1990. 
+lrr$var_lrr_richness_c <-
+  ((lrr$sd_richness)^2/(4*(lrr$mean_richness)^2)) + ((lrr$ref_c_sd_richness)^2/(4*(lrr$ref_c_mean_richness)^2))
+lrr$var_lrr_abundance_c <-
+  ((lrr$sd_abundance)^2/(4*(lrr$mean_abundance)^2)) + ((lrr$ref_c_sd_abundance)^2/(4*(lrr$ref_c_mean_abundance)^2))
+lrr$var_lrr_Y_zipf_c <-
+  ((lrr$sd_Y_zipf)^2/(4*(lrr$mean_Y_zipf)^2)) + ((lrr$ref_c_sd_Y_zipf)^2/(4*(lrr$ref_c_mean_Y_zipf)^2))
+lrr$var_lrr_mu_log_c <-
+  ((lrr$sd_mu_log)^2/(4*(lrr$mean_mu_log)^2)) + ((lrr$ref_c_sd_mu_log)^2/(4*(lrr$ref_c_mean_mu_log)^2))
+lrr$var_lrr_sigma_log_c <-
+  ((lrr$sd_sigma_log)^2/(4*(lrr$mean_sigma_log)^2)) + ((lrr$ref_c_sd_sigma_log)^2/(4*(lrr$ref_c_mean_sigma_log)^2))
+  
+  
+treatment_labs_dynamics <- c("Warming", "Perturbation", "Warming and perturbation")
+names(treatment_labs_dynamics) <- c("w", "p", "wp")
+
+
+ggplot(lrr,
+       aes(x = date, y = lrr_richness_c)) + 
+  facet_wrap(~ treatment, labeller = labeller(treatment = treatment_labs_dynamics, nrow = 1, ncol = 3))+
+  
+  geom_smooth(
+    se = TRUE, aes(color = treatment, fill = treatment),
+    method = "loess", span = 0.6, alpha = 0.2 
+  ) +
+  
+  geom_point(aes(color = treatment),
+             alpha = 0.5) +
+  
+  geom_errorbar(aes(ymax = lrr_richness_c + var_lrr_richness_c, ymin = lrr_richness_c - var_lrr_richness_c, color = treatment),
+                , alpha = 0.2) + 
+  
+  
+  scale_colour_manual(values = c("c" = "#48A597", "w" = "#D94E47", "p" = "#3A7CA5", "wp" = "#6D4C7D")) +
+  
+  scale_fill_manual(values = c("c" = "#48A597", "w" = "#D94E47", "p" = "#3A7CA5", "wp" = "#6D4C7D")) +
+  
+  scale_x_date(
+    date_breaks = "4 weeks", # Specify the interval (e.g., every 2 weeks)
+    date_labels = "%d-%b-%y" # Customize the date format (e.g., "04-May-23")
+  ) +
+  
+  geom_vline(xintercept = as.Date("2023-05-11"), linetype = "dashed", color = "gray40") +
+  geom_hline(yintercept = 0, linetype = "dashed", color = "gray40") +
+  
+  
+  theme(axis.text.x = element_text(angle = 45, hjust = 1), legend.position = "none",
+  ) +
+  scale_y_log10() +
+  
+  labs(y = "LRR (Richness)", x = NULL) #
 
 
 
