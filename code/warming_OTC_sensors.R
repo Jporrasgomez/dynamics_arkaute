@@ -35,7 +35,6 @@ library(readr)
 library(ggpubr)
 library(tidyverse)
 library(gridExtra)
-source("code/tools/basicFun.R")
 
 
 
@@ -43,7 +42,7 @@ source("code/tools/basicFun.R")
 # Organising sensors/plots names --------------
 plots <- read.csv("data/plots.csv")
 #IMPORTANT! Change the value of the DATE everytime a new set of data is opened.It depends on the day you took the data from the sensors. 
-plots$file_code <- paste0("data_", plots$sensor_code, "_2024_04_30_0.csv")
+plots$file_code <- paste0("data_", plots$sensor_code, "_2024_10_24_0.csv")
 
 
 
@@ -62,9 +61,11 @@ for (i in seq_along(file_code_values)) {
                      trim_ws = TRUE)
   data$ttreat <- ttreat_value  # Add a new variable "ttreat" to the data with ttreat_value
   plots_list[[new_name]] <- data
+  
+  rm(data)
 }
 
-rm(data)
+
 
 #View(plots_list[[1]])
 
@@ -85,6 +86,9 @@ for (i in seq_along(plots_list)) {
   item$month <- month(item$date, label = TRUE)
   item$day <- day(item$date)
   item$time <- format(as.POSIXct(item$datetimenew), "%H:%M")
+  item$hour <- as.numeric(format(as.POSIXct(item$datetimenew), "%H"))
+  
+  
   
   item <- subset(item, date >= "2023/01/01")
   
@@ -94,9 +98,12 @@ for (i in seq_along(plots_list)) {
   item$plot_type <- gsub("[0-9]", "", item$plot)
   
   plots_list[[i]] <- item
+  
+  rm(item)
+  
 }
 
-rm(item)
+
 
 #View(plots_list[[2]])
 #View(plots_list[[4]])
@@ -164,7 +171,11 @@ all_plots <- merge(controls, ws, all = TRUE)
 all_plots$ttreat <- as.factor(all_plots$ttreat)
 
 
-all_plots_sum <- subset(all_plots, month %in% c("Apr", "May", "Jun", "Jul", "Aug", "Sep"))
+all_plots_growth <- subset(all_plots, month %in% c("Apr", "May", "Jun", "Jul", "Aug", "Sep"))
+
+all_plots_growth_daylight <- all_plots %>% 
+  filter(month %in% c("Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct")) %>% 
+  filter(hour %in% c(8:20))
 
 # Visualization individual plots------------
 
@@ -286,13 +297,21 @@ allplots_temp_24h_diff <-  summarise(group_by(all_plots, time, ttreat),
                                t_ground_mean = round(mean(T_ground, na.rm = T), 2),
                                t_ground_sd = round(sd(T_ground, na.rm = T), 2))
 
-allplots_temp_24h_diff_sum <-  summarise(group_by(all_plots_sum, time, ttreat),
+allplots_temp_24h_diff_growth <-  summarise(group_by(all_plots_growth, time, ttreat),
                                      t_top_mean = round(mean(T_top, na.rm = T), 2),
                                      t_top_sd = round(sd(T_top, na.rm = T), 2), 
                                      t_bottom_mean = round(mean (T_bottom, na.rm = T), 2),
                                      t_bottom_sd = round(sd(T_bottom, na.rm = T), 2), 
                                      t_ground_mean = round(mean(T_ground, na.rm = T), 2),
                                      t_ground_sd = round(sd(T_ground, na.rm = T), 2))
+
+allplots_temp_24h_diff_growth_daylight <-  summarise(group_by(all_plots_growth_daylight, time, ttreat),
+                                            t_top_mean = round(mean(T_top, na.rm = T), 2),
+                                            t_top_sd = round(sd(T_top, na.rm = T), 2), 
+                                            t_bottom_mean = round(mean (T_bottom, na.rm = T), 2),
+                                            t_bottom_sd = round(sd(T_bottom, na.rm = T), 2), 
+                                            t_ground_mean = round(mean(T_ground, na.rm = T), 2),
+                                            t_ground_sd = round(sd(T_ground, na.rm = T), 2))
 
 
 allplots_temp_24h_diff <- allplots_temp_24h_diff %>%
@@ -301,7 +320,13 @@ allplots_temp_24h_diff <- allplots_temp_24h_diff %>%
               names_prefix = "") %>%
   select(time, starts_with("t_"))
 
-allplots_temp_24h_diff_sum <- allplots_temp_24h_diff_sum %>%
+allplots_temp_24h_diff_growth <- allplots_temp_24h_diff_growth %>%
+  pivot_wider(names_from = ttreat,
+              values_from = c(t_top_mean, t_top_sd, t_bottom_mean, t_bottom_sd, t_ground_mean, t_ground_sd),
+              names_prefix = "") %>%
+  select(time, starts_with("t_"))
+
+allplots_temp_24h_diff_growth_daylight <- allplots_temp_24h_diff_growth_daylight %>%
   pivot_wider(names_from = ttreat,
               values_from = c(t_top_mean, t_top_sd, t_bottom_mean, t_bottom_sd, t_ground_mean, t_ground_sd),
               names_prefix = "") %>%
@@ -319,13 +344,21 @@ allplots_temp_24h_diff <- summarise(group_by(allplots_temp_24h_diff, time),
                                 t_ground_mean_diff = t_ground_mean_w - t_ground_mean_c,
                                 t_ground_sd_diff = sqrt((t_ground_sd_w^2 / n) + (t_ground_sd_c^2 / n)))
 
-allplots_temp_24h_diff_sum <- summarise(group_by(allplots_temp_24h_diff_sum, time),
+allplots_temp_24h_diff_growth <- summarise(group_by(allplots_temp_24h_diff_growth, time),
                                     t_top_mean_diff = t_top_mean_w - t_top_mean_c,
                                     t_top_sd_diff = sqrt((t_top_sd_w^2 / n) + (t_top_sd_c^2 / n)),  ## formula para calcular diferencias entre sd. 
                                     t_bottom_mean_diff = t_bottom_mean_w - t_bottom_mean_c,
                                     t_bottom_sd_diff = sqrt((t_bottom_sd_w^2 / n) + (t_bottom_sd_c^2 / n)),
                                     t_ground_mean_diff = t_ground_mean_w - t_ground_mean_c,
                                     t_ground_sd_diff = sqrt((t_ground_sd_w^2 / n) + (t_ground_sd_c^2 / n)))
+
+allplots_temp_24h_diff_growth_daylight <- summarise(group_by(allplots_temp_24h_diff_growth_daylight, time),
+                                           t_top_mean_diff = t_top_mean_w - t_top_mean_c,
+                                           t_top_sd_diff = sqrt((t_top_sd_w^2 / n) + (t_top_sd_c^2 / n)),  ## formula para calcular diferencias entre sd. 
+                                           t_bottom_mean_diff = t_bottom_mean_w - t_bottom_mean_c,
+                                           t_bottom_sd_diff = sqrt((t_bottom_sd_w^2 / n) + (t_bottom_sd_c^2 / n)),
+                                           t_ground_mean_diff = t_ground_mean_w - t_ground_mean_c,
+                                           t_ground_sd_diff = sqrt((t_ground_sd_w^2 / n) + (t_ground_sd_c^2 / n)))
 
 #allplots_temp_24h_diff <- allplots_temp_24h_diff %>% slice(1:(nrow(allplots_temp_24h_diff) - 1))
 
@@ -338,14 +371,50 @@ sd(allplots_temp_24h_diff$t_bottom_mean_diff, na.rm = T)
 mean(allplots_temp_24h_diff$t_ground_mean_diff, na.rm = T)
 sd(allplots_temp_24h_diff$t_ground_mean_diff, na.rm = T)
 
-mean(allplots_temp_24h_diff_sum$t_top_mean_diff, na.rm = T)
-sd(allplots_temp_24h_diff_sum$t_top_mean_diff, na.rm = T)
+mean(allplots_temp_24h_diff_growth$t_top_mean_diff, na.rm = T)
+sd(allplots_temp_24h_diff_growth$t_top_mean_diff, na.rm = T)
 
-mean(allplots_temp_24h_diff_sum$t_bottom_mean_diff, na.rm = T)
-sd(allplots_temp_24h_diff_sum$t_bottom_mean_diff, na.rm = T)
+mean(allplots_temp_24h_diff_growth$t_bottom_mean_diff, na.rm = T)
+sd(allplots_temp_24h_diff_growth$t_bottom_mean_diff, na.rm = T)
 
-mean(allplots_temp_24h_diff_sum$t_ground_mean_diff, na.rm = T)
-sd(allplots_temp_24h_diff_sum$t_ground_mean_diff, na.rm = T)
+mean(allplots_temp_24h_diff_growth$t_ground_mean_diff, na.rm = T)
+sd(allplots_temp_24h_diff_growth$t_ground_mean_diff, na.rm = T)
+
+
+mean(allplots_temp_24h_diff_growth_daylight$t_top_mean_diff, na.rm = T)
+sd(allplots_temp_24h_diff_growth_daylight$t_top_mean_diff, na.rm = T)
+
+mean(allplots_temp_24h_diff_growth_daylight$t_bottom_mean_diff, na.rm = T)
+sd(allplots_temp_24h_diff_growth_daylight$t_bottom_mean_diff, na.rm = T)
+
+mean(allplots_temp_24h_diff_growth_daylight$t_ground_mean_diff, na.rm = T)
+sd(allplots_temp_24h_diff_growth_daylight$t_ground_mean_diff, na.rm = T)
+
+
+
+
+ggplot(all_plots_growth_daylight, aes( x = ttreat, y = T_top, fill = ttreat)) +
+  geom_boxplot() +
+  #scale_color_manual(values = c("c" = "#48A597", "w" = "#D94E47")) +
+  scale_fill_manual(values = c("c" = "#48A597", "w" = "#D94E47")) +
+  theme_minimal()
+
+hist(all_plots_growth_daylight$T_top, breaks = 100)
+hist(all_plots_growth_daylight$T_top[which(all_plots_growth_daylight$ttreat == "c")], breaks = 100)
+hist(all_plots_growth_daylight$T_top[which(all_plots_growth_daylight$ttreat == "w")], breaks = 100)
+#shapiro.test(all_plots_growth_daylight$T_top)
+library(nortest)
+ad.test(all_plots_growth_daylight$T_top[which(all_plots_growth_daylight$ttreat == "w")])
+ad.test(all_plots_growth_daylight$T_top[which(all_plots_growth_daylight$ttreat == "c")])
+
+anova_result <- aov(T_top ~ ttreat, data = all_plots_growth_daylight)
+summary(anova_result)
+TukeyHSD(anova_result)
+
+
+kruskal.test(T_top ~ ttreat, data = all_plots_growth_daylight)
+dunn.test::dunn.test(all_plots_growth_daylight$T_top, all_plots_growth_daylight$ttreat, method = "bonferroni")
+
 
 
 #gt24h_diff <- 
@@ -362,7 +431,7 @@ ggplot(allplots_temp_24h_diff) +
   geom_line(aes(x = time, y = t_ground_mean_diff + t_ground_sd_diff, group = 1, color = "Ground"), linetype = "dashed") +
   geom_line(aes(x = time, y = t_ground_mean_diff - t_ground_sd_diff, group = 1, color = "Ground"), linetype = "dashed")+
   
-  labs(x = "24 hours (January 2023 - May 2024)", y = "Temperature difference (warming-control) ºC") +
+  labs(x = "24 hours (January 2023 - October 2024)", y = "Temperature difference (warming-control) ºC") +
   geom_hline(yintercept = 0, linetype = "dotted", color = "black") +
   scale_x_discrete(breaks = allplots_temp_24h_diff$time[c(1, seq(24, length(allplots_temp_24h_diff$time), length.out = 5))]) +
   scale_color_manual(values = c("Top" = "red2", "Bottom" = "blue3", "Ground" = "green3"),
@@ -370,7 +439,7 @@ ggplot(allplots_temp_24h_diff) +
   theme_bw()+
   theme(legend.position = "NULL")
 
-ggplot(allplots_temp_24h_diff_sum) +
+ggplot(allplots_temp_24h_diff_growth) +
   geom_line(aes(x = time, y = t_top_mean_diff, group = 1, color = "Top"), linetype = "solid", linewidth = 1) +
   geom_line(aes(x = time, y = t_top_mean_diff + t_top_sd_diff, group = 1, color = "Top"), linetype = "dashed") +
   geom_line(aes(x = time, y = t_top_mean_diff - t_top_sd_diff, group = 1, color = "Top"), linetype = "dashed")+
@@ -383,7 +452,7 @@ ggplot(allplots_temp_24h_diff_sum) +
   geom_line(aes(x = time, y = t_ground_mean_diff + t_ground_sd_diff, group = 1, color = "Ground"), linetype = "dashed") +
   geom_line(aes(x = time, y = t_ground_mean_diff - t_ground_sd_diff, group = 1, color = "Ground"), linetype = "dashed")+
   
-  labs(x = "24 hours (April-Sept 2023 & April-May 2024)", y = "Temperature difference (warming-control) ºC") +
+  labs(x = "24 hours (Growing seasons (Apr-Sep) 2023 and 2024 )", y = "Temperature difference (warming-control) ºC") +
   geom_hline(yintercept = 0, linetype = "dotted", color = "black") +
   scale_x_discrete(breaks = allplots_temp_24h_diff$time[c(1, seq(24, length(allplots_temp_24h_diff$time), length.out = 5))]) +
   scale_color_manual(values = c("Top" = "red2", "Bottom" = "blue3", "Ground" = "green3"),
@@ -392,24 +461,45 @@ ggplot(allplots_temp_24h_diff_sum) +
   theme(legend.position = "NULL")
 
 
+ggplot(allplots_temp_24h_diff_growth_daylight) +
+  geom_line(aes(x = time, y = t_top_mean_diff, group = 1, color = "Top"), linetype = "solid", linewidth = 1) +
+  geom_line(aes(x = time, y = t_top_mean_diff + t_top_sd_diff, group = 1, color = "Top"), linetype = "dashed") +
+  geom_line(aes(x = time, y = t_top_mean_diff - t_top_sd_diff, group = 1, color = "Top"), linetype = "dashed")+
+  
+  geom_line(aes(x = time, y = t_bottom_mean_diff, group = 1, color = "Bottom"), linetype = "solid", linewidth = 1) +
+  geom_line(aes(x = time, y = t_bottom_mean_diff + t_bottom_sd_diff, group = 1, color = "Bottom"), linetype = "dashed") +
+  geom_line(aes(x = time, y = t_bottom_mean_diff - t_bottom_sd_diff, group = 1, color = "Bottom"), linetype = "dashed")+
+  
+  geom_line(aes(x = time, y = t_ground_mean_diff, group = 1, color = "Ground"), linetype = "solid", linewidth = 1) +
+  geom_line(aes(x = time, y = t_ground_mean_diff + t_ground_sd_diff, group = 1, color = "Ground"), linetype = "dashed") +
+  geom_line(aes(x = time, y = t_ground_mean_diff - t_ground_sd_diff, group = 1, color = "Ground"), linetype = "dashed")+
+  
+  labs(x = "Daylight hours (Growing seasons (Apr-Sep) 2023 and 2024 )", y = "Temperature difference (warming-control) ºC") +
+  geom_hline(yintercept = 0, linetype = "dotted", color = "black") +
+  scale_x_discrete(breaks = allplots_temp_24h_diff$time[c(1, seq(24, length(allplots_temp_24h_diff$time), length.out = 5))]) +
+  scale_color_manual(values = c("Top" = "red2", "Bottom" = "blue3", "Ground" = "green3"),
+                     name = "Temperature type") +
+  theme_bw()+
+  theme(legend.position = "NULL")
+
 
 ggt24h_diff_justtop <- ggplot(allplots_temp_24h_diff) +
   geom_line(aes(x = time, y = t_top_mean_diff, group = 1, color = "red2"), linetype = "solid", linewidth = 1) +
   geom_line(aes(x = time, y = t_top_mean_diff + t_top_sd_diff, group = 1, color = "red2"), linetype = "dashed") +
   geom_line(aes(x = time, y = t_top_mean_diff - t_top_sd_diff, group = 1, color = "red2"), linetype = "dashed")+
   geom_hline(yintercept = 0, linetype = "dotted", color = "black") +
-  labs(x = "24 hours (January 2023 - May 2024)", y = "Temperature difference (warming-control) ºC") +
+  labs(x = "24 hours (January 2023 - October 2024)", y = "Temperature difference (warming-control) ºC") +
   scale_x_discrete(breaks = allplots_temp_24h_diff$time[c(1, seq(24, length(allplots_temp_24h_diff$time), length.out = 5))]) +
   theme_bw() +
   theme(legend.position = "NULL")
 
 
-ggt24h_diff_justtop_sum <- ggplot(allplots_temp_24h_diff_sum) +
+ggt24h_diff_justtop_growth <- ggplot(allplots_temp_24h_diff_growth) +
   geom_line(aes(x = time, y = t_top_mean_diff, group = 1, color = "red2"), linetype = "solid", linewidth = 1) +
   geom_line(aes(x = time, y = t_top_mean_diff + t_top_sd_diff, group = 1, color = "red2"), linetype = "dashed") +
   geom_line(aes(x = time, y = t_top_mean_diff - t_top_sd_diff, group = 1, color = "red2"), linetype = "dashed")+
   geom_hline(yintercept = 0, linetype = "dotted", color = "black") +
-  labs(x = "24 hours (January 2023 - May 2024)", y = "Temperature difference (warming-control) ºC") +
+  labs(x = "24 hours (Growing seasons (Apr-Sep) 2023 and 2024 )", y = "Temperature difference (warming-control) ºC") +
   scale_x_discrete(breaks = allplots_temp_24h_diff$time[c(1, seq(24, length(allplots_temp_24h_diff$time), length.out = 5))]) +
   theme_bw() +
   theme(legend.position = "NULL")
@@ -460,7 +550,7 @@ allplots_temp_day_mean <-  summarise(group_by(all_plots, datetimenew, ttreat),
                                 t_bottom_mean = round(mean (T_bottom, na.rm = T), 2), 
                                 t_ground_mean = round(mean(T_ground, na.rm = T), 2))
 
-allplots_temp_day_mean_sum <-  summarise(group_by(all_plots_sum, datetimenew, ttreat),
+allplots_temp_day_mean_growth <-  summarise(group_by(all_plots_growth, datetimenew, ttreat),
                                      t_top_mean = round(mean(T_top, na.rm = T), 2), 
                                      t_bottom_mean = round(mean (T_bottom, na.rm = T), 2), 
                                      t_ground_mean = round(mean(T_ground, na.rm = T), 2))
@@ -473,7 +563,7 @@ allplots_temp_day_diff <- allplots_temp_day_mean %>%
   select(datetimenew, starts_with("t_"))
 
 
-allplots_temp_day_diff_sum <- allplots_temp_day_mean_sum %>%
+allplots_temp_day_diff_growth <- allplots_temp_day_mean_growth %>%
   pivot_wider(names_from = ttreat,
               values_from = c(t_top_mean, t_bottom_mean, t_ground_mean),
               names_prefix = "") %>%
@@ -484,7 +574,7 @@ allplots_temp_day_diff <- summarise(group_by(allplots_temp_day_diff, datetimenew
                                t_bottom_diff = t_bottom_mean_w - t_bottom_mean_c,
                                t_ground_diff = t_ground_mean_w - t_ground_mean_c)
 
-allplots_temp_day_diff_sum <- summarise(group_by(allplots_temp_day_diff_sum, datetimenew),
+allplots_temp_day_diff_growth <- summarise(group_by(allplots_temp_day_diff_growth, datetimenew),
                                     t_top_diff = t_top_mean_w - t_top_mean_c,
                                     t_bottom_diff = t_bottom_mean_w - t_bottom_mean_c,
                                     t_ground_diff = t_ground_mean_w - t_ground_mean_c)
@@ -526,7 +616,7 @@ ggtdailtdiff <- ggarrange(ggtdailydiff_top, ggtdailydiff_bottom, ggtdailydiff_gr
 
 
 
-ggtdailydiff_top_sum <- ggplot(allplots_temp_day_diff_sum, aes(x = datetimenew)) +
+ggtdailydiff_top_growth <- ggplot(allplots_temp_day_diff_growth, aes(x = datetimenew)) +
   geom_point(aes(y = t_top_diff), size = 0.5, alpha = 0.2, color = "red2")+
   geom_smooth(aes(y = t_top_diff), color = "red2", fill = "red2") +
   labs(x = NULL, y = "Temperature difference (ºC) ") +
@@ -534,7 +624,7 @@ ggtdailydiff_top_sum <- ggplot(allplots_temp_day_diff_sum, aes(x = datetimenew))
   scale_x_datetime(breaks = scales::date_breaks("10 weeks"), labels = scales::date_format("%Y-%m-%d")) +
   theme_bw()
 
-ggtdailydiff_ground_sum <- ggplot(allplots_temp_day_diff_sum, aes(x = datetimenew)) +
+ggtdailydiff_ground_growth <- ggplot(allplots_temp_day_diff_growth, aes(x = datetimenew)) +
   geom_point(aes(y = t_ground_diff), , size = 0.5, alpha = 0.2, color = "green") +
   geom_smooth(aes(y = t_ground_diff), color = "green3", fill = "green3") +
   labs(x = "January - May", y = "Tground diff" ) +
@@ -542,7 +632,7 @@ ggtdailydiff_ground_sum <- ggplot(allplots_temp_day_diff_sum, aes(x = datetimene
   scale_x_datetime(breaks = scales::date_breaks("10 weeks"), labels = scales::date_format("%Y-%m-%d")) +
   theme_bw()
 
-ggtdailydiff_bottom_sum <- ggplot(allplots_temp_day_diff_sum, aes(x = datetimenew)) +
+ggtdailydiff_bottom_growth <- ggplot(allplots_temp_day_diff_growth, aes(x = datetimenew)) +
   geom_point(aes(y = t_bottom_diff), , size = 0.5, alpha = 0.2, color = "blue2") +
   geom_smooth(aes(y = t_bottom_diff), color = "blue2", fill = "blue2") +
   labs(x = NULL, y = "TBottom diff") +
@@ -552,7 +642,7 @@ ggtdailydiff_bottom_sum <- ggplot(allplots_temp_day_diff_sum, aes(x = datetimene
 
 
 
-ggtdailtdiff <- ggarrange(ggtdailydiff_top_sum, ggtdailydiff_bottom_sum, ggtdailydiff_ground_sum, 
+ggtdailtdiff <- ggarrange(ggtdailydiff_top_growth, ggtdailydiff_bottom_growth, ggtdailydiff_ground_growth, 
                           labels = c("A", "B", "C"),
                           ncol = 1, nrow =3 )
 

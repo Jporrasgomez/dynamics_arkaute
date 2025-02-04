@@ -57,7 +57,7 @@ nrow({checking2 <- flora_raw %>%
 
 library(ggrepel)
 
-
+ggcbdm <- 
 ggplot( flora_raw %>% filter(!is.na(Cb) & !is.na(Dm)),
          aes(x = log(Cb), y = Dm, color = treatment, label = paste(sampling, plot, code, sep = ", "))) +
   geom_point(aes(alpha = 0.02, shape = treatment), size = 0.9) +  # Points with alpha and shape mapped
@@ -76,7 +76,7 @@ ggplot( flora_raw %>% filter(!is.na(Cb) & !is.na(Dm)),
   )
 
 
- 
+ggcmdb <- 
 ggplot( flora_raw %>% filter(!is.na(Cm) & !is.na(Db)),
          aes(x = log(Cm), y = Db, color = treatment, label = paste(sampling, plot, code, sep = ", "))) +
   geom_point(aes(alpha = 0.02, shape = treatment), size = 0.9) +  # Points with alpha and shape mapped
@@ -94,7 +94,7 @@ ggplot( flora_raw %>% filter(!is.na(Cm) & !is.na(Db)),
   )
 
 
-
+ggdbdm <- 
 ggplot(
       flora_raw %>% filter(!is.na(Db) & !is.na(Dm)),  # Filter rows where Db and Dm are not NA
       aes(x = Db, y = Dm, color = treatment, label = paste(sampling, plot, code, sep = ", "))
@@ -113,6 +113,7 @@ ggplot(
     )
 
 
+  ggcbcm <- 
   ggplot( flora_raw %>% filter(!is.na(Cb) & !is.na(Cm)),
          aes(x = Cb, y = Cm, color = treatment, label = paste(sampling, plot, code, sep = ", "))) +
   #geom_point(aes(alpha = 0.02, shape = treatment), size = 0.9) +  # Points with alpha and shape mapped
@@ -129,7 +130,11 @@ ggplot(
     color = "Treatment"  # Legend title for color
   )
   
-
+ggsave("results/ggcbdm.png", plot = ggcbdm, width = 6, height = 4, dpi = 300)
+ggsave("results/ggcmdb.png", plot = ggcmdb, width = 6, height = 4, dpi = 300)
+ggsave("results/ggdbdm.png", plot = ggdbdm, width = 6, height = 4, dpi = 300)
+ggsave("results/ggcbcm.png", plot = ggcbcm, width = 6, height = 4, dpi = 300)
+  
 
 # Adding dates
 sampling_dates <- read.csv("data/sampling_dates.csv")
@@ -148,7 +153,8 @@ sampling_dates <- sampling_dates %>%
 
 flora_raw <- right_join(flora_raw, sampling_dates, by = join_by(sampling))
 
-flora_rare <- flora_raw %>% select(sampling, one_month_window, omw_date, plot, treatment, code, abundance, height, Cb, Db, Cm, Dm, date, month)
+flora_rare <- flora_raw %>%
+  select(sampling, one_month_window, omw_date, plot, treatment, code, abundance, height, Cb, Db, Cm, Dm, date, month)
 
 
 
@@ -194,7 +200,7 @@ flora_rare$Ah <- ((flora_rare$cm)^2)/(4*pi)
 flora_rare$Ab <- ((flora_rare$cb)^2)/(4*pi)
 
 nrow({checkingNA <- flora_rare %>%
-  filter(rowSums(is.na(select(., height, Ah, Ab))) > 1) %>%  #Checking if the area of any individua is above 1 square meter
+  filter(rowSums(is.na(select(., height, Ah, Ab))) > 1) %>%  #Checking if the area of any individual is above 1 square meter
   filter(!sampling %in% c("0", "1", "2", "3", "12"))})
 
  
@@ -213,7 +219,8 @@ ggplot(flora_rare, aes(x = Ab, y = Ah, color = treatment, label = paste(sampling
     color = "Treatment"  # Legend title for color
   )
 
-
+#At the first samplings, we were collecting information of all possible species. With the pass of time, we
+# realized we could not identify every species at every sampling, 
 taxongroups <- flora_rare %>%
   filter(code %in% c("poaceae", "asteraceae", "tosp", "orchidaceae"))%>%
   group_by(code, sampling, one_month_window, omw_date, plot, treatment, date, month, species, family, genus_level, species_level) %>%

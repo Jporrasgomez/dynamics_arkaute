@@ -11,6 +11,8 @@ pacman::p_load(dplyr,reshape2,tidyverse, lubridate, ggplot2, ggpubr, gridExtra,
 source("code/1.first_script.R")
 radcoeff_df <- read.csv("data/radcoeff_df.csv")
 
+
+
 {theme_set(theme_bw() +
             theme(axis.title.x = element_blank(),
                   legend.position = "right",
@@ -24,21 +26,20 @@ radcoeff_df <- read.csv("data/radcoeff_df.csv")
 # Database for abundance and richness analysis
 
 
-
 ab_rich_dynamics <- merge(flora_abrich, radcoeff_df)   
 
 ab_rich_dynamics <- ab_rich_dynamics %>% 
   group_by(treatment, sampling, date, month) %>% 
-  mutate(mean_richness = mean(richness),
-         sd_richness = sd(richness),
-         mean_abundance = mean(abundance_community),
-         sd_abundance = sd(abundance_community),
-         mean_Y_zipf = mean(Y_zipf),
-         sd_Y_zipf = sd(Y_zipf),
-         mean_mu_log = mean(mu_log),
-         sd_mu_log = sd(mu_log),
-         mean_sigma_log = mean(sigma_log),
-         sd_sigma_log = sd(sigma_log)) %>% 
+  mutate(mean_richness = mean(richness, na.rm = T),
+         sd_richness = sd(richness, na.rm = T),
+         mean_abundance = mean(abundance_community, na.rm = T),
+         sd_abundance = sd(abundance_community, na.rm = T),
+         mean_Y_zipf = mean(Y_zipf, na.rm = T),
+         sd_Y_zipf = sd(Y_zipf, na.rm = T),
+         mean_mu_log = mean(mu_log, na.rm = T),
+         sd_mu_log = sd(mu_log, na.rm = T),
+         mean_sigma_log = mean(sigma_log, na.rm = T),
+         sd_sigma_log = sd(sigma_log, na.rm = T)) %>% 
   ungroup() %>% 
   select(plot, sampling, sampling_date, treatment, date, code, richness, mean_richness, sd_richness, 
          abundance_community, mean_abundance, sd_abundance, Y_zipf, mean_Y_zipf, sd_Y_zipf,
@@ -222,7 +223,7 @@ a_abundance <-
 # Box plot
 b_abundance <- 
   ggplot(ab_rich_dynamics, aes(y = abundance_community, x = treatment)) +
-  geom_violin(aes(fill = treatment), colour = "black", alpha = 0.5) + # Set the outline color to black
+  geom_boxplot(aes(fill = treatment), colour = "black", alpha = 0.5) + # Set the outline color to black
   scale_fill_manual(values = c("c" = "#48A597", "w" = "#D94E47", "p" = "#3A7CA5", "wp" = "#6D4C7D")) +
   theme(legend.position = "none",
         axis.text.x = element_blank(), axis.text.y = element_blank(),
@@ -295,7 +296,7 @@ a_richness <-
 # Box plot
 b_richness <- 
   ggplot(ab_rich_dynamics, aes(x = treatment, y = richness)) +
-  geom_violin(aes(fill = treatment), colour = "black", alpha = 0.5) + # Set the outline color to black
+  geom_boxplot(aes(fill = treatment), colour = "black", alpha = 0.5) + # Set the outline color to black
   scale_fill_manual(values = c("c" = "#48A597", "w" = "#D94E47", "p" = "#3A7CA5", "wp" = "#6D4C7D")) +
   ggsignif::geom_signif(
     comparisons = list(c("c","w"), c("c", "p"), c("c", "wp"), c("wp", "w"), c("wp", "p")),  # Significant comparisons
@@ -485,6 +486,7 @@ lrr_sigma_log <- lrr %>%
   select(plot, sampling, sampling_date, treatment, date, code, sigma_log, mean_sigma_log, sd_sigma_log)
 
 
+
 #Sampling 2 has several plots with very few species, which generates problems at RADs
 # At plot 15, we have only 1 species so there is no RAD
 # At plot 13, we have 2 species, so the RAD values are not reliable. Im deleting this data by hand: 
@@ -495,92 +497,71 @@ lrr_sigma_log$sigma_log[lrr$sampling == "2" & lrr$plot == "13"] <- NA
 
 samps <- unique(lrr$sampling)
 
-# Loop through each sampling period
-for (i in 1:length(samps)) {
-  
-  # Function to safely assign unique values (or NA if empty)
-  safe_assign <- function(data, condition, value_column) {
-    result <- unique(data[condition, value_column])
-    if (length(result) == 0) NA else result
+# Cuantas replicas hay por muestreo y variable ? Vamos a ver los NA
+
+
+length(lrr_richness$mean_richness[which(is.na(lrr_richness$mean_richness))])
+length(lrr_abundance$mean_abundance[which(is.na(lrr_abundance$mean_abundance))])
+length(lrr_Y_zipf$mean_Y_zipf[which(is.na(lrr_Y_zipf$mean_Y_zipf))])
+length(lrr_mu_log$mean_mu_log[which(is.na(lrr_mu_log$mean_mu_log))])
+length(lrr_sigma_log$mean_sigma_log[which(is.na(lrr_sigma_log$mean_sigma_log))])
+
+
+samps <- unique(lrr$sampling)
+treats <- unique(lrr$treatment)
+
+
+for (i in seq_along(samps)){
+  for(j in seq_along(treats)){
+    
+    samp = samps[i]
+    treat = treats[j]
+    
+  lrr_richness_try <- lrr_richness %>% 
+      filter(sampling %in% samp) %>% 
+      filter(treatment %in% treat) %>% 
+      mutate(!!paste("ref", treat, sep = "_") := mean_richness) %>% 
+      full_join(lrr_richness)
+    
   }
-  
-  # Mean and SD of richness
-  lrr_richness$ref_c_mean[lrr_richness$sampling == samps[i]] <- 
-    safe_assign(lrr_richness, lrr_richness$treatment == "c" & lrr_richness$sampling == samps[i], "mean_richness")
-  lrr_richness$ref_w_mean[lrr_richness$sampling == samps[i]] <- 
-    safe_assign(lrr_richness, lrr_richness$treatment == "w" & lrr_richness$sampling == samps[i], "mean_richness")
-  lrr_richness$ref_p_mean[lrr_richness$sampling == samps[i]] <- 
-    safe_assign(lrr_richness, lrr_richness$treatment == "p" & lrr_richness$sampling == samps[i], "mean_richness")
-  
-  lrr_richness$ref_c_sd[lrr_richness$sampling == samps[i]] <- 
-    safe_assign(lrr_richness, lrr_richness$treatment == "c" & lrr_richness$sampling == samps[i], "sd_richness")
-  lrr_richness$ref_w_sd[lrr_richness$sampling == samps[i]] <- 
-    safe_assign(lrr_richness, lrr_richness$treatment == "w" & lrr_richness$sampling == samps[i], "sd_richness")
-  lrr_richness$ref_p_sd[lrr_richness$sampling == samps[i]] <- 
-    safe_assign(lrr_richness, lrr_richness$treatment == "p" & lrr_richness$sampling == samps[i], "sd_richness")
-  
-  # Mean and SD of abundance
-  lrr_abundance$ref_c_mean[lrr_abundance$sampling == samps[i]] <- 
-    safe_assign(lrr_abundance, lrr_abundance$treatment == "c" & lrr_abundance$sampling == samps[i], "mean_abundance")
-  lrr_abundance$ref_w_mean[lrr_abundance$sampling == samps[i]] <- 
-    safe_assign(lrr_abundance, lrr_abundance$treatment == "w" & lrr_abundance$sampling == samps[i], "mean_abundance")
-  lrr_abundance$ref_p_mean[lrr_abundance$sampling == samps[i]] <- 
-    safe_assign(lrr_abundance, lrr_abundance$treatment == "p" & lrr_abundance$sampling == samps[i], "mean_abundance")
-  
-  lrr_abundance$ref_c_sd[lrr_abundance$sampling == samps[i]] <- 
-    safe_assign(lrr_abundance, lrr_abundance$treatment == "c" & lrr_abundance$sampling == samps[i], "sd_abundance")
-  lrr_abundance$ref_w_sd[lrr_abundance$sampling == samps[i]] <- 
-    safe_assign(lrr_abundance, lrr_abundance$treatment == "w" & lrr_abundance$sampling == samps[i], "sd_abundance")
-  lrr_abundance$ref_p_sd[lrr_abundance$sampling == samps[i]] <- 
-    safe_assign(lrr_abundance, lrr_abundance$treatment == "p" & lrr_abundance$sampling == samps[i], "sd_abundance")
-  
-  # Mean and SD of Y_zipf
-  lrr_Y_zipf$ref_c_mean[lrr_Y_zipf$sampling == samps[i]] <- 
-    safe_assign(lrr_Y_zipf, lrr_Y_zipf$treatment == "c" & lrr_Y_zipf$sampling == samps[i], "mean_Y_zipf")
-  lrr_Y_zipf$ref_w_mean[lrr_Y_zipf$sampling == samps[i]] <- 
-    safe_assign(lrr_Y_zipf, lrr_Y_zipf$treatment == "w" & lrr_Y_zipf$sampling == samps[i], "mean_Y_zipf")
-  lrr_Y_zipf$ref_p_mean[lrr_Y_zipf$sampling == samps[i]] <- 
-    safe_assign(lrr_Y_zipf, lrr_Y_zipf$treatment == "p" & lrr_Y_zipf$sampling == samps[i], "mean_Y_zipf")
-  
-  lrr_Y_zipf$ref_c_sd[lrr_Y_zipf$sampling == samps[i]] <- 
-    safe_assign(lrr_Y_zipf, lrr_Y_zipf$treatment == "c" & lrr_Y_zipf$sampling == samps[i], "sd_Y_zipf")
-  lrr_Y_zipf$ref_w_sd[lrr_Y_zipf$sampling == samps[i]] <- 
-    safe_assign(lrr_Y_zipf, lrr_Y_zipf$treatment == "w" & lrr_Y_zipf$sampling == samps[i], "sd_Y_zipf")
-  lrr_Y_zipf$ref_p_sd[lrr_Y_zipf$sampling == samps[i]] <- 
-    safe_assign(lrr_Y_zipf, lrr_Y_zipf$treatment == "p" & lrr_Y_zipf$sampling == samps[i], "sd_Y_zipf")
-  
-  # Mean and SD of mu_log
-  lrr_mu_log$ref_c_mean[lrr_mu_log$sampling == samps[i]] <- 
-    safe_assign(lrr_mu_log, lrr_mu_log$treatment == "c" & lrr_mu_log$sampling == samps[i], "mean_mu_log")
-  lrr_mu_log$ref_w_mean[lrr_mu_log$sampling == samps[i]] <- 
-    safe_assign(lrr_mu_log, lrr_mu_log$treatment == "w" & lrr_mu_log$sampling == samps[i], "mean_mu_log")
-  lrr_mu_log$ref_p_mean[lrr_mu_log$sampling == samps[i]] <- 
-    safe_assign(lrr_mu_log, lrr_mu_log$treatment == "p" & lrr_mu_log$sampling == samps[i], "mean_mu_log")
-  
-  lrr_mu_log$ref_c_sd[lrr_mu_log$sampling == samps[i]] <- 
-    safe_assign(lrr_mu_log, lrr_mu_log$treatment == "c" & lrr_mu_log$sampling == samps[i], "sd_mu_log")
-  lrr_mu_log$ref_w_sd[lrr_mu_log$sampling == samps[i]] <- 
-    safe_assign(lrr_mu_log, lrr_mu_log$treatment == "w" & lrr_mu_log$sampling == samps[i], "sd_mu_log")
-  lrr_mu_log$ref_p_sd[lrr_mu_log$sampling == samps[i]] <- 
-    safe_assign(lrr_mu_log, lrr_mu_log$treatment == "p" & lrr_mu_log$sampling == samps[i], "sd_mu_log")
-  
-  # Mean and SD of sigma_log
-  lrr_sigma_log$ref_c_mean[lrr_sigma_log$sampling == samps[i]] <- 
-    safe_assign(lrr_sigma_log, lrr_sigma_log$treatment == "c" & lrr_sigma_log$sampling == samps[i], "mean_sigma_log")
-  lrr_sigma_log$ref_w_mean[lrr_sigma_log$sampling == samps[i]] <- 
-    safe_assign(lrr_sigma_log, lrr_sigma_log$treatment == "w" & lrr_sigma_log$sampling == samps[i], "mean_sigma_log")
-  lrr_sigma_log$ref_p_mean[lrr_sigma_log$sampling == samps[i]] <- 
-    safe_assign(lrr_sigma_log, lrr_sigma_log$treatment == "p" & lrr_sigma_log$sampling == samps[i], "mean_sigma_log")
-  
-  lrr_sigma_log$ref_c_sd[lrr_sigma_log$sampling == samps[i]] <- 
-    safe_assign(lrr_sigma_log, lrr_sigma_log$treatment == "c" & lrr_sigma_log$sampling == samps[i], "sd_sigma_log")
-  lrr_sigma_log$ref_w_sd[lrr_sigma_log$sampling == samps[i]] <- 
-    safe_assign(lrr_sigma_log, lrr_sigma_log$treatment == "w" & lrr_sigma_log$sampling == samps[i], "sd_sigma_log")
-  lrr_sigma_log$ref_p_sd[lrr_sigma_log$sampling == samps[i]] <- 
-    safe_assign(lrr_sigma_log, lrr_sigma_log$treatment == "p" & lrr_sigma_log$sampling == samps[i], "sd_sigma_log")
 }
+
+
+lrr_richness_try <- lrr_richness %>% 
+  filter(sampling %in% 14) %>% 
+  filter(treatment %in% "p") %>% 
+  mutate(!!paste("ref", "p", sep = "_") := mean_richness)
+
+
+
+# Iterating over unique sampling values
+samps <- unique(lrr$sampling)
+
+for (i in seq_along(samps)) {
+  samp <- samps[i]
   
-  
+  for (var in c("richness", "abundance", "Y_zipf", "mu_log", "sigma_log")) {
+    mean_col <- paste0("mean_", var)
+    sd_col <- paste0("sd_", var)
+    ref_means <- paste0("ref_", c("c", "w", "p"), "_mean")
+    ref_sds <- paste0("ref_", c("c", "w", "p"), "_sd")
+    
+    for (treat in c("c", "w", "p")) {
+      treat_filter <- lrr$treatment == treat & lrr$sampling == samp
+      ref_mean_val <- unique(lrr[[mean_col]][treat_filter])
+      ref_sd_val <- unique(lrr[[sd_col]][treat_filter])
+      
+      assign(paste0("lrr_", var), 
+             get(paste0("lrr_", var)) %>% 
+               mutate(
+                 !!ref_means[which(c("c", "w", "p") == treat)] := ref_mean_val,
+                 !!ref_sds[which(c("c", "w", "p") == treat)] := ref_sd_val
+               )
+      )
+    }
+  }
+}
+
   
 
 lrr <- lrr %>%

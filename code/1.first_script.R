@@ -79,6 +79,16 @@ flora_rare$Dm <- flora_rare$Dm + 0.01
 flora_rare$Db <- flora_rare$Db + 0.01
 
 
+a <- flora_rare %>% 
+  filter(code %in% "poaceae") %>% 
+  group_by(treatment, sampling, plot) %>% 
+  mutate(n_obs = n()) %>% 
+  select(sampling, plot, treatment, code, n_obs) %>% 
+  group_by(treatment, sampling, plot) %>% 
+  summarize(n_obs = unique(n_obs))
+
+length(which(a$n_obs <= 5))
+length(which(a$n_obs > 5))
 
 ## BIOMASS AT INDIVIDUAL LEVEL ####
 
