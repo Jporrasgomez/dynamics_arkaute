@@ -344,6 +344,7 @@ flora_biomass_lm$nind_m2 <- flora_biomass_lm$intercept + flora_biomass_lm$abunda
 # cannot be the case. There are 3 species. We can either delete these species or make this "shitty" correction by sayin that if
 # nind_m2 < 0 , then nind_m2 = 0
 # Shitty correction ?????????????????????????????????????
+# There is no problem because actually this is not happening in the database. 
 flora_biomass_lm <- flora_biomass_lm %>%
   mutate(nind_m2 = ifelse(nind_m2 < 0, 0.1, nind_m2))
 

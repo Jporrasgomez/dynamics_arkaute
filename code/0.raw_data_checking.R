@@ -130,10 +130,10 @@ ggplot(
     color = "Treatment"  # Legend title for color
   )
   
-ggsave("results/ggcbdm.png", plot = ggcbdm, width = 6, height = 4, dpi = 300)
-ggsave("results/ggcmdb.png", plot = ggcmdb, width = 6, height = 4, dpi = 300)
-ggsave("results/ggdbdm.png", plot = ggdbdm, width = 6, height = 4, dpi = 300)
-ggsave("results/ggcbcm.png", plot = ggcbcm, width = 6, height = 4, dpi = 300)
+#ggsave("results/ggcbdm.png", plot = ggcbdm, width = 6, height = 4, dpi = 300)
+#ggsave("results/ggcmdb.png", plot = ggcmdb, width = 6, height = 4, dpi = 300)
+#ggsave("results/ggdbdm.png", plot = ggdbdm, width = 6, height = 4, dpi = 300)
+#ggsave("results/ggcbcm.png", plot = ggcbcm, width = 6, height = 4, dpi = 300)
   
 
 # Adding dates
@@ -293,17 +293,21 @@ ggplot(flora_abrich, aes(x = date, y = abundance_community,
 
 flora_medium$code_ordered <- reorder(flora_medium$code, -flora_medium$abundance, FUN = mean)
 
-ggplot(flora_medium, aes(x = code_ordered, y = abundance)) +
-  geom_boxplot() +
-  stat_summary(fun = mean, geom = "point", shape = 20, size = 2, color = "red") +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1))
-
 flora_nobs <- flora_medium %>% 
   group_by(code) %>% 
   summarize(n_observations= n(),
             mean_abundance = mean(abundance))
 
 flora_nobs$abnobs <- flora_nobs$mean_abundance * flora_nobs$n_observations
+
+flora_nobs$code_nobs <- factor(flora_nobs$code,
+                               levels = flora_nobs$code[order(flora_nobs$n_observations, decreasing = TRUE)])
+
+ggplot(flora_medium, aes(x = code_ordered, y = abundance)) +
+  geom_boxplot() +
+  stat_summary(fun = mean, geom = "point", shape = 20, size = 2, color = "red") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1))
+
 
 ggplot(flora_nobs, aes(x = mean_abundance, y = n_observations, label = code, color = abnobs))+
   geom_point() + 
@@ -315,8 +319,7 @@ ggplot(flora_nobs, aes(x = mean_abundance, y = n_observations, label = code, col
     segment.size = 0.5         # Line thickness
   )
 
-flora_nobs$code_nobs <- factor(flora_nobs$code,
-                               levels = flora_nobs$code[order(flora_nobs$n_observations, decreasing = TRUE)])
+
 ggplot(flora_nobs, aes(x = code_nobs, y = n_observations, fill = n_observations)) +
   geom_col() +
   scale_fill_gradient(low = "blue4", high = "red2") +  # Apply color gradient from blue to red
@@ -343,7 +346,7 @@ ggplot(flora_nobs, aes(x = code_abnobs, y = abnobs, fill = abnobs)) +
 
 #For biomass, we do not have information for samplings 0, 1, 2 and 12. 
 
-{flora_biomass_raw <- flora_medium %>% 
+flora_biomass_raw <- flora_medium %>% 
   filter(!sampling %in% c("0", "1", "2", "12"))
 
 # To calculate the biomass at species level (biomass_s) on a plot at sampling based on the biomass at individual level (biomass_i) we
@@ -378,22 +381,34 @@ flora_biomass_raw <- flora_biomass_raw %>%
 
 
 nind1 <- read.csv("data/n_individuals.csv")
+plots <- read.csv("data/plots.csv") %>% 
+  select(nplot, treatment_code) %>% 
+  rename(treatment = treatment_code,
+         plot = nplot)
+
+nind1 <- merge(nind1, plots)
+
+
 #source("code/first_script_old.R")
 
 nind1$code <- as.factor(nind1$code)
 
-nind1 <- select(nind1, sampling, plot, code, nind_m2, abundance)
+nind1 <- nind1 %>% 
+  select(sampling, treatment,  plot, code, nind_m2, abundance)
+  
 #flora_nind <-  flora %>% select(code, family) %>% distinct(code, .keep_all = TRUE)
 
 nind1 <- nind1 %>%
-  group_by(sampling, plot, code) %>%
+  group_by(sampling, treatment, plot, code) %>%
   summarize(nind_m2 = sum(nind_m2), abundance = sum(abundance))
 
+{
 nind1$sampling <- as.factor(nind1$sampling)
+nind1$treatment <- as.factor(nind1$treatment)
 nind1$plot <- as.factor(nind1$plot)
 nind1$code <- as.factor(nind1$code)
 nind1$nind_m2 <- as.numeric(nind1$nind_m2)
-nind1$abundance <- as.numeric(nind1$abundance)
+nind1$abundance <- as.numeric(nind1$abundance)}
 
 ## Las especies de asteraceae que hemos agrupado por familia se recalculan sus individuos y abundancias aquí
 
@@ -402,18 +417,18 @@ nind1$abundance <- as.numeric(nind1$abundance)
 
 nind2 <- flora_raw %>%
   filter(!sampling %in% c("12", "13", "14", "15", "16", "17", "18", "19", "20"))  %>%
-  group_by(sampling, plot, code) %>%
+  group_by(sampling, treatment, plot, code) %>%
   mutate(n_individuals = n())
 
 nind2 <- nind2 %>%
-  group_by(sampling, plot, code,abundance) %>%
+  group_by(sampling, plot, treatment, code, abundance) %>%
   summarize(n_individuals_mean = mean(n_individuals, na.rm = T))  #corrección de asteraceae y poaceae #corrección de asteraceae y poaceae
 
 nind2 <- nind2 %>%
   filter(n_individuals_mean < 5)
 names(nind2)[names(nind2) == "n_individuals_mean"] <- "nind_m2"
 
-nind <- bind_rows(nind1, nind2)
+nind <- full_join(nind1, nind2)
 
 # ** We could discuss the question: if we have some species for which the number of individuals measured in the plot was the total amount
 # of individuals in that plot, why we are not calculating the biomass of that species as biomass_s = biomass_1 + biomass_2 ...biomass_i ?
@@ -486,7 +501,7 @@ for (i in 1: length(code_levels)) {
   nind_lm_data$n_observations[counter] <- n_observations_i
   
   
-}}
+}
 
 print(gglist[[6]])
 
@@ -499,8 +514,9 @@ nind_lm_data$posneg_slope <- ifelse(nind_lm_data$slope < 0, paste("negative"), p
 #Let's check results
 results <- 
   ggplot(nind_lm_data, aes( x = r_squared, y = p_value, 
-                            label = paste(code, n_observations, sep = ", "), color = posneg_slope))+
-  geom_point()+ 
+                            label = paste(code, n_observations, sep = ", "),
+                            color = posneg_slope))+
+  geom_point( aes(size = n_observations))+ 
   geom_vline(xintercept = 0.3, linetype = "dashed", color = "gray40") +
   geom_hline(yintercept = 0.1, linetype = "dashed", color = "gray40") +
   
@@ -512,48 +528,41 @@ results <-
     max.overlaps = 15# Line thickness
   )
 
+
 print(results)
 
-#The lm model fits well (R^2 >= 0.3 and p-value < 0.1) for a few species: 
-# !! Why do we choose R2 0.3?
 
-species_lm<- nind_lm_data %>% 
-  filter(r_squared > 0.3) %>% 
-  filter(p_value < 0.1)
+#The lm model fits well (R^2 >= 0.3 and p-value < 0.1) for a few species 
 
 
-species_lm_codes <- unique(species_lm$code)
+# We can see all this process for the disaggregation of treatments and see if we
+# could create a linear model per code and treatment, in order to be more accurate
 
-nind_lm_species <- nind_lm_data %>% 
-  filter(code %in% species_lm_codes )
+source("code/0.1disaggregating_lm_bytreatment.R")
+results_treatments
+shared_codes 
+#these are the shared species between all treatments that have presented a well fitted linear model
+# Therefore, we stick to the general linear model for all species
 
-excluded_species_lm <- {nind_lm_data %>% 
-  filter(!code %in% species_lm_codes )}$code
+# We take out species with negative slope first 
+nind_lm_data <- nind_lm_data %>% 
+  filter(posneg_slope %in% "positive")
 
+# But,  !! Why do we choose R2 0.3?
+# Lets do a sensitivity analysis
 
-flora_nobs$excluded <- ifelse(flora_nobs$code %in% excluded_species_lm, "excluded", "included")
+source("code/0.2sensitivity_analysis_lm.R")
+#The plot A is nind_lm_species, B is nind_lm_species_1 and C is nind_lm_species_2
+ggarrange(a,b,c,
+          labels = c("A", "B", "C"),
+          nrow = 1, 
+          ncol = 3)
+#!! siguen saliendo "veof" "vear" y "cadi" en los plots? no deberíanC
 
-# Update the plot
-ggplot(flora_nobs, aes(x = mean_abundance, y = n_observations, label = code)) +
-  geom_point(aes(color = excluded)) +  # Color based on the exclusion status
-  scale_color_manual(
-    values = c("included" = "black", "excluded" = "red")  # Specify colors
-  ) +
-  geom_text_repel(
-    size = 3,                # Text size
-    min.segment.length = 0.1,  # Ensures lines are always drawn
-    segment.color = "gray50",  # Line color
-    segment.size = 0.5         # Line thickness
-  )+
-  labs(color = "LM inclusion") 
+# Which set of species do we choose? 
+# I say we choose p-value < 0.05. Is the leas arbitrary and we do not lose a lot of information. 
 
-
-(length(species_lm_codes)+ length(one_ind_species))/(length(unique(flora_raw$code))) *100
-#51% of species have been excluded from biomass
-
-
-
-flora_biomass_lm <- merge(flora_biomass_raw, nind_lm_species)
+flora_biomass_lm <- merge(flora_biomass_raw, nind_lm_species_2)
 
 
 #calculation of number of indivuals per m2 with the regression data for each species
@@ -621,8 +630,6 @@ hist(log(flora_biomass_clean$biomass_s), breaks = 50, main = "Without outliers (
 
 #There is almost no difference. Mark proposes to work on biomass as log(biomass) since it is the most common way of working
 # in ecology
-
-
 
 
 
