@@ -41,7 +41,7 @@ ab_rich_dynamics <- ab_rich_dynamics %>%
          mean_sigma_log = mean(sigma_log, na.rm = T),
          sd_sigma_log = sd(sigma_log, na.rm = T)) %>% 
   ungroup() %>% 
-  select(plot, sampling, sampling_date, treatment, date, code, richness, mean_richness, sd_richness, 
+  select(plot, sampling, treatment, date, code, richness, mean_richness, sd_richness, 
          abundance_community, mean_abundance, sd_abundance, Y_zipf, mean_Y_zipf, sd_Y_zipf,
          mu_log, mean_mu_log, sd_mu_log, sigma_log, mean_sigma_log, sd_sigma_log)
 
@@ -55,7 +55,7 @@ biomass_dynamics_cleaned <- flora_biomass_clean %>%
   mutate(mean_biomass = mean(biomass_community, na.rm = T),
          sd_biomass = sd(biomass_community, na.rm = T)) %>% 
   ungroup() %>% 
-  select(treatment, sampling, sampling_date, date, plot, code, biomass_s, biomass_community, mean_biomass, 
+  select(treatment, sampling, date, plot, code, biomass_s, biomass_community, mean_biomass, 
          sd_biomass)
 
 

@@ -78,7 +78,7 @@ results_treatments <-
   ggplot(nind_lm_data_treatments, aes( x = r_squared, y = p_value, 
                             label = paste(code, n_observations, sep = ", "), color = posneg_slope))+
   facet_wrap(~ treatment, labeller = labeller(treatment = treatment_labs_dynamics, nrow = 2, ncol = 2)) + 
-  geom_point(aes(size = n_observations))+ 
+  geom_point()+ 
   geom_hline(yintercept = 0.1, linetype = "dashed", color = "gray40") +
   
   geom_text_repel(

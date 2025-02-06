@@ -153,6 +153,7 @@ sampling_dates <- sampling_dates %>%
 
 flora_raw <- right_join(flora_raw, sampling_dates, by = join_by(sampling))
 
+
 flora_rare <- flora_raw %>%
   select(sampling, one_month_window, omw_date, plot, treatment, code, abundance, height, Cb, Db, Cm, Dm, date, month)
 
@@ -203,7 +204,7 @@ nrow({checkingNA <- flora_rare %>%
   filter(rowSums(is.na(select(., height, Ah, Ab))) > 1) %>%  #Checking if the area of any individual is above 1 square meter
   filter(!sampling %in% c("0", "1", "2", "3", "12"))})
 
- 
+ggabah <-  
 ggplot(flora_rare, aes(x = Ab, y = Ah, color = treatment, label = paste(sampling, plot, code, sep = ", "))) +
   geom_point(aes(alpha = 0.02, shape = treatment), size = 0.9) +  # Points with alpha and shape mapped
   geom_text_repel(
@@ -379,7 +380,6 @@ flora_biomass_raw <- flora_biomass_raw %>%
   
   #1.  Since sampling 12, we have been estimating the number of individuals per species and plot based on direct field observations.
 
-
 nind1 <- read.csv("data/n_individuals.csv")
 plots <- read.csv("data/plots.csv") %>% 
   select(nplot, treatment_code) %>% 
@@ -448,7 +448,6 @@ nind$code <- as.character(nind$code)
 
 #The lm model is actually no needed for species "rucr", "amsp", "kips" and "brasicaceae" since these are
 # just one individual found in one plot at different times. So the estimated biomass will be for 1 square meter
-
 nind <- nind %>% 
   filter(!code %in% one_ind_species)
 
@@ -483,12 +482,13 @@ for (i in 1: length(code_levels)) {
   counter <- counter + 1
   
   gglist[[counter]] <- ggplot(nind_i, aes(x = abundance, y = nind_m2)) +
-    geom_point() +
-    geom_smooth(method = "lm", se = FALSE, color = "blue") +
-    labs(title = paste("Linear Relationship for", code_levels[i]),
+    geom_point(aes(color = treatment), alpha = 0.5) +
+    scale_colour_manual(values = c("c" = "green2", "w" = "red", "p" = "blue3", "wp" = "purple")) +
+    geom_smooth(method = "lm", se = FALSE, color = "black") +
+    labs(title = paste("LM ", code_levels[i]),
          subtitle = paste("Equation: y =", round(intercept_i, 2), "+", round(slope_i, 2), "* x\n",
-                          "R^2:", round(r_squared_i, 2), ", p-value:", round(p_value_i, 4), "\n",
-                          "Number of observations", n_observations_i),
+                          "R2:", round(r_squared_i, 2), ", p-value:", round(p_value_i, 4), "\n",
+                          "n observations", n_observations_i),
          x = "Abundance",
          y = "Numbers of individual per m2") +
     theme_minimal()
@@ -503,7 +503,43 @@ for (i in 1: length(code_levels)) {
   
 }
 
-print(gglist[[6]])
+ggarrange(gglist[[1]], gglist[[2]], gglist[[3]], 
+          gglist[[4]], gglist[[5]], gglist[[6]], 
+          ncol = 2, nrow = 3)
+
+ggarrange(gglist[[7]], gglist[[8]], gglist[[9]], 
+          gglist[[10]], gglist[[11]], gglist[[12]], 
+          ncol = 2, nrow = 3)
+
+ggarrange(gglist[[13]], gglist[[14]], gglist[[15]], 
+          gglist[[16]], gglist[[17]], gglist[[18]], 
+          ncol = 2, nrow = 3)
+
+ggarrange(gglist[[19]], gglist[[20]], gglist[[21]], 
+          gglist[[22]], gglist[[23]], gglist[[24]], 
+          ncol = 2, nrow = 3)
+
+ggarrange(gglist[[25]], gglist[[26]], gglist[[27]], 
+          gglist[[28]], gglist[[29]], gglist[[30]], 
+          ncol = 2, nrow = 3)
+
+ggarrange(gglist[[31]], gglist[[32]], gglist[[33]], 
+          gglist[[34]], gglist[[35]], gglist[[36]], 
+          ncol = 2, nrow = 3)
+
+
+gglist[[37]]
+
+
+print(gglist[[12]])
+
+ggplot(nind, aes(x = abundance, y = nind_m2)) + 
+  facet_wrap(~ treatment) +
+  geom_point(aes(color = treatment), shape = 15, alpha = 0.5) +
+  scale_colour_manual(values = c("c" = "green2", "w" = "red", "p" = "blue", "wp" = "purple")) +
+  scale_fill_manual(values = c("c" = "green2", "w" = "red", "p" = "blue", "wp" = "purple")) +
+  geom_smooth(method = "lm", se = FALSE, color = "black")
+
 
 # As we can see, for this example the R$^2$ is quite low ( R$^2$ = 0.23). The fact is that, if we take a look to how well
 # the model fit for all of our species, there are many considerations.
@@ -516,7 +552,7 @@ results <-
   ggplot(nind_lm_data, aes( x = r_squared, y = p_value, 
                             label = paste(code, n_observations, sep = ", "),
                             color = posneg_slope))+
-  geom_point( aes(size = n_observations))+ 
+  geom_point()+ 
   geom_vline(xintercept = 0.3, linetype = "dashed", color = "gray40") +
   geom_hline(yintercept = 0.1, linetype = "dashed", color = "gray40") +
   
@@ -548,6 +584,7 @@ shared_codes
 nind_lm_data <- nind_lm_data %>% 
   filter(posneg_slope %in% "positive")
 
+
 # But,  !! Why do we choose R2 0.3?
 # Lets do a sensitivity analysis
 
@@ -557,10 +594,10 @@ ggarrange(a,b,c,
           labels = c("A", "B", "C"),
           nrow = 1, 
           ncol = 3)
-#!! siguen saliendo "veof" "vear" y "cadi" en los plots? no deberíanC
+
 
 # Which set of species do we choose? 
-# I say we choose p-value < 0.05. Is the leas arbitrary and we do not lose a lot of information. 
+# I say we choose p-value < 0.05. Is the least arbitrary and we do not lose a lot of information. 
 
 flora_biomass_lm <- merge(flora_biomass_raw, nind_lm_species_2)
 
@@ -573,7 +610,7 @@ flora_biomass_lm$nind_m2 <- flora_biomass_lm$intercept + flora_biomass_lm$abunda
 # nind_m2 < 0 , then nind_m2 = 0
 # Shitty correction ?????????????????????????????????????
 flora_biomass_lm <- flora_biomass_lm %>%
-  mutate(nind_m2 = ifelse(nind_m2 < 0, 0.1, nind_m2))
+  mutate(nind_m2 = ifelse(nind_m2 < 0, 1, nind_m2))
 
 
 # Calculation of species biomass per square meter by multiplying biomass at individual (biomass_i) level by the 

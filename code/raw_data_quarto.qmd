@@ -369,24 +369,34 @@ To be able to estimate abundance based on the number of individuals we need data
 ```{r Estimating number of individuals: group 1}
 #| warning: false
 
+nind1 <- read.csv(here("data","n_individuals.csv"))
+plots <- read.csv(here("data", "plots.csv")) %>% 
+  select(nplot, treatment_code) %>% 
+  rename(treatment = treatment_code,
+         plot = nplot)
 
-nind1 <- read.csv(here("data", "n_individuals.csv"))
+nind1 <- merge(nind1, plots)
+
 #source("code/first_script_old.R")
 
 nind1$code <- as.factor(nind1$code)
 
-nind1 <- select(nind1, sampling, plot, code, nind_m2, abundance)
+nind1 <- nind1 %>% 
+  select(sampling, treatment,  plot, code, nind_m2, abundance)
+  
 #flora_nind <-  flora %>% select(code, family) %>% distinct(code, .keep_all = TRUE)
 
 nind1 <- nind1 %>%
-  group_by(sampling, plot, code) %>%
+  group_by(sampling, treatment, plot, code) %>%
   summarize(nind_m2 = sum(nind_m2), abundance = sum(abundance))
 
+{
 nind1$sampling <- as.factor(nind1$sampling)
+nind1$treatment <- as.factor(nind1$treatment)
 nind1$plot <- as.factor(nind1$plot)
 nind1$code <- as.factor(nind1$code)
 nind1$nind_m2 <- as.numeric(nind1$nind_m2)
-nind1$abundance <- as.numeric(nind1$abundance)
+nind1$abundance <- as.numeric(nind1$abundance)}
 
 ## Las especies de asteraceae que hemos agrupado por familia se recalculan sus individuos y abundancias aquí
 ```
@@ -399,16 +409,19 @@ nind1$abundance <- as.numeric(nind1$abundance)
 
 nind2 <- flora_raw %>%
   filter(!sampling %in% c("12", "13", "14", "15", "16", "17", "18", "19", "20"))  %>%
-  group_by(sampling, plot, code) %>%
+  group_by(sampling, treatment, plot, code) %>%
   mutate(n_individuals = n())
 
 nind2 <- nind2 %>%
-  group_by(sampling, plot, code,abundance) %>%
+  group_by(sampling, plot, treatment, code, abundance) %>%
   summarize(n_individuals_mean = mean(n_individuals, na.rm = T))  #corrección de asteraceae y poaceae #corrección de asteraceae y poaceae
 
 nind2 <- nind2 %>%
   filter(n_individuals_mean < 5)
 names(nind2)[names(nind2) == "n_individuals_mean"] <- "nind_m2"
+
+nind <- full_join(nind1, nind2)
+
 ```
 
 Once we have both groups, we can merge both groups by binding rows. 
@@ -431,7 +444,8 @@ Once that we have the database to establish the estimation, we have applied a li
 
 nind$code <- as.character(nind$code)
 
-#Filtering the species for which we have only one point per plot and sampling. 
+#The lm model is actually no needed for species "rucr", "amsp", "kips" and "brasicaceae" since these are
+# just one individual found in one plot at different times. So the estimated biomass will be for 1 square meter
 nind <- nind %>% 
   filter(!code %in% one_ind_species)
 
@@ -467,11 +481,78 @@ for (i in 1: length(code_levels)) {
   
   gglist[[counter]] <- ggplot(nind_i, aes(x = abundance, y = nind_m2)) +
     geom_point() +
-    geom_smooth(method = "lm", se = FALSE, color = "blue") +
-    labs(title = paste("Linear Relationship for", code_levels[i]),
+    geom_smooth(method = "lm", se = FALSE, color = "black") +
+    labs(title = paste("LM ", code_levels[i]),
          subtitle = paste("Equation: y =", round(intercept_i, 2), "+", round(slope_i, 2), "* x\n",
-                          "R^2:", round(r_squared_i, 2), ", p-value:", round(p_value_i, 4), "\n",
-                          "Number of observations", n_observations_i),
+                          "R2:", round(r_squared_i, 2), ", p-value:", round(p_value_i, 4), "\n",
+                          "n observations", n_observations_i),
+         x = "Abundance",
+         y = "Numbers of individual per m2") +
+    theme_minimal()
+  
+  nind_lm_data$code[counter] <- code_levels[i]
+  nind_lm_data$intercept[counter] <- intercept_i
+  nind_lm_data$slope[counter] <- slope_i
+  nind_lm_data$r_squared[counter] <- r_squared_i
+  nind_lm_data$p_value[counter] <- p_value_i
+  nind_lm_data$n_observations[counter] <- n_observations_i
+  
+  
+}
+
+print(gglist[[9]])
+
+```
+
+For this linear regression 2 questions arise: 
+1. Is the relationship between abundance and number of individuals/m$^2$ influenced by treatment? 
+2. Which species do we choose and following which criteria? 
+
+
+For the first question we take a look to the following plots: 
+
+```{r linear regression exploration}
+#| warning: false
+#| fig-width: 6
+#| fig-height: 12
+
+code_levels <- unique(nind$code)
+gglist <- list()
+
+nind_lm_data <- matrix(nrow = length(code_levels), ncol = 6)
+colnames(nind_lm_data) <- c("code", "intercept", "slope", "r_squared", "p_value", "n_observations")
+nind_lm_data <- as.data.frame(nind_lm_data)
+
+counter <- 0
+
+library(broom)
+
+for (i in 1: length(code_levels)) {
+  
+  nind_i <- subset(nind, code == code_levels[i])
+  lm_i <- lm(nind_m2 ~ abundance, data = nind_i)
+  
+  # Extract coefficients, R^2, and p-value
+  lm_i_summary <- summary(lm_i)
+  lm_i_tidy <- tidy(lm_i)
+  lm_i_glance <- glance(lm_i)
+  
+  intercept_i <- lm_i_tidy$estimate[1]
+  slope_i <- lm_i_tidy$estimate[2]
+  r_squared_i <- lm_i_glance$r.squared
+  p_value_i <- lm_i_tidy$p.value[2]
+  n_observations_i <- nrow(nind_i)
+  
+  counter <- counter + 1
+  
+  gglist[[counter]] <- ggplot(nind_i, aes(x = abundance, y = nind_m2)) +
+    geom_point(aes(color = treatment), alpha = 0.5) +
+    scale_colour_manual(values = c("c" = "green2", "w" = "red", "p" = "blue3", "wp" = "purple")) +
+    geom_smooth(method = "lm", se = FALSE, color = "black") +
+    labs(title = paste("LM ", code_levels[i]),
+         subtitle = paste("Equation: y =", round(intercept_i, 2), "+", round(slope_i, 2), "* x\n",
+                          "R2:", round(r_squared_i, 2), ", p-value:", round(p_value_i, 4), "\n",
+                          "n observations", n_observations_i),
          x = "Abundance",
          y = "Numbers of individual per m2") +
     theme_minimal()
@@ -487,14 +568,81 @@ for (i in 1: length(code_levels)) {
 }
 
 
-print(gglist[[6]])
+ggarrange(gglist[[1]], gglist[[2]], gglist[[3]], 
+          gglist[[4]], gglist[[5]], gglist[[6]], 
+          ncol = 2, nrow = 3)
+
+ggarrange(gglist[[7]], gglist[[8]], gglist[[9]], 
+          gglist[[10]], gglist[[11]], gglist[[12]], 
+          ncol = 2, nrow = 3)
+
+ggarrange(gglist[[13]], gglist[[14]], gglist[[15]], 
+          gglist[[16]], gglist[[17]], gglist[[18]], 
+          ncol = 2, nrow = 3)
+
+ggarrange(gglist[[19]], gglist[[20]], gglist[[21]], 
+          gglist[[22]], gglist[[23]], gglist[[24]], 
+          ncol = 2, nrow = 3)
+
+ggarrange(gglist[[25]], gglist[[26]], gglist[[27]], 
+          gglist[[28]], gglist[[29]], gglist[[30]], 
+          ncol = 2, nrow = 3)
+
+ggarrange(gglist[[31]], gglist[[32]], gglist[[33]], 
+          gglist[[34]], gglist[[35]], gglist[[36]], 
+          ncol = 2, nrow = 3)
+
+
+
+
+```
+
+```{r linear regression exploration0}
+#| echo: false
+#| 
+gglist[[37]]
+
+
+```
+
+There are some groups, like poaceae, where we can see a differentiation between treatments. But it is difficult to see a pattern 
+
+And also to this one, where I aggregate all species into the 4 treatments. This way we can see if the distribution of points is more concentrated in certain regions: 
+
+```{r linear regression exploration 1}
+#| warning: false
+
+ggplot(nind, aes(x = abundance, y = nind_m2)) + 
+  facet_wrap(~ treatment) +
+  geom_point(aes(color = treatment), shape = 15, alpha = 0.5) +
+  scale_colour_manual(values = c("c" = "green2", "w" = "red", "p" = "blue", "wp" = "purple")) +
+  scale_fill_manual(values = c("c" = "green2", "w" = "red", "p" = "blue", "wp" = "purple")) +
+  geom_smooth(method = "lm", se = FALSE, color = "black")
+
+
+```
+
+Control and warming seem to be a little bit more scattered while perturbation and warming+perturbation appear to be more concentrated into the low abundance - low nind_m2. To ensure there are no significant differences among treatments, we visualize all four treatments together in a single plot. Each treatment is represented by distinct colors and enclosed within 99% confidence ellipses. Additionally, a linear regression trend line is included to observe overall patterns in the data:
+
+```{r linear regression exploration 2}
+#| warning: false
+
+ggplot(nind, aes(x = abundance, y = nind_m2)) + 
+  geom_point(aes(color = treatment, shape = treatment), alpha = 0.5) +
+  stat_ellipse(geom = "polygon", aes(fill = treatment),
+                 alpha = 0.2,
+                 show.legend = FALSE,
+                 level = 0.99) +
+  scale_colour_manual(values = c("c" = "green2", "w" = "red", "p" = "blue", "wp" = "purple")) +
+  scale_fill_manual(values = c("c" = "green2", "w" = "red", "p" = "blue", "wp" = "purple")) +
+  geom_smooth(method = "lm", se = FALSE, color = "black")
 
 ```
 
 
+Since it appears there are no considerable differences between treatments in abundance - nind_m2 distribution, we can go ahead with treatment aggregation. 
 
-
-As we can see, for this example the R$^2$ is quite low ( R$^2$ = 0.23). Thus, we have to take a look to how well the model fits to all our species. To do that, we can create the following plot:   
+To answer the second question we have to take a look to how well the model fits to all our species. 
 
 ```{r linear regression 2}
 #| warning: false
@@ -507,8 +655,8 @@ results <-
   ggplot(nind_lm_data, aes( x = r_squared, y = p_value, 
                             label = paste(code, n_observations, sep = ", "), color = posneg_slope))+
   geom_point()+ 
-  geom_vline(xintercept = 0.3, linetype = "dashed", color = "gray40") +
   geom_hline(yintercept = 0.1, linetype = "dashed", color = "gray40") +
+  geom_vline(xintercept = 0.3, linetype = "dashed", color = "gray40") +
   
   geom_text_repel(
     size = 3,                # Text size
@@ -522,12 +670,22 @@ print(results)
 
 ```
 
-Here we can see the p-value in y-axis and the R$^2$ value in the x-axis. In orange, we can see the species for which the slope is negative. We can see that there are many species for which the linear regression model does not properly fit. 
+```{r linear regression 2.1}
+#| warning: false
 
-https://statisticsbyjim.com/regression/interpret-r-squared-regression/
+#source(here("code", "0.1disaggregating_lm_bytreatment.R"))
+#
+#results_treatments
+#shared_codes 
 
-2 dashed lines have been drew in p-value = 0.1 y R$^2$ = 0.3. **Therefore, if p-value < 0.1 and R$^2$ > 0.3 for the regression model of the species, we will use it for the next step*
-****** Por qué 0.3? habría que hacer más cosas aquí
+
+```
+
+
+Here we can see the p-value in y-axis and the R$^2$ value in the x-axis. In orange, we can see the species for which the slope is negative. 2 dashed lines have been drew in p-value = 0.1 y R$^2$ = 0.3. In this scenario, *we would pick those species for which the model fits within p-value < 0.1 and R$^2$ > 0.3 for next stpeps*. In this case, 50% of species (20 species) would be used.
+
+However, using R$^2$ > 0.3 is an arbitrary decision. The significance of the model is given by the p-value, while R$^2$ explains how scattered the data is. We can make a sensitivity analysis. 
+
 
 ```{r linear regression 3}
 #| warning: false
@@ -535,50 +693,23 @@ https://statisticsbyjim.com/regression/interpret-r-squared-regression/
 #The lm model fits well (R^2 >= 0.3 and p-value < 0.1) for a few species: 
 # !! Why do we choose R2 0.3?
 
-species_lm<- nind_lm_data %>% 
-  filter(r_squared > 0.3) %>% 
-  filter(p_value < 0.1)
-
-
-species_lm_codes <- unique(species_lm$code)
-
-nind_lm_species <- nind_lm_data %>% 
-  filter(code %in% species_lm_codes )
-
-excluded_species_lm <- {nind_lm_data %>% 
-  filter(!code %in% species_lm_codes )}$code
-
-perc_lmspecies <- (length(species_lm_codes)+ length(one_ind_species))/(length(unique(flora_raw$code))) *100
-#51% of species have been excluded from biomass
+source(here("code", "0.2sensitivity_analysis_lm.R"))
+#The plot A is nind_lm_species, B is nind_lm_species_1 and C is nind_lm_species_2
+ggarrange(a,b,c,
+          labels = c("A", "B", "C"),
+          nrow = 1, 
+          ncol = 3)
 
 
 ```
 
-Assuming that we choose those species, we would include the `r perc_lmspecies` of the total amount: this is `r length(species_lm_codes)` species. 
+Therefore, we can assess which set of species we use based on the p-value and R$^2$. 
 
-```{r linear regression 4}
-#| warning: false
-
-flora_nobs$excluded <- ifelse(flora_nobs$code %in% excluded_species_lm, "excluded", "included")
-
-# Update the plot
-print(ggplot(flora_nobs, aes(x = mean_abundance, y = n_observations, label = code)) +
-  geom_point(aes(color = excluded)) +  # Color based on the exclusion status
-  scale_color_manual(
-    values = c("included" = "black", "excluded" = "red")  # Specify colors
-  ) +
-  geom_text_repel(
-    size = 3,                # Text size
-    min.segment.length = 0.1,  # Ensures lines are always drawn
-    segment.color = "gray50",  # Line color
-    segment.size = 0.5         # Line thickness
-  )+
-  labs(color = "LM inclusion") )
+Before going ahead, we can check if treatment has an effect on the linear model significance for species:  
 
 
-```
+We see there are many species for which the linear model properly fit. However, if we take into account all shared species between the 4 treatments that are below p-value = 0.1. Having a linear model per treatment would be much accurate, but we can not do it. 
 
-my name is javi and i am a smelly man
 
 I get the following table: 
 
@@ -588,7 +719,7 @@ I get the following table:
 #| echo: false
 #| warning: false
 
- knitr::kable(head(nind_lm_species))
+ knitr::kable(head(nind_lm_species_2))
 
 ```
 :::
@@ -599,21 +730,21 @@ The resulting table is integrated with the biomass database so we can calculate 
 
 ```{r nind_m2 calculation 1}
 
-flora_biomass_lm <- merge(flora_biomass_raw, nind_lm_species)
+flora_biomass_lm <- merge(flora_biomass_raw, nind_lm_species_2)
 
 flora_biomass_lm$nind_m2 <-
   flora_biomass_lm$intercept + flora_biomass_lm$abundance * flora_biomass_lm$slope
 
 ```
 
- Since there are some species for which its intercept is negative, the lm consider that nind_m2 < 0 when abundance = 0, and that cannot be the case. This happens for 3 species. We can either delete these species or make *this "dummy" correction by saying that if nind_m2 < 0 , then nind_m2 = 0.*
+ Since there are some species for which its intercept is negative, the lm consider that nind_m2 < 0 when abundance = 0, and that cannot be the case. This happens for 3 species. We can either delete these species or make *this "dummy" correction by saying that if nind_m2 < 0 , then nind_m2 = 1.*
 
 ```{r nind_m2 calculation 2}
 #| warning: false
 #
 # Dummy correction ?????????????????????????????????????
 flora_biomass_lm <- flora_biomass_lm %>%
-  mutate(nind_m2 = ifelse(nind_m2 < 0, 0.1, nind_m2))
+  mutate(nind_m2 = ifelse(nind_m2 < 0, 1, nind_m2))
 ```
 
 #### Calculation of biomass at species level +

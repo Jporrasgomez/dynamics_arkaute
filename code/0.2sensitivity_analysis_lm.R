@@ -24,9 +24,9 @@ a <- ggplot(flora_nobs, aes(x = mean_abundance, y = n_observations, label = code
     segment.color = "gray50",  # Line color
     segment.size = 0.5         # Line thickness
   ) +
-  labs(color = "LM inclusion", x = NULL, y = "Number of observations",
+  labs(color = "LM inclusion", x = "Mean abundance", y = "Number of observations",
        title = paste0("p-value < 0.1 and R2 > 0.3: "), subtitle = paste0(perc_ex, "%", " excluded species")) +
-  theme(legend.position = "none")
+  theme(legend.position = "null")
 
 
 species_lm_1<- nind_lm_data %>% 
@@ -38,6 +38,8 @@ excluded_species_lm_1 <- {nind_lm_data %>%
     filter(!code %in% species_lm_codes_1 )}$code
 perc_ex_1 <- round(100 - (length(species_lm_codes_1)+ length(one_ind_species))/(length(unique(flora_raw$code))) *100, 2)
 flora_nobs$excluded_1 <- ifelse(flora_nobs$code %in% excluded_species_lm_1, "excluded", "included")
+
+
 
 
 # Update the plot
@@ -52,9 +54,9 @@ b <- ggplot(flora_nobs, aes(x = mean_abundance, y = n_observations, label = code
     segment.color = "gray50",  # Line color
     segment.size = 0.5         # Line thickness
   )+
-  labs(color = "LM inclusion", y = NULL, x = NULL,
+  labs(color = "LM inclusion", y = NULL, x = "Mean abundance",
        title = paste0("p-value < 0.1"), subtitle = paste0(perc_ex_1, "%", " excluded species")) +
-  theme(legend.position = "none")
+  theme(legend.position = "null")
 
 
 
@@ -69,6 +71,8 @@ perc_ex_2 <- round(100 - (length(species_lm_codes_2)+ length(one_ind_species))/(
 flora_nobs$excluded_2 <- ifelse(flora_nobs$code %in% excluded_species_lm_2, "excluded", "included")
 
 
+
+
 c <- ggplot(flora_nobs, aes(x = mean_abundance, y = n_observations, label = code)) +
   geom_point(aes(color = excluded_2)) +  # Color based on the exclusion status
   scale_color_manual(
@@ -80,9 +84,9 @@ c <- ggplot(flora_nobs, aes(x = mean_abundance, y = n_observations, label = code
     segment.color = "gray50",  # Line color
     segment.size = 0.5         # Line thickness
   ) +
-  labs(color = "Linear model inclusion", y = NULL, x = NULL,
+  labs(color = "Linear model inclusion", y = NULL, x = "Mean abundance",
        title = paste0("p-value < 0.05"), subtitle = paste0(perc_ex_2, "%", " excluded species")) +
-  theme(legend.position = "none")
+  theme(legend.position = "null")
 
 
 
