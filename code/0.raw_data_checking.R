@@ -503,6 +503,7 @@ for (i in 1: length(code_levels)) {
   
 }
 
+
 ggarrange(gglist[[1]], gglist[[2]], gglist[[3]], 
           gglist[[4]], gglist[[5]], gglist[[6]], 
           ncol = 2, nrow = 3)
@@ -533,6 +534,11 @@ gglist[[37]]
 
 print(gglist[[12]])
 
+
+
+# As we can see, for this example the R$^2$ is quite low ( R$^2$ = 0.23). The fact is that, if we take a look to how well
+# the model fit for all of our species, there are many considerations.
+
 ggplot(nind, aes(x = abundance, y = nind_m2)) + 
   facet_wrap(~ treatment) +
   geom_point(aes(color = treatment), shape = 15, alpha = 0.5) +
@@ -540,9 +546,6 @@ ggplot(nind, aes(x = abundance, y = nind_m2)) +
   scale_fill_manual(values = c("c" = "green2", "w" = "red", "p" = "blue", "wp" = "purple")) +
   geom_smooth(method = "lm", se = FALSE, color = "black")
 
-
-# As we can see, for this example the R$^2$ is quite low ( R$^2$ = 0.23). The fact is that, if we take a look to how well
-# the model fit for all of our species, there are many considerations.
 
 nind_lm_data$posneg_slope <- ifelse(nind_lm_data$slope < 0, paste("negative"), paste("positive"))
 #hist(nind_lm_data$slope)
@@ -595,6 +598,20 @@ ggarrange(a,b,c,
           nrow = 1, 
           ncol = 3)
 
+
+species_presence_treat <- flora_biomass_raw %>% 
+  select(treatment, sampling, plot, code) %>% 
+  distinct() %>% 
+  group_by(treatment, code) %>% 
+  mutate(n_obs_xtreat = n()) %>% 
+  select(treatment, code, n_obs_xtreat) %>% 
+  distinct() %>% 
+  group_by(code) %>% 
+  mutate(total_obs = sum(n_obs_xtreat)) %>% 
+  mutate(perc_obs = round(n_obs_xtreat/total_obs, 2))
+
+nind_lm_species0 <- merge(nind_lm_species, species_presence_treat, by ="code")
+# porqeeeeeeee no salen las mismas observacciones??
 
 # Which set of species do we choose? 
 # I say we choose p-value < 0.05. Is the least arbitrary and we do not lose a lot of information. 
