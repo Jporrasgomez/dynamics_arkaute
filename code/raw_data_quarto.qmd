@@ -514,7 +514,7 @@ For the first question we take a look to the following plots:
 ```{r linear regression exploration}
 #| warning: false
 #| fig-width: 6
-#| fig-height: 12
+#| fig-height: 9
 
 code_levels <- unique(nind$code)
 gglist <- list()

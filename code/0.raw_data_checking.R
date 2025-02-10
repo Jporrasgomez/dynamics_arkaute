@@ -267,6 +267,19 @@ flora_medium <- flora_medium %>%
 
 flora_abrich <- flora_medium
 
+
+flora_medium$code_ordered <- reorder(flora_medium$code, -flora_medium$abundance, FUN = mean)
+
+flora_nobs <- flora_medium %>% 
+  group_by(code) %>% 
+  summarize(n_observations= n(),
+            mean_abundance = mean(abundance))
+
+flora_nobs$abnobs <- flora_nobs$mean_abundance * flora_nobs$n_observations
+
+flora_nobs$code_nobs <- factor(flora_nobs$code,
+                               levels = flora_nobs$code[order(flora_nobs$n_observations, decreasing = TRUE)])
+
 # !!Checking abundance
 
 hist(flora_abrich$abundance_community, breaks = 100)
@@ -292,17 +305,7 @@ ggplot(flora_abrich, aes(x = date, y = abundance_community,
   
 
 
-flora_medium$code_ordered <- reorder(flora_medium$code, -flora_medium$abundance, FUN = mean)
 
-flora_nobs <- flora_medium %>% 
-  group_by(code) %>% 
-  summarize(n_observations= n(),
-            mean_abundance = mean(abundance))
-
-flora_nobs$abnobs <- flora_nobs$mean_abundance * flora_nobs$n_observations
-
-flora_nobs$code_nobs <- factor(flora_nobs$code,
-                               levels = flora_nobs$code[order(flora_nobs$n_observations, decreasing = TRUE)])
 
 ggplot(flora_medium, aes(x = code_ordered, y = abundance)) +
   geom_boxplot() +
@@ -456,7 +459,7 @@ code_levels <- unique(nind$code)
 gglist <- list()
 
 nind_lm_data <- matrix(nrow = length(code_levels), ncol = 6)
-colnames(nind_lm_data) <- c("code", "intercept", "slope", "r_squared", "p_value", "n_observations")
+colnames(nind_lm_data) <- c("code", "intercept", "slope", "r_squared", "p_value", "n_points_lm")
 nind_lm_data <- as.data.frame(nind_lm_data)
 
 counter <- 0
@@ -498,7 +501,7 @@ for (i in 1: length(code_levels)) {
   nind_lm_data$slope[counter] <- slope_i
   nind_lm_data$r_squared[counter] <- r_squared_i
   nind_lm_data$p_value[counter] <- p_value_i
-  nind_lm_data$n_observations[counter] <- n_observations_i
+  nind_lm_data$n_points_lm[counter] <- n_observations_i
   
   
 }
@@ -599,19 +602,22 @@ ggarrange(a,b,c,
           ncol = 3)
 
 
-species_presence_treat <- flora_biomass_raw %>% 
-  select(treatment, sampling, plot, code) %>% 
-  distinct() %>% 
-  group_by(treatment, code) %>% 
-  mutate(n_obs_xtreat = n()) %>% 
-  select(treatment, code, n_obs_xtreat) %>% 
-  distinct() %>% 
-  group_by(code) %>% 
-  mutate(total_obs = sum(n_obs_xtreat)) %>% 
-  mutate(perc_obs = round(n_obs_xtreat/total_obs, 2))
+source("code/0.3species_presence.R")
+ggpresence
+ggarrange(
+  ggpresence0, ggpresence1, ggpresence2, 
+  labels = c("A", "B", "C"), 
+  nrow = 1, 
+  ncol = 3
+)
 
-nind_lm_species0 <- merge(nind_lm_species, species_presence_treat, by ="code")
-# porqeeeeeeee no salen las mismas observacciones??
+
+
+
+
+nind_lm_species <- merge(nind_lm_species, species_presence_treat, by ="code")
+nind_lm_species_1 <- merge(nind_lm_species_1, species_presence_treat, by ="code")
+nind_lm_species_2 <- merge(nind_lm_species_2, species_presence_treat, by ="code")
 
 # Which set of species do we choose? 
 # I say we choose p-value < 0.05. Is the least arbitrary and we do not lose a lot of information. 
