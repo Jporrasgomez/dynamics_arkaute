@@ -15,7 +15,6 @@ bibliography: "C:/Users/javier.porras/Documents/dynamics_arkaute/code/experiment
 
 ## Opening and preparing database
 
-
 ```{r Code settings}
 #| warning: false
 
@@ -36,14 +35,13 @@ theme_set(theme_bw() +
 
 All the raw data information we have present an assymetrical distribution.
 
-* Abundance
-* Morphological parameters: 
-    + Height (H, cm)
-    + Diameter at half height (Dm, cm)
-    + Circumference at half heiht (Cm, cm)
-    + Diameter at the base (Db, cm)
-    + Circumference at the base (Cb, cm)
-  
+-   Abundance
+-   Morphological parameters:
+    -   Height (H, cm)
+    -   Diameter at half height (Dm, cm)
+    -   Circumference at half heiht (Cm, cm)
+    -   Diameter at the base (Db, cm)
+    -   Circumference at the base (Cb, cm)
 
 ```{r Opening database}
 #| warning: false
@@ -73,8 +71,7 @@ boxplot(flora_raw$Db, main = "Diameter at the base")
 boxplot(flora_raw$Cb, main = "Circumference at the base")
 ```
 
-We add sampling dates using the package *lubridate* and the database "sampling_dates.csv" where we kept a record of all dates. 
-
+We add sampling dates using the package *lubridate* and the database "sampling_dates.csv" where we kept a record of all dates.
 
 ```{r Adding sampling dates information}
 #| warning: false
@@ -99,7 +96,7 @@ flora_raw <- right_join(flora_raw, sampling_dates, by = join_by(sampling))
 flora_rare <- flora_raw %>% select(sampling, one_month_window, omw_date, plot, treatment, code, abundance, height, Cb, Db, Cm, Dm, date, month)
 ```
 
-We also added species information by adding the database "species_code.csv" and merging it by "code", which is the abrevitation we have used for the species. Each code is a word of four letters, the first two being the first two letters of the genus, and the last two letters being the first two letter os the species. Example: For the species *Convolvus arvensis* we used the code *coar*, while for the species *Ranunculus bulbosus* we used the code *rabu*. 
+We also added species information by adding the database "species_code.csv" and merging it by "code", which is the abrevitation we have used for the species. Each code is a word of four letters, the first two being the first two letters of the genus, and the last two letters being the first two letter os the species. Example: For the species *Convolvus arvensis* we used the code *coar*, while for the species *Ranunculus bulbosus* we used the code *rabu*.
 
 ```{r Adding species information}
 #| warning: false
@@ -114,7 +111,7 @@ flora_rare <- merge(flora_rare, species_code, by = "code")
 
 ```
 
-A change we had to make to the database is adding 0.01 cm to both Dm and Db since the tool we used was calibrated at -0.01 cm. 
+A change we had to make to the database is adding 0.01 cm to both Dm and Db since the tool we used was calibrated at -0.01 cm.
 
 ```{r Change to diameter }
 #| warning: false
@@ -126,8 +123,6 @@ flora_rare$Dm <- flora_rare$Dm + 0.01
 flora_rare$Db <- flora_rare$Db + 0.01
 
 ```
-
-
 
 ### Checking errors
 
@@ -147,40 +142,35 @@ error2 <- nrow({checking2 <- flora_raw %>%
 
 ```
 
-We have to check all possible mistakes found within the database due to errors at field or database building. 
+We have to check all possible mistakes found within the database due to errors at field or database building.
 
-1) Is there any line with less than 2 NA between height, cb, cm, db and dm?  This is: did we slip some extra data in some lines? The answer is: `r error1`
+1)  Is there any line with less than 2 NA between height, cb, cm, db and dm? This is: did we slip some extra data in some lines? The answer is: `r error1`
 
-2) Is there any line with more than 2 NA among the same variables? This is: are we missing some data? The answer is: `r error2`
-For this last question, I have filtered by excluding the samplings 0, 1, 2, 3 and 12. This is because during samplings 0, 1 and 2 we only measured height, for the sampling 3 (first sampling performing non-destructive methodology) we missed some individuals, and for sampling 12 we could not do biomass for several reasons. 
+2)  Is there any line with more than 2 NA among the same variables? This is: are we missing some data? The answer is: `r error2` For this last question, I have filtered by excluding the samplings 0, 1, 2, 3 and 12. This is because during samplings 0, 1 and 2 we only measured height, for the sampling 3 (first sampling performing non-destructive methodology) we missed some individuals, and for sampling 12 we could not do biomass for several reasons.
 
+After that, we can check several plots in order to see the relationship between the morphological parameters and check if there is any dot that seems to be off the chart.
 
-After that, we can check several plots in order to see the relationship between the morphological parameters and check if there is any dot that seems to be off the chart. 
+\*\* no consigo cargar los plots
 
-** no consigo cargar los plots
-
-
-
-## VARIABLES 
+## VARIABLES
 
 ### Biomass at individual level: applying allometric equation
 
-1. First thing we have to do is to transform the diameters into circumferences
+1.  First thing we have to do is to transform the diameters into circumferences
+
 ```{r Biomass species level 1}
 #Transforming diameters into circumferences
 flora_rare$cm <- round(ifelse(!is.na(flora_rare$Dm), flora_rare$Dm * pi, flora_rare$Cm), 2)
 flora_rare$cb <- round(ifelse(!is.na(flora_rare$Db), flora_rare$Db * pi, flora_rare$Cb), 2)
 ```
 
-2. Then, we calculate the area at base level and at half height using bot Cm and Cb
+2.  Then, we calculate the area at base level and at half height using bot Cm and Cb
 
 ```{r Biomass species level 2}
 #Calculating area of circle with circumference values
 flora_rare$Ah <- ((flora_rare$cm)^2)/(4*pi)
 flora_rare$Ab <- ((flora_rare$cb)^2)/(4*pi)
 ```
-
-
 
 ```{r Biomass species level 2.1}
 
@@ -191,9 +181,10 @@ biggerthan1<- nrow({checkingNA <- flora_rare %>%
   filter(rowSums(is.na(select(., height, Ah, Ab))) > 1) %>%
   filter(!sampling %in% c("0", "1", "2", "3", "12"))})
 ```
-We can check if there is any individual with an area bigger than 1 m^2^. And the result is that there is `r biggerthan1` species under that condition. 
 
-3. Agrupation of taxonomical groups and calculation of mean values for morphological values. At the first samplings, we were collecting information of all possible species. With the pass of time, we realized we could not identify every species at every sampling due to the abscence of flowers or fruits. That is why we decided to group those species into a higher taxonomical categories. This is the case of the families *poaceae*, *asteraceae*, *orchidaceae* and the genus *Torilis*. Here we calculate the abundance of these groups by summing all data of abundance per sampling and plot. Example: if we took abundance fromm a plot in the sampling 1, we might have included 5 poaceae species. That means, we are including 5 datapoints about abundance. Since we are aggregating these species into the family group, we need to sum all these abundances in order to know how much space was the poaceae group occupying at the time. It is important to mention that there are some poaceae species like *Dactilys glomerata* or *Festuca arundinacea* that we could identify. Same happens for asteraceae group. Besides, in this step we calculate the average value for height, the area at base level (Ab) and the area at half height (Ah). 
+We can check if there is any individual with an area bigger than 1 m^2^. And the result is that there is `r biggerthan1` species under that condition.
+
+3.  Agrupation of taxonomical groups and calculation of mean values for morphological values. At the first samplings, we were collecting information of all possible species. With the pass of time, we realized we could not identify every species at every sampling due to the abscence of flowers or fruits. That is why we decided to group those species into a higher taxonomical categories. This is the case of the families *poaceae*, *asteraceae*, *orchidaceae* and the genus *Torilis*. Here we calculate the abundance of these groups by summing all data of abundance per sampling and plot. Example: if we took abundance fromm a plot in the sampling 1, we might have included 5 poaceae species. That means, we are including 5 datapoints about abundance. Since we are aggregating these species into the family group, we need to sum all these abundances in order to know how much space was the poaceae group occupying at the time. It is important to mention that there are some poaceae species like *Dactilys glomerata* or *Festuca arundinacea* that we could identify. Same happens for asteraceae group. Besides, in this step we calculate the average value for height, the area at base level (Ab) and the area at half height (Ah).
 
 ```{r Biomass species level 3, warning= FALSE}
 
@@ -222,7 +213,7 @@ flora_medium <- bind_rows(taxongroups, species)
 
 ```
 
-4. Once we have reduced the database by calculating the mean value of height, Ah and Ab per species, plot and sampling, we have a database where in every measured plot we have 1 row per species mainly containing sampling, date, plot, treatment, species code, height, Ah, Ab. Now, we can apply the biomass equation. This way we calculate the mean biomass of one individual for each species (biomass_i).
+4.  Once we have reduced the database by calculating the mean value of height, Ah and Ab per species, plot and sampling, we have a database where in every measured plot we have 1 row per species mainly containing sampling, date, plot, treatment, species code, height, Ah, Ab. Now, we can apply the biomass equation. This way we calculate the mean biomass of one individual for each species (biomass_i).
 
 ```{r Biomass species level 4}
 #| warning: false
@@ -235,11 +226,9 @@ flora_medium$biomass_i <- d*(flora_medium$x^z)
 
 ```
 
-
-
 ### Richness
 
-To add the richness information per plot and sampling, we just count the number of different species within each combination of plot and sampling. 
+To add the richness information per plot and sampling, we just count the number of different species within each combination of plot and sampling.
 
 ```{r richness}
 #| warning: false
@@ -254,7 +243,7 @@ flora_medium <- flora_medium %>%
 
 ### Abundance at community level
 
-To calculate the abundance at community level (this is: total abundance of each plot at each sampling), we have to add the relative abundance of each species within the plots. 
+To calculate the abundance at community level (this is: total abundance of each plot at each sampling), we have to add the relative abundance of each species within the plots.
 
 ```{r abundance}
 #| warning: false
@@ -268,10 +257,7 @@ flora_abrich <- flora_medium
 
 ```
 
-At this point we can take a look to some plot to have an idea of how relevant our species are in the experiment. 
-In the plot 1 we see boxplots of abundance with the mean value as a red point. 
-In the plot 2 we see a the number of observations (this is: how many times the species has been spotted throughout the experiment) distribution as a function of the mean abundance of each species. 
-In the plot 3 we only see the number of observations 
+At this point we can take a look to some plot to have an idea of how relevant our species are in the experiment. In the plot 1 we see boxplots of abundance with the mean value as a red point. In the plot 2 we see a the number of observations (this is: how many times the species has been spotted throughout the experiment) distribution as a function of the mean abundance of each species. In the plot 3 we only see the number of observations
 
 ```{r plots, echo = FALSE, warning = FALSE}
 
@@ -318,8 +304,8 @@ ggplot(flora_nobs, aes(x = code_nobs, y = n_observations, fill = n_observations)
 
 ### Biomass at species level
 
+The first thing to do with biomass is to filter from the database all samplings for which we do not have any information about biomass. This is sampling 0, 1, 2 and 12.
 
-The first thing to do with biomass is to filter from the database all samplings for which we do not have any information about biomass. This is sampling 0, 1, 2 and 12. 
 ```{r biomass com 1}
 #| warning: false
 
@@ -330,13 +316,11 @@ flora_biomass_raw <- flora_medium %>%
 
 ```
 
-
-To calculate the biomass at species level (biomass_s) on a plot and sampling based on the biomass at individual level (biomass_i) we need to know the number of individuals that were on that plot for that species. biomass_i is just the mean biomass of an individual of a certain species. Therefore, we need to know the number of individuals per square metre or plot (nind_m2) in oder to know the total amount of biomass per species on a plot (biomass_s). This way biomass_s = biomass_i * nind_m2. However, the information about nind_m2 is not available for all species at all plots and samplings. Therefore, we have to estimate it based on the available information.
+To calculate the biomass at species level (biomass_s) on a plot and sampling based on the biomass at individual level (biomass_i) we need to know the number of individuals that were on that plot for that species. biomass_i is just the mean biomass of an individual of a certain species. Therefore, we need to know the number of individuals per square metre or plot (nind_m2) in oder to know the total amount of biomass per species on a plot (biomass_s). This way biomass_s = biomass_i \* nind_m2. However, the information about nind_m2 is not available for all species at all plots and samplings. Therefore, we have to estimate it based on the available information.
 
 #### Biomass at species level of "lonely" species
 
 But, before that, we know that there are some species for which we only have measured 1 individual per plot and sampling every time we have spot it. Therefore, for these species we do not need to estimate the number of individuals. In this case, biomass_i = biomass_s. These species are *Rumex crispus*, *Amaranthus sp.*, *Kickxia supuria* and an unidentified species of the family *brasicaceae*.
-
 
 ```{r one individual species for biomass}
 #| warning: false
@@ -360,11 +344,11 @@ flora_biomass_raw <- flora_biomass_raw %>%
 
 #### Estimation of number of individuals: available data
 
-Once we have that information we can proceed to estimate the number of individuals. 
+Once we have that information we can proceed to estimate the number of individuals.
 
 To be able to estimate abundance based on the number of individuals we need data were abundance and number of individuals per species, plot and sampling were available. Since we have been learning the application of this non-destructive methodology on the go, we have 2 different groups of data:
 
-1. Group 1 (nind1): Since sampling 12, we have been estimating the number of individuals per species and plot based on direct field observations.
+1.  Group 1 (nind1): Since sampling 12, we have been estimating the number of individuals per species and plot based on direct field observations.
 
 ```{r Estimating number of individuals: group 1}
 #| warning: false
@@ -401,8 +385,7 @@ nind1$abundance <- as.numeric(nind1$abundance)}
 ## Las especies de asteraceae que hemos agrupado por familia se recalculan sus individuos y abundancias aquí
 ```
 
-
-2. Group 2 (nind2): Up to sampling 11, We only measured the morphological parameters of 5 individuals per specie as maximum. If there were less than 5 species, we know that number was the total amount of individuals in the plot.
+2.  Group 2 (nind2): Up to sampling 11, We only measured the morphological parameters of 5 individuals per specie as maximum. If there were less than 5 species, we know that number was the total amount of individuals in the plot.
 
 ```{r Estimating number of individuals: group 2}
 #| warning: false
@@ -424,7 +407,8 @@ nind <- full_join(nind1, nind2)
 
 ```
 
-Once we have both groups, we can merge both groups by binding rows. 
+Once we have both groups, we can merge both groups by binding rows.
+
 ```{r Estimating number of individuals: merging groups}
 #| warning: false
 
@@ -432,12 +416,11 @@ Once we have both groups, we can merge both groups by binding rows.
 nind <- bind_rows(nind1, nind2)
 ```
 
-Question:  if we have some species for which the number of individuals measured in the plot was the total amount of individuals in that plot (this is, when there were less than 5 individuals per species), why are we not calculating the biomass of those species as biomass_s = biomass_1 + biomass_2 ... + biomass_i ? I think this is worthy to be considered. At the begining we did do this. But, I think we decided that, for the shake of consistency, we do not want to mix biomass_s estimation approaches for the same species. For the case of one_ind_species, these species have only been spotted isolately. Therefore, biomass_i = biomass_s is valid for these species since it will be the only approach used for them. However, if for *Potentilla reptans* we use one approach (summing individual biomass when nind < 5) at certain moments and another approach (estimation of nind_m2 when nind >5), the noise might be higher. **We could, maybe, try it?**
+Question: if we have some species for which the number of individuals measured in the plot was the total amount of individuals in that plot (this is, when there were less than 5 individuals per species), why are we not calculating the biomass of those species as biomass_s = biomass_1 + biomass_2 ... + biomass_i ? I think this is worthy to be considered. At the begining we did do this. But, I think we decided that, for the shake of consistency, we do not want to mix biomass_s estimation approaches for the same species. For the case of one_ind_species, these species have only been spotted isolately. Therefore, biomass_i = biomass_s is valid for these species since it will be the only approach used for them. However, if for *Potentilla reptans* we use one approach (summing individual biomass when nind \< 5) at certain moments and another approach (estimation of nind_m2 when nind \>5), the noise might be higher. **We could, maybe, try it?**
 
 #### Estimation of number of individuals: linear model
 
-Once that we have the database to establish the estimation, we have applied a linear regression model where we plot the number of individuals per m$^2$ as a function of abundance. For the lineal regression we applied the code: lm(nind_m2 \~ abundance). 
-
+Once that we have the database to establish the estimation, we have applied a linear regression model where we plot the number of individuals per m$^2$ as a function of abundance. For the lineal regression we applied the code: lm(nind_m2 \~ abundance).
 
 ```{r linear regression 1}
 #| warning: false
@@ -504,12 +487,9 @@ print(gglist[[9]])
 
 ```
 
-For this linear regression 2 questions arise: 
-1. Is the relationship between abundance and number of individuals/m$^2$ influenced by treatment? 
-2. Which species do we choose and following which criteria? 
+For this linear regression 2 questions arise: 1. Is the relationship between abundance and number of individuals/m$^2$ influenced by treatment? 2. Which species do we choose and following which criteria?
 
-
-For the first question we take a look to the following plots: 
+For the first question we take a look to the following plots:
 
 ```{r linear regression exploration}
 #| warning: false
@@ -605,9 +585,9 @@ gglist[[37]]
 
 ```
 
-There are some groups, like poaceae, where we can see a differentiation between treatments. But it is difficult to see a pattern 
+There are some groups, like poaceae, where we can see a differentiation between treatments. But it is difficult to see a pattern
 
-And also to this one, where I aggregate all species into the 4 treatments. This way we can see if the distribution of points is more concentrated in certain regions: 
+And also to this one, where I aggregate all species into the 4 treatments. This way we can see if the distribution of points is more concentrated in certain regions:
 
 ```{r linear regression exploration 1}
 #| warning: false
@@ -639,10 +619,9 @@ ggplot(nind, aes(x = abundance, y = nind_m2)) +
 
 ```
 
+Since it appears there are no considerable differences between treatments in abundance - nind_m2 distribution, we can go ahead with treatment aggregation.
 
-Since it appears there are no considerable differences between treatments in abundance - nind_m2 distribution, we can go ahead with treatment aggregation. 
-
-To answer the second question we have to take a look to how well the model fits to all our species. 
+To answer the second question we have to take a look to how well the model fits to all our species.
 
 ```{r linear regression 2}
 #| warning: false
@@ -653,7 +632,7 @@ nind_lm_data$posneg_slope <- ifelse(nind_lm_data$slope < 0, paste("negative"), p
 #Let's check results
 results <- 
   ggplot(nind_lm_data, aes( x = r_squared, y = p_value, 
-                            label = paste(code, n_observations, sep = ", "), color = posneg_slope))+
+                            label = paste(code, n_points_lm, sep = ", "), color = posneg_slope))+
   geom_point()+ 
   geom_hline(yintercept = 0.1, linetype = "dashed", color = "gray40") +
   geom_vline(xintercept = 0.3, linetype = "dashed", color = "gray40") +
@@ -681,11 +660,9 @@ print(results)
 
 ```
 
+Here we can see the p-value in y-axis and the R$^2$ value in the x-axis. In orange, we can see the species for which the slope is negative. 2 dashed lines have been drew in p-value = 0.1 y R$^2$ = 0.3. In this scenario, *we would pick those species for which the model fits within p-value \< 0.1 and R*$^2$ \> 0.3 for next stpeps. In this case, 50% of species (20 species) would be used.
 
-Here we can see the p-value in y-axis and the R$^2$ value in the x-axis. In orange, we can see the species for which the slope is negative. 2 dashed lines have been drew in p-value = 0.1 y R$^2$ = 0.3. In this scenario, *we would pick those species for which the model fits within p-value < 0.1 and R$^2$ > 0.3 for next stpeps*. In this case, 50% of species (20 species) would be used.
-
-However, using R$^2$ > 0.3 is an arbitrary decision. The significance of the model is given by the p-value, while R$^2$ explains how scattered the data is. We can make a sensitivity analysis. 
-
+However, using R$^2$ \> 0.3 is an arbitrary decision. The significance of the model is given by the p-value, while R$^2$ explains how scattered the data is. We can make a sensitivity analysis.
 
 ```{r linear regression 3}
 #| warning: false
@@ -701,20 +678,37 @@ ggarrange(a,b,c,
           ncol = 3)
 
 
+
 ```
 
-Therefore, we can assess which set of species we use based on the p-value and R$^2$. 
 
-Before going ahead, we can check if treatment has an effect on the linear model significance for species:  
+Also, we can see the presence of species in each treatment in terms of number of observations. This way we can know if we are deleting some relevant species to some treatments. 
+
+```{r linear regression 4}
+
+#| warning: false
+#| 
+source(here("code", "0.3species_presence.R"))
+ggpresence
+ggarrange(
+  ggpresence0, ggpresence1, ggpresence2, 
+  labels = c("A", "B", "C"), 
+  nrow = 1, 
+  ncol = 3
+)
 
 
-We see there are many species for which the linear model properly fit. However, if we take into account all shared species between the 4 treatments that are below p-value = 0.1. Having a linear model per treatment would be much accurate, but we can not do it. 
+```
+
+Therefore, we can assess which set of species we use based on the p-value and R$^2$.
 
 
-I get the following table: 
 
+We see there are many species for which the linear model properly fit. However, if we take into account all shared species between the 4 treatments that are below p-value = 0.1. Having a linear model per treatment would be much accurate, but we can not do it.
 
-:::{.callout title="Linear model outputs" collapse="show"}
+I get the following table:
+
+::: {.callout title="Linear model outputs" collapse="show"}
 ```{r linear regression 5}
 #| echo: false
 #| warning: false
@@ -724,9 +718,9 @@ I get the following table:
 ```
 :::
 
-#### Calculation of number of individuals per square metre 
+#### Calculation of number of individuals per square metre
 
-The resulting table is integrated with the biomass database so we can calculate the number of individuals per m$^2$ for all rows. 
+The resulting table is integrated with the biomass database so we can calculate the number of individuals per m$^2$ for all rows.
 
 ```{r nind_m2 calculation 1}
 
@@ -737,7 +731,7 @@ flora_biomass_lm$nind_m2 <-
 
 ```
 
- Since there are some species for which its intercept is negative, the lm consider that nind_m2 < 0 when abundance = 0, and that cannot be the case. This happens for 3 species. We can either delete these species or make *this "dummy" correction by saying that if nind_m2 < 0 , then nind_m2 = 1.*
+Since there are some species for which its intercept is negative, the lm consider that nind_m2 \< 0 when abundance = 0, and that cannot be the case. This happens for 3 species. We can either delete these species or make *this "dummy" correction by saying that if nind_m2 \< 0 , then nind_m2 = 1.*
 
 ```{r nind_m2 calculation 2}
 #| warning: false
@@ -755,7 +749,7 @@ Calculation of species biomass (biomass_s) per square meter by multiplying bioma
 flora_biomass_lm$biomass_s <- flora_biomass_lm$biomass_i * flora_biomass_lm$nind_m2
 ```
 
-Then, I join the "lonely" species biomass database and the linear model species database. 
+Then, I join the "lonely" species biomass database and the linear model species database.
 
 ```{r nind_m2 calculation 4}
 
@@ -764,18 +758,11 @@ flora_biomass <- bind_rows(flora_biomass_oneind, flora_biomass_lm)
 
 ```
 
-
 #### Outliers of biomass_s
 
-At this point, it is worth considering the removal of outlier for biomass_s. To reach this information we have: 
-1) Used abundance data gathered from the field by direct observations
-2) Used morphological measurements taken in the field in the application of a biomass equation
-3) Used the available data of number of individuals / m2 and species that was gathered in the field by visual estimation
-4) Used a linear model to estimate the number of individuals per m2 for all species, samplings and plots. 
-5) Calculated the biomass at species level by biomass_i * nind_m2. 
+At this point, it is worth considering the removal of outlier for biomass_s. To reach this information we have: 1) Used abundance data gathered from the field by direct observations 2) Used morphological measurements taken in the field in the application of a biomass equation 3) Used the available data of number of individuals / m2 and species that was gathered in the field by visual estimation 4) Used a linear model to estimate the number of individuals per m2 for all species, samplings and plots. 5) Calculated the biomass at species level by biomass_i \* nind_m2.
 
-So, here there are many calculations that might had led to error accumulation. 
-
+So, here there are many calculations that might had led to error accumulation.
 
 ```{r outliers 1}
 
@@ -789,7 +776,6 @@ hist(log(flora_biomass$biomass_s), breaks = 50, main = "log(biomass_s)")
 
 ```
 
-
 ```{r outliers 2}
 
 # Step 1: Calculate IQR for log-transformed biomass_s
@@ -801,7 +787,6 @@ IQR <- Q3 - Q1
 flora_biomass_clean <- flora_biomass %>%
   filter(log(biomass_s) >= Q1 - 1.5 * IQR & log(biomass_s) <= Q3 + 1.5 * IQR)
 ```
-
 
 ```{r outliers 3}
 
@@ -822,7 +807,7 @@ There is almost no difference. Mark proposes to work on biomass as log(biomass) 
 
 ### Biomass at community levels
 
-Calculation of total biomasss (biomass_community) by summing all biomass at species level per square meter (biomass_s). 
+Calculation of total biomasss (biomass_community) by summing all biomass at species level per square meter (biomass_s).
 
 ```{r community biomass}
 
@@ -839,6 +824,3 @@ flora_biomass_clean <- flora_biomass_clean %>%
   
 
 ```
-
-
-

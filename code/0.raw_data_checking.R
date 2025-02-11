@@ -556,7 +556,7 @@ nind_lm_data$posneg_slope <- ifelse(nind_lm_data$slope < 0, paste("negative"), p
 #Let's check results
 results <- 
   ggplot(nind_lm_data, aes( x = r_squared, y = p_value, 
-                            label = paste(code, n_observations, sep = ", "),
+                            label = paste(code, n_points_lm, sep = ", "),
                             color = posneg_slope))+
   geom_point()+ 
   geom_vline(xintercept = 0.3, linetype = "dashed", color = "gray40") +
@@ -596,6 +596,7 @@ nind_lm_data <- nind_lm_data %>%
 
 source("code/0.2sensitivity_analysis_lm.R")
 #The plot A is nind_lm_species, B is nind_lm_species_1 and C is nind_lm_species_2
+
 ggarrange(a,b,c,
           labels = c("A", "B", "C"),
           nrow = 1, 
@@ -612,12 +613,53 @@ ggarrange(
 )
 
 
+# Plus exploration by Dani
+
+nind_2 <- nind %>% 
+  filter(!code %in% excluded_species_lm_2)
+
+species_0_obs <- flora_nobs_presence %>% 
+  filter(n_obs_xtreat = 0)
+
+presence_2 <- flora_nobs_presence %>% 
+  # Filtro para las especies con p-value < 0.05
+  filter(!code %in% excluded_species_lm_2) %>% 
+  # Aseguro quedarme con las especies presentes en todos los tratamientos
+  filter(!code %in% unique(flora_nobs_presence$code[which(flora_nobs_presence$n_obs_xtreat == 0)])) 
+nind_2 <- merge(nind_2, presence_2)
+
+code_levels_2 <- unique(nind_2$code)
+
+source("code/plots_functions_flora/lm_function.R")
+
+lm_function(nind_2, code_levels_2[1])
+lm_function(nind_2, code_levels_2[2])
+lm_function(nind_2, code_levels_2[3])
+lm_function(nind_2, code_levels_2[4])
+lm_function(nind_2, code_levels_2[5])
+lm_function(nind_2, code_levels_2[6])
+lm_function(nind_2, code_levels_2[7])
+lm_function(nind_2, code_levels_2[8])
+lm_function(nind_2, code_levels_2[9])
+lm_function(nind_2, code_levels_2[10])
+lm_function(nind_2, code_levels_2[11])
+lm_function(nind_2, code_levels_2[12])
+lm_function(nind_2, code_levels_2[13])
+lm_function(nind_2, code_levels_2[14])
+lm_function(nind_2, code_levels_2[15])
+lm_function(nind_2, code_levels_2[16])
+lm_function(nind_2, code_levels_2[17])
+lm_function(nind_2, code_levels_2[18])
+lm_function(nind_2, code_levels_2[19])
+lm_function(nind_2, code_levels_2[20])
+lm_function(nind_2, code_levels_2[21])
+lm_function(nind_2, code_levels_2[22])
+lm_function(nind_2, code_levels_2[23])
 
 
 
-nind_lm_species <- merge(nind_lm_species, species_presence_treat, by ="code")
-nind_lm_species_1 <- merge(nind_lm_species_1, species_presence_treat, by ="code")
-nind_lm_species_2 <- merge(nind_lm_species_2, species_presence_treat, by ="code")
+#las especies para las que no funciona la función son especies sin representación en algo
+
 
 # Which set of species do we choose? 
 # I say we choose p-value < 0.05. Is the least arbitrary and we do not lose a lot of information. 

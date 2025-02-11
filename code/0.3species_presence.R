@@ -106,3 +106,6 @@ ggpresence2 <-
     legend.position = "bottom"  # Colocar la leyenda en la parte inferior
   ) +
   labs(x = "Treatment", y = NULL, title = paste0("p-value < 0.05"))
+
+
+
