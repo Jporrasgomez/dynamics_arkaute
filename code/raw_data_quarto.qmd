@@ -542,7 +542,7 @@ for (i in 1: length(code_levels)) {
   nind_lm_data$slope[counter] <- slope_i
   nind_lm_data$r_squared[counter] <- r_squared_i
   nind_lm_data$p_value[counter] <- p_value_i
-  nind_lm_data$n_observations[counter] <- n_observations_i
+  nind_lm_data$n_points_lm[counter] <- n_observations_i
   
   
 }
@@ -681,8 +681,7 @@ ggarrange(a,b,c,
 
 ```
 
-
-Also, we can see the presence of species in each treatment in terms of number of observations. This way we can know if we are deleting some relevant species to some treatments. 
+Also, we can see the presence of species in each treatment in terms of number of observations. This way we can know if we are deleting some relevant species to some treatments.
 
 ```{r linear regression 4}
 
@@ -700,16 +699,63 @@ ggarrange(
 
 ```
 
-Therefore, we can assess which set of species we use based on the p-value and R$^2$.
+Therefore, we can assess which set of species we use based on the p-value and R$^2$. R$^2$ is .............. EXPLICAR COMO DECIDIMOS COGER SOLO P-VALUE < 0.05
+
+```{r linear regression 5 }
+
+#| warning: false
+#| 
+# Plus exploration by Dani
+
+nind_2 <- nind %>% 
+  filter(!code %in% excluded_species_lm_2)
+
+species_0_obs <- flora_nobs_presence %>% 
+  filter(n_obs_xtreat == 0)
+
+presence_2 <- flora_nobs_presence %>% 
+  # Filtro para las especies con p-value < 0.05
+  filter(!code %in% excluded_species_lm_2) %>% 
+  # Aseguro quedarme con las especies presentes en todos los tratamientos
+  filter(!code %in% unique(flora_nobs_presence$code[which(flora_nobs_presence$n_obs_xtreat == 0)])) 
+nind_2 <- merge(nind_2, presence_2)
+
+code_levels_2 <- unique(nind_2$code)
+
+source(here("code", "plots_functions_flora", "lm_function.R"))
+
+lm_function(nind_2, code_levels_2[1])
+lm_function(nind_2, code_levels_2[2])
+lm_function(nind_2, code_levels_2[3])
+lm_function(nind_2, code_levels_2[4])
+lm_function(nind_2, code_levels_2[5])
+lm_function(nind_2, code_levels_2[6])
+lm_function(nind_2, code_levels_2[7])
+lm_function(nind_2, code_levels_2[8])
+lm_function(nind_2, code_levels_2[9])
+lm_function(nind_2, code_levels_2[10])
+lm_function(nind_2, code_levels_2[11])
+lm_function(nind_2, code_levels_2[12])
+lm_function(nind_2, code_levels_2[13])
+lm_function(nind_2, code_levels_2[14])
+lm_function(nind_2, code_levels_2[15])
+lm_function(nind_2, code_levels_2[16])
+lm_function(nind_2, code_levels_2[17])
+#lm_function(nind_2, code_levels_2[18])
+lm_function(nind_2, code_levels_2[19])
+lm_function(nind_2, code_levels_2[20])
+lm_function(nind_2, code_levels_2[21])
+#lm_function(nind_2, code_levels_2[22])
 
 
 
-We see there are many species for which the linear model properly fit. However, if we take into account all shared species between the 4 treatments that are below p-value = 0.1. Having a linear model per treatment would be much accurate, but we can not do it.
+```
+
 
 I get the following table:
 
 ::: {.callout title="Linear model outputs" collapse="show"}
-```{r linear regression 5}
+```{r linear regression 6}
 #| echo: false
 #| warning: false
 

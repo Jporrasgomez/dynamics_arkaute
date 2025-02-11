@@ -62,7 +62,7 @@ ggpresence0 <-
     panel.grid = element_blank(),  # Eliminar líneas de cuadrícula predeterminadas
     axis.text.y = element_text(face = "italic", 
                                color = ifelse(levels(flora_nobs_presence$code) %in% 
-                                                species_lm_codes, "black", "red")),  # Cambiar color para "Poaceae"
+                                                excluded_species_lm, "red", "black")),  # Cambiar color para "Poaceae"
     legend.position = "bottom"  # Colocar la leyenda en la parte inferior
   ) +
   labs(x = "Treatment", y = "Species", title = paste0("p-value < 0.1 and R2 > 0.3: "))
@@ -82,7 +82,7 @@ ggpresence1 <-
     panel.grid = element_blank(),  # Eliminar líneas de cuadrícula predeterminadas
     axis.text.y = element_text(face = "italic", 
                                color = ifelse(levels(flora_nobs_presence$code) %in% 
-                                                species_lm_codes_1, "black", "red")),  # Cambiar color para "Poaceae"
+                                                excluded_species_lm_1, "red", "black")),  # Cambiar color para "Poaceae"
     legend.position = "bottom"  # Colocar la leyenda en la parte inferior
   ) +
   labs(x = "Treatment", y = NULL, title = paste0("p-value < 0.1"))
@@ -102,7 +102,7 @@ ggpresence2 <-
     panel.grid = element_blank(),  # Eliminar líneas de cuadrícula predeterminadas
     axis.text.y = element_text(face = "italic", 
                                color = ifelse(levels(flora_nobs_presence$code) %in% 
-                                                species_lm_codes_2, "black", "red")),  # Cambiar color para "Poaceae"
+                                                excluded_species_lm_2, "red", "black")),  # Cambiar color para "Poaceae"
     legend.position = "bottom"  # Colocar la leyenda en la parte inferior
   ) +
   labs(x = "Treatment", y = NULL, title = paste0("p-value < 0.05"))

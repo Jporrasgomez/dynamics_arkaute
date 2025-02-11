@@ -619,7 +619,7 @@ nind_2 <- nind %>%
   filter(!code %in% excluded_species_lm_2)
 
 species_0_obs <- flora_nobs_presence %>% 
-  filter(n_obs_xtreat = 0)
+  filter(n_obs_xtreat == 0)
 
 presence_2 <- flora_nobs_presence %>% 
   # Filtro para las especies con p-value < 0.05
@@ -649,12 +649,11 @@ lm_function(nind_2, code_levels_2[14])
 lm_function(nind_2, code_levels_2[15])
 lm_function(nind_2, code_levels_2[16])
 lm_function(nind_2, code_levels_2[17])
-lm_function(nind_2, code_levels_2[18])
+#lm_function(nind_2, code_levels_2[18])
 lm_function(nind_2, code_levels_2[19])
 lm_function(nind_2, code_levels_2[20])
 lm_function(nind_2, code_levels_2[21])
-lm_function(nind_2, code_levels_2[22])
-lm_function(nind_2, code_levels_2[23])
+#lm_function(nind_2, code_levels_2[22])
 
 
 
