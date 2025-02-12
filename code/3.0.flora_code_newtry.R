@@ -65,7 +65,7 @@ biomass_dynamics <- flora_biomass %>%
   mutate(mean_biomass = mean(biomass_community, na.rm = T),
          sd_biomass = sd(biomass_community, na.rm = T)) %>% 
   ungroup() %>% 
-  select(treatment, sampling, sampling_date, date, plot, code, biomass_s, biomass_community, mean_biomass, 
+  select(treatment, sampling, date, plot, code, biomass_s, biomass_community, mean_biomass, 
          sd_biomass)
 
 
@@ -160,14 +160,14 @@ dunn.test(log(biomass_dynamics$biomass_community), biomass_dynamics$treatment, m
 
 ggplot(biomass_dynamics, aes(x = treatment, y = log(biomass_community))) +
   geom_boxplot(aes(fill = treatment), colour = "black", alpha = 0.5) + # Set the outline color to black
-  scale_fill_manual(values = c("c" = "#48A597", "w" = "#D94E47", "p" = "#3A7CA5", "wp" = "#6D4C7D")) +
-  ggsignif::geom_signif(
-    comparisons = list(c("c","w"), c("c", "p"), c("c", "wp"), c("wp", "w"), c("wp", "p")),  # Significant comparisons
-    annotations = c("NS", "***", "***","***", "**"), # Asterisks for significance
-    map_signif_level = TRUE,  # Automatically map significance levels if p-values provided
-    y_position = c(9, 10, 11, 12, 13, 14),  # Adjust bracket positions
-    tip_length = 0.01,  # Length of bracket tips
-    textsize = 4  # Size of asterisks
+  scale_fill_manual(values = c("c" = "#48A597", "w" = "#D94E47", "p" = "#3A7CA5", "wp" = "#6D4C7D")) 
+  #ggsignif::geom_signif(
+  #  comparisons = list(c("c","w"), c("c", "p"), c("c", "wp"), c("wp", "w"), c("wp", "p")),  # Significant comparisons
+  #  annotations = c("NS", "***", "***","***", "**"), # Asterisks for significance
+  #  map_signif_level = TRUE,  # Automatically map significance levels if p-values provided
+  #  y_position = c(9, 10, 11, 12, 13, 14),  # Adjust bracket positions
+  #  tip_length = 0.01,  # Length of bracket tips
+  #  textsize = 4  # Size of asterisks
   )
 
 

@@ -493,7 +493,7 @@ For the first question we take a look to the following plots:
 
 ```{r linear regression exploration}
 #| warning: false
-#| fig-width: 6
+#| fig-width: 8
 #| fig-height: 9
 
 code_levels <- unique(nind$code)
@@ -666,6 +666,8 @@ However, using R$^2$ \> 0.3 is an arbitrary decision. The significance of the mo
 
 ```{r linear regression 3}
 #| warning: false
+#| fig-width: 8
+#| fig-height: 9
 
 #The lm model fits well (R^2 >= 0.3 and p-value < 0.1) for a few species: 
 # !! Why do we choose R2 0.3?
@@ -683,12 +685,13 @@ ggarrange(a,b,c,
 
 Also, we can see the presence of species in each treatment in terms of number of observations. This way we can know if we are deleting some relevant species to some treatments.
 
-```{r linear regression 4}
+```{r linear regression 4, warning=FALSE}
 
 #| warning: false
-#| 
+#| fig-width: 11
+#| fig-height: 16
+
 source(here("code", "0.3species_presence.R"))
-ggpresence
 ggarrange(
   ggpresence0, ggpresence1, ggpresence2, 
   labels = c("A", "B", "C"), 
@@ -704,8 +707,9 @@ Therefore, we can assess which set of species we use based on the p-value and R$
 ```{r linear regression 5 }
 
 #| warning: false
-#| 
-# Plus exploration by Dani
+#| fig-width: 8
+#| fig-height: 9
+
 
 nind_2 <- nind %>% 
   filter(!code %in% excluded_species_lm_2)

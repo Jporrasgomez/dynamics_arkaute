@@ -353,6 +353,8 @@ ggplot(flora_nobs, aes(x = code_abnobs, y = abnobs, fill = abnobs)) +
 flora_biomass_raw <- flora_medium %>% 
   filter(!sampling %in% c("0", "1", "2", "12"))
 
+
+
 # To calculate the biomass at species level (biomass_s) on a plot at sampling based on the biomass at individual level (biomass_i) we
 # need to know the number of individuals that were on that plot for that species. Because biomass_i * number of indivuals /m2 (ninc_m2). However, 
 # the information about nind_m2 is not available for all species at all plots an samplings. Therefore, we have to estimate it. 
@@ -580,13 +582,16 @@ print(results)
 # We can see all this process for the disaggregation of treatments and see if we
 # could create a linear model per code and treatment, in order to be more accurate
 
-source("code/0.1disaggregating_lm_bytreatment.R")
-results_treatments
-shared_codes 
+#source("code/0.1disaggregating_lm_bytreatment.R")
+#results_treatments
+#shared_codes 
 #these are the shared species between all treatments that have presented a well fitted linear model
 # Therefore, we stick to the general linear model for all species
 
 # We take out species with negative slope first 
+
+neg_slope_species <- nind_lm_data$code[which(nind_lm_data$posneg_slope == "negative")]
+
 nind_lm_data <- nind_lm_data %>% 
   filter(posneg_slope %in% "positive")
 
@@ -683,12 +688,55 @@ flora_biomass_lm$biomass_s <- flora_biomass_lm$biomass_i * flora_biomass_lm$nind
 
 
 #Putting together lm species and one ind species
-flora_biomass <- bind_rows(flora_biomass_oneind, flora_biomass_lm)
+flora_biomass_lm <- bind_rows(flora_biomass_oneind, flora_biomass_lm)
+
+
+# Okey, there is a PLOT TWIST. We can calculate biomass in another way: 
+
+# We can approach the calculation of biomass at species level (biomass_s) 
+
+flora_biomass_raw$mean_area_i <- (flora_biomass_raw$Ah + flora_biomass_raw$Ab)/2
+
+flora_biomass_raw$biomass_s <- 
+  (flora_biomass_raw$biomass_i * flora_biomass_raw$abundance)/flora_biomass_raw$mean_area_i
+
+
+# Either we use the number of individuals, or we use the AREA OCCUPIED BY THE INDIVIDUALS in order to calculate
+# the biomass at species level. 
+
+
+
+ggplot(flora_biomass_raw, 
+       aes(y = biomass_i, x = log(mean_area_i), 
+           color = treatment, 
+           label = paste(code, sampling, plot, sep = ", "))) + 
+  geom_point()+
+  geom_text_repel(
+    size = 3.5,                # Text size
+    min.segment.length = 0.1,  # Ensures lines are always drawn
+    segment.color = "gray50",  # Line color
+    segment.size = 0.5         # Line thickness
+  ) 
+
+
+
 
 nabiomass <- which(is.na(flora_biomass$biomass_s))
 print(flora_biomass[nabiomass, ]) 
 # There are some NAs comming from sampling 3, where we did not measure morphological data from species with very low abundance (decisions of
 # tired Javi and Laura :( ))
+
+
+
+
+
+
+
+
+
+
+#At this point, we can fill the gaps of samplings 0, 1 and 2 by making a linear regression of biomass as a function of abundance. 
+
 
 # Removing outliers from biomass_s
 # At this point, it is worth considering the removal of outlier for biomass_s. To reach this information we have: 
