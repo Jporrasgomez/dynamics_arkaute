@@ -68,6 +68,14 @@ biomass_dynamics <- flora_biomass %>%
   select(treatment, sampling, date, plot, code, biomass_s, biomass_community, mean_biomass, 
          sd_biomass)
 
+biomass_lm_dynamics <- flora_biomass_lm %>%
+  filter(!sampling %in% c("0", "1", "2", "12")) %>% 
+  group_by(treatment, sampling, date, month) %>% 
+  mutate(mean_biomass = mean(biomass_community, na.rm = T),
+         sd_biomass = sd(biomass_community, na.rm = T)) %>% 
+  ungroup() %>% 
+  select(treatment, sampling, date, plot, code, biomass_s, biomass_community, mean_biomass, 
+         sd_biomass)
 
 
 
@@ -147,18 +155,18 @@ ggplot(ab_rich_dynamics, aes(x = treatment, y = abundance_community)) +
 
 
 
-#BIOMASS
-hist(biomass_dynamics$biomass_community, breaks = 50)
-shapiro.test(biomass_dynamics$biomass_community)
+#BIOMASS_LM
+hist(biomass_lm_dynamics$biomass_community, breaks = 50)
+shapiro.test(biomass_lm_dynamics$biomass_community)
 
-hist(log(biomass_dynamics$biomass_community), breaks = 50)
-shapiro.test(log(biomass_dynamics$biomass_community))
+hist(log(biomass_lm_dynamics$biomass_community), breaks = 50)
+shapiro.test(log(biomass_lm_dynamics$biomass_community))
 
-car::leveneTest(log(biomass_community) ~ treatment, data = biomass_dynamics)
-kruskal.test(log(biomass_community) ~ treatment, data = biomass_dynamics)
-dunn.test(log(biomass_dynamics$biomass_community), biomass_dynamics$treatment, method = "bonferroni")
+car::leveneTest(log(biomass_community) ~ treatment, data = biomass_lm_dynamics)
+kruskal.test(log(biomass_community) ~ treatment, data = biomass_lm_dynamics)
+dunn.test(log(biomass_lm_dynamics$biomass_community), biomass_lm_dynamics$treatment, method = "bonferroni")
 
-ggplot(biomass_dynamics, aes(x = treatment, y = log(biomass_community))) +
+ggplot(biomass_lm_dynamics, aes(x = treatment, y = log(biomass_community))) +
   geom_boxplot(aes(fill = treatment), colour = "black", alpha = 0.5) + # Set the outline color to black
   scale_fill_manual(values = c("c" = "#48A597", "w" = "#D94E47", "p" = "#3A7CA5", "wp" = "#6D4C7D")) 
   #ggsignif::geom_signif(
@@ -168,7 +176,7 @@ ggplot(biomass_dynamics, aes(x = treatment, y = log(biomass_community))) +
   #  y_position = c(9, 10, 11, 12, 13, 14),  # Adjust bracket positions
   #  tip_length = 0.01,  # Length of bracket tips
   #  textsize = 4  # Size of asterisks
-  )
+  #   )
 
 
 par(mfrow = c(1, 4))
@@ -330,8 +338,8 @@ ggcomb_richness
 
 
 
-a_biomass <-
-  ggplot(biomass_dynamics,
+a_biomass_lm <-
+  ggplot(biomass_lm_dynamics,
          aes(x = date, y = biomass_community)) + 
   
   geom_smooth(
