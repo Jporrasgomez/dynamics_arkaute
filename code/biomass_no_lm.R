@@ -5,72 +5,74 @@
 #We calculate the mean area of the individual by taking Ah and Ab both and transform it into m2 (cm2/10000)
 biomass_nolm <- flora_biomass_raw
 
-biomass_nolm$mean_area_i <- ((biomass_nolm$Ah + biomass_nolm$Ab)/2)/10000
-
-# We then calculate the number of individuals that are within the plot by dividing the total abundance of the species
-# by the mean area occupied by an individual
-
-# There is a problem here. 
-biomass_nolm$nind_s <- (biomass_nolm$abundance/100) / biomass_nolm$mean_area_i
-
-par(mfrow = c(1,1))
-
-hist(biomass_nolm$nind_s, breaks = 100)
-View(subset(biomass_nolm, nind_s >1000000))
-
-#The number of individuals is STUPIDLY HIGH
-ggplot(biomass_nolm, 
-       aes(y = nind_s, x = abundance, 
-           color = treatment, 
-           label = paste(code, sampling, plot, sep = ", "))) + 
-  scale_colour_manual(values = c("c" = "green2", "w" = "red", "p" = "blue", "wp" = "purple")) +
-  geom_point()+
-  geom_text_repel(
-    size = 3,                # Text size
-    min.segment.length = 0.1,  # Ensures lines are always drawn
-    segment.color = "gray50",  # Line color
-    segment.size = 0.5         # Line thickness
-  ) 
-
-ggplot(biomass_nolm, 
-       aes(y = nind_s, x = abundance, 
-           color = treatment, 
-           label = paste(code, sampling, plot, sep = ", "))) + 
-  scale_colour_manual(values = c("c" = "green2", "w" = "red", "p" = "blue", "wp" = "purple")) +
-  geom_point()+
-  geom_text_repel(
-    size = 3,                # Text size
-    min.segment.length = 0.1,  # Ensures lines are always drawn
-    segment.color = "gray50",  # Line color
-    segment.size = 0.5         # Line thickness
-  ) 
-
-View(subset(biomass_nolm, plot == 16))
-View(subset(flora_raw, plot == 16 & code == "poaceae"))
+biomass_nolm <- merge(biomass_nolm, species_code)
 
 
-ggplot(biomass_nolm, aes(x = mean_area_i, y = nind_s)) +
-  geom_point()
-
-ggplot(biomass_nolm, aes(x = abundance, y = nind_s)) +
-  geom_point()
-
-
+#biomass_nolm <- biomass_nolm %>%
+# mutate(area_i = case_when(
+#   growing_type == "crawler" ~ (Ah + Ab + (pi*(height/2)^2)) / 3,  # For "crawler"
+#   TRUE ~ pmax(Ah, Ab, na.rm = TRUE)  # For all others, take the max of Ah and Ab
+# ))
 
 
+# assigning an area at individual level based on the growing type of the species. 
 
-biomass_nolm$biomass_s <- biomass_nolm$nind_s * biomass_nolm$biomass_i
+biomass_nolm <- biomass_nolm %>%
+  mutate(max_a = pmax(Ah, Ab, na.rm = T )) %>% 
+  mutate(area_i = case_when(
+    growing_type == "crawler" ~ (pi*(height/2)^2),
+    growing_type == "vertical"~ max_a, 
+    growing_type == "cone" ~ (max_a + (pi*(height/2)^2))/2, 
+    growing_type == "spherical" ~ (max_a + (pi*(height/2)^2))/2))
+    
+
+  
+biomass_nolm$area_i <- biomass_nolm$area_i/10000 # transforming from cm2 to m2
 
 
-ggplot(biomass_nolm, 
-       aes(y = biomass_s, x = date, 
-           color = treatment, 
-           label = paste(code, sampling, plot, sep = ", "))) + 
-  scale_colour_manual(values = c("c" = "green2", "w" = "red", "p" = "blue", "wp" = "purple")) +
-  geom_point()+
-  geom_text_repel(
-    size = 3,                # Text size
-    min.segment.length = 0.1,  # Ensures lines are always drawn
-    segment.color = "gray50",  # Line color
-    segment.size = 0.5         # Line thickness
-  ) 
+biomass_nolm <- left_join(biomass_nolm, nind0)
+
+biomass_nolm <- biomass_nolm %>% 
+  mutate(nind_m2_estimated = (abundance/100)/area_i)
+
+#let's get rid of the outliers
+hist(biomass_nolm$nind_m2_estimated, breaks = 100)
+hist(log(biomass_nolm$nind_m2_estimated), breaks = 100)
+
+# WHATTT SALE BIMODAL!
+
+# Step 1: Calculate IQR for log-transformed biomass_s
+#Q1 <- quantile(log(biomass_nolm$nind_m2_estimated), 0.25, na.rm = TRUE)
+#Q3 <- quantile(log(biomass_nolm$nind_m2_estimated), 0.75, na.rm = TRUE)
+#IQR <- Q3 - Q1
+#
+## Step 2: Remove outliers
+#biomass_nolm_clean <- biomass_nolm %>%
+#  filter(log(nind_m2_estimated) >= Q1 - 1.5 * IQR & log(nind_m2_estimated) <= Q3 + 1.5 * IQR)
+
+biomass_nolm_clean <- biomass_nolm %>% 
+  filter(nind_m2_estimated < 95000) 
+  
+
+hist(biomass_nolm_clean$nind_m2_estimated, breaks = 100)
+hist(log(biomass_nolm_clean$nind_m2_estimated), breaks = 100)
+
+
+
+biomass_nolm_clean <- biomass_nolm_clean %>%
+  mutate(nind_m2_scaled = (nind_m2_estimated - min(nind_m2_estimated, na.rm = TRUE)) /
+           (max(nind_m2_estimated, na.rm = TRUE) - min(nind_m2_estimated, na.rm = TRUE)) *
+           (100 - 1) + 1)
+
+ggplot(biomass_nolm_clean, aes(x = nind_m2, y = nind_m2_scaled)) + 
+  geom_point() + 
+  geom_smooth(method = "lm")
+
+#At this point 
+
+
+biomass_nolm_clean <- biomass_nolm_clean %>% 
+  mutate(biomass_s = biomass_i * nind_m2_scaled)
+
+
+flora_biomass_nolm <- biomass_nolm_clean

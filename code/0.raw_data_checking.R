@@ -173,7 +173,7 @@ nrow({checkingNA <- flora_rare %>%
 
 #Adding species information
 species_code <- read.csv("data/species_code.csv")
-species_code <- select(species_code, species, code, family, genus_level, species_level)
+species_code <- select(species_code, species, code, family, genus_level, species_level, growing_type)
 species_code <- species_code %>%
   mutate(across(where(is.character), as.factor))
 
@@ -443,6 +443,12 @@ flora_biomass_lm_clean <- flora_biomass_lm_clean %>%
   group_by(plot, sampling, treatment) %>% 
   mutate(biomass_community =  sum(biomass_s, na.rm = TRUE)) %>%
   ungroup()
+
+flora_biomass_nolm <- flora_biomass_nolm %>% 
+  group_by(plot, sampling, treatment) %>% 
+  mutate(biomass_community =  sum(biomass_s, na.rm = TRUE)) %>%
+  ungroup()
+
   
 
 

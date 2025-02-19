@@ -363,3 +363,23 @@ flora_biomass_lm$biomass_s <- flora_biomass_lm$biomass_i * flora_biomass_lm$nind
 
 #Putting together lm species and one ind species
 flora_biomass_lm <- bind_rows(flora_biomass_oneind, flora_biomass_lm)
+
+
+# What about the specie we have excluded? can we do something about them?
+excluded_sp <- flora_biomass_raw %>% 
+  filter(code %in% excluded_species_lm_2)
+summary(excluded_sp)
+
+excluded_sp <- left_join(excluded_sp, nind0)
+summary(excluded_sp)
+excluded_sp_NA <- excluded_sp_nind[which(is.na(excluded_sp_nind$nind_m2)),]
+
+ggplot(excluded_sp_NA, aes(x = sampling, fill = code)) +
+  geom_bar()
+
+
+excluded_sp <- excluded_sp %>% 
+  mutate(biomass_s = biomass_i * nind_m2)
+
+flora_biomass_lm <- bind_rows(flora_biomass_lm, excluded_sp)
+

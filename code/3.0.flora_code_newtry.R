@@ -59,14 +59,6 @@ biomass_dynamics_cleaned <- flora_biomass_clean %>%
          sd_biomass)
 
 
-biomass_dynamics <- flora_biomass %>%
-  filter(!sampling %in% c("0", "1", "2", "12")) %>% 
-  group_by(treatment, sampling, date, month) %>% 
-  mutate(mean_biomass = mean(biomass_community, na.rm = T),
-         sd_biomass = sd(biomass_community, na.rm = T)) %>% 
-  ungroup() %>% 
-  select(treatment, sampling, date, plot, code, biomass_s, biomass_community, mean_biomass, 
-         sd_biomass)
 
 biomass_lm_dynamics <- flora_biomass_lm %>%
   filter(!sampling %in% c("0", "1", "2", "12")) %>% 
@@ -77,6 +69,15 @@ biomass_lm_dynamics <- flora_biomass_lm %>%
   select(treatment, sampling, date, plot, code, biomass_s, biomass_community, mean_biomass, 
          sd_biomass)
 
+
+biomass_nolm_dynamics <- flora_biomass_nolm %>%
+  filter(!sampling %in% c("0", "1", "2", "12")) %>% 
+  group_by(treatment, sampling, date, month) %>% 
+  mutate(mean_biomass = mean(biomass_community, na.rm = T),
+         sd_biomass = sd(biomass_community, na.rm = T)) %>% 
+  ungroup() %>% 
+  select(treatment, sampling, date, plot, code, biomass_s, biomass_community, mean_biomass, 
+         sd_biomass)
 
 
 
@@ -177,6 +178,30 @@ ggplot(biomass_lm_dynamics, aes(x = treatment, y = log(biomass_community))) +
   #  tip_length = 0.01,  # Length of bracket tips
   #  textsize = 4  # Size of asterisks
   #   )
+
+
+#BIOMASS_NOLM
+hist(biomass_nolm_dynamics$biomass_community, breaks = 50)
+shapiro.test(biomass_nolm_dynamics$biomass_community)
+
+hist(log(biomass_nolm_dynamics$biomass_community), breaks = 50)
+shapiro.test(log(biomass_nolm_dynamics$biomass_community))
+
+car::leveneTest(log(biomass_community) ~ treatment, data = biomass_nolm_dynamics)
+kruskal.test(log(biomass_community) ~ treatment, data = biomass_nolm_dynamics)
+dunn.test(log(biomass_nolm_dynamics$biomass_community), biomass_nolm_dynamics$treatment, method = "bonferroni")
+
+ggplot(biomass_nolm_dynamics, aes(x = treatment, y = log(biomass_community))) +
+  geom_boxplot(aes(fill = treatment), colour = "black", alpha = 0.5) + # Set the outline color to black
+  scale_fill_manual(values = c("c" = "#48A597", "w" = "#D94E47", "p" = "#3A7CA5", "wp" = "#6D4C7D")) 
+#ggsignif::geom_signif(
+#  comparisons = list(c("c","w"), c("c", "p"), c("c", "wp"), c("wp", "w"), c("wp", "p")),  # Significant comparisons
+#  annotations = c("NS", "***", "***","***", "**"), # Asterisks for significance
+#  map_signif_level = TRUE,  # Automatically map significance levels if p-values provided
+#  y_position = c(9, 10, 11, 12, 13, 14),  # Adjust bracket positions
+#  tip_length = 0.01,  # Length of bracket tips
+#  textsize = 4  # Size of asterisks
+#   )
 
 
 par(mfrow = c(1, 4))
@@ -374,8 +399,8 @@ a_biomass_lm <-
   labs(y = "log(Community biomass)", x = NULL) #
 
 # Box plot
-b_biomass <- 
-  ggplot(biomass_dynamics, aes(y = log(biomass_community),x = treatment)) +
+b_biomass_lm <- 
+  ggplot(biomass_lm_dynamics, aes(y = log(biomass_community),x = treatment)) +
   geom_boxplot(aes(fill = treatment), colour = "black", alpha = 0.5) + # Set the outline color to black
   scale_fill_manual(values = c("c" = "#48A597", "w" = "#D94E47", "p" = "#3A7CA5", "wp" = "#6D4C7D")) +
   theme(legend.position = "none",
@@ -395,9 +420,9 @@ b_biomass <-
 
 
 # Combine plots
-ggcomb_biomass <- a_biomass +
+ggcomb_biomass <- a_biomass_lm +
   annotation_custom(
-    grob = ggplotGrob(b_biomass),
+    grob = ggplotGrob(b_biomass_lm),
     xmin = as.Date("2023-12-01"), # Adjust position: left boundary
     xmax = as.Date("2024-04-20"), # Adjust position: right boundary
     ymin = 10, # Adjust position: bottom boundary
@@ -405,15 +430,15 @@ ggcomb_biomass <- a_biomass +
   )
 
 # Render combined plot
-ggcomb_biomass
+ggcomb_biomass_lm
 
 
 
 
 
 
-a_biomass_cleaned <-
-  ggplot(biomass_dynamics_cleaned,
+a_biomass_nolm <-
+  ggplot(biomass_nolm_dynamics,
          aes(x = date, y = biomass_community)) + 
   
   geom_smooth(
@@ -439,38 +464,51 @@ a_biomass_cleaned <-
     date_labels = "%d-%b-%y" # Customize the date format (e.g., "04-May-23")
   ) +
   
-  geom_vline(xintercept = as.Date("2023-05-11"), linetype = "dashed", color = "gray40") +
+  #geom_vline(xintercept = as.Date("2023-05-11"), linetype = "dashed", color = "gray40") +
   
   theme(axis.text.x = element_text(angle = 45, hjust = 1), legend.position = "none",
   ) +
+  scale_y_log10() +
   
-  labs(y = "Biomass (without outliers)", x = NULL) #
+  labs(y = "log(Community biomass)", x = NULL) #
 
 # Box plot
-b_biomass_cleaned <- 
-  ggplot(biomass_dynamics_cleaned, aes(y = biomass_community)) +
+b_biomass_nolm <- 
+  ggplot(biomass_molm_dynamics, aes(y = log(biomass_community),x = treatment)) +
   geom_boxplot(aes(fill = treatment), colour = "black", alpha = 0.5) + # Set the outline color to black
   scale_fill_manual(values = c("c" = "#48A597", "w" = "#D94E47", "p" = "#3A7CA5", "wp" = "#6D4C7D")) +
   theme(legend.position = "none",
         axis.text.x = element_blank(), axis.text.y = element_blank(),
         panel.background = element_rect(fill = NA, colour = NA), # Transparent background
-        plot.background = element_rect(fill = NA, colour = NA)) + # Transparent plot background+ 
+        plot.background = element_rect(fill = NA, colour = NA)) +
+  ggsignif::geom_signif(
+    comparisons = list(c("c","w"), c("c", "p"), c("c", "wp"), c("wp", "w"), c("wp", "p")),  # Significant comparisons
+    annotations = c("NS", "***", "***","***", "**"), # Asterisks for significance
+    map_signif_level = TRUE,  # Automatically map significance levels if p-values provided
+    y_position = c(9, 10, 11, 12, 13, 14),  # Adjust bracket positions
+    tip_length = 0.01,  # Length of bracket tips
+    textsize = 4  # Size of asterisks
+  ) +# Transparent plot background+ 
   labs(y = NULL)
 
 
 
 # Combine plots
-ggcomb_biomass_cleaned <- a_biomass_cleaned +
+ggcomb_biomass <- a_biomass_nolm +
   annotation_custom(
-    grob = ggplotGrob(b_biomass_cleaned),
-    xmin = as.Date("2024-07-01"), # Adjust position: left boundary
-    xmax = as.Date("2024-11-20"), # Adjust position: right boundary
-    ymin = 350, # Adjust position: bottom boundary
-    ymax = 500 # Adjust position: top boundary
+    grob = ggplotGrob(b_biomass_lm),
+    xmin = as.Date("2023-12-01"), # Adjust position: left boundary
+    xmax = as.Date("2024-04-20"), # Adjust position: right boundary
+    ymin = 10, # Adjust position: bottom boundary
+    ymax = 1000 # Adjust position: top boundary
   )
 
 # Render combined plot
-ggcomb_biomass_cleaned
+ggcomb_biomass_lm
+
+
+
+
 
 
 
