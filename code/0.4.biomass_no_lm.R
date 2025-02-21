@@ -17,6 +17,7 @@ biomass_nolm <- merge(biomass_nolm, species_code)
 
 # assigning an area at individual level based on the growing type of the species. 
 
+# Probar así: 
 biomass_nolm <- biomass_nolm %>%
   mutate(max_a = pmax(Ah, Ab, na.rm = T )) %>% 
   mutate(area_i = case_when(
@@ -26,6 +27,20 @@ biomass_nolm <- biomass_nolm %>%
     growing_type == "spherical" ~ (max_a + (pi*(height/2)^2))/2)) # I add the height in order to reduce the effect of compressing the tissues
 
 
+##Probar así
+#biomass_nolm <- biomass_nolm %>%
+#  mutate(max_a = pmax(Ah, Ab, na.rm = T )) %>% 
+#  mutate(area_i = case_when(
+#    growing_type == "crawler" ~ (pi*(height/2)^2), # The area is the diameter of the height since the longest stems are growing by crawling on the ground
+#    growing_type == "vertical"~ max_a, # I take the max value of Ah and Ab to ensure minimizing the effect of the compression of tissues at measuring
+#    growing_type == "cone" ~ max_a, # I add the height in order to reduce the effect of compressing the tissues
+#    growing_type == "spherical" ~ max_a))
+
+# Probar así: 
+#biomass_nolm <- biomass_nolm %>%
+#  mutate(max_a = pmax(Ah, Ab, na.rm = T )) %>% 
+#  mutate(area_i = (max_a + (pi*(height/2)^2))/2)
+  
   
 biomass_nolm$area_i <- biomass_nolm$area_i/10000 # transforming from cm2 to m2
 
@@ -36,10 +51,14 @@ biomass_nolm <- left_join(biomass_nolm, nind0)
 # by the average space occupied by one individual of that species (area_i). 
 
 biomass_nolm <- biomass_nolm %>% 
-  mutate(nind_m2_estimated = (abundance/100)/area_i)
+  mutate(nind_m2_estimated = (abundance/100)/area_i) # I divide abundance/100 because abundance its %coverage of m2 and i want it to be m2.  
 
 #let's get rid of the outliers
-hist(biomass_nolm$nind_m2_estimated, breaks = 100)
+
+hist(biomass_nolm$nind_m2_estimated, breaks = 1000000, xlim = range(1,1000))
+
+quantile(biomass_nolm$nind_m2_estimated, na.rm = T)
+
 hist(log(biomass_nolm$nind_m2_estimated), breaks = 100)
 
 
@@ -49,6 +68,8 @@ ggplot(biomass_nolm, aes(x = log(nind_m2_estimated), fill = treatment)) +
   scale_x_continuous(breaks = scales::breaks_extended(n = 20))+
   geom_vline(xintercept = 4.65, linetype = "dashed", color = "gray40")
 #Curiously is bimodal! Clear stratification by treatment
+# Tiene sentido que el primer modo sea mayor que el primero. Hay más frecuencia
+# de especies con pocos individuos. 
 
 
 hist(biomass_nolm$biomass_i, breaks = 100)
@@ -80,7 +101,7 @@ ggplot(biomass_nolm, aes(x = log_biomass_i_corrected, fill = treatment)) +
 
 # Does this make any sense? To multiply log-transformed values? 
 
-biomass_nolm$biomass_s <- biomass_nolm$log_biomass_i_corrected * biomass_nolm$log_nind_m2_corrected
+biomass_nolm$biomass_s <- biomass_nolm$log_biomass_i_corrected * biomass_nolm$log_nind_m2_corrected ##Creo que habria que sumar!
 
 
 # Let's check the results: 
@@ -157,6 +178,8 @@ a_biomass_nolm <-
   
   theme(axis.text.x = element_text(angle = 45, hjust = 1), legend.position = "none",
   ) +
+  
+ # scale_y_log10() +
   
   labs(y = "Community biomass", x = NULL) #
 

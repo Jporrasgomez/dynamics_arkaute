@@ -4,9 +4,6 @@
 ##| tomamos ese valor y cuando no lo haya, se pone el valor extraído de la 
 
 
-
-
-
 # To calculate the biomass at species level (biomass_s) on a plot at sampling based on the biomass at individual level (biomass_i) we
 # need to know the number of individuals that were on that plot for that species. Because biomass_i * number of indivuals /m2 (ninc_m2). However, 
 # the information about nind_m2 is not available for all species at all plots an samplings. Therefore, we have to estimate it. 
