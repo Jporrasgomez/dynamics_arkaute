@@ -358,73 +358,16 @@ ggplot(flora_nobs, aes(x = code_abnobs, y = abnobs, fill = abnobs)) +
 flora_biomass_raw <- flora_medium %>% 
   filter(!sampling %in% c("0", "1", "2", "12"))
 
- source("code/0.1linear_regression.R")
 
-#At this point, we can fill the gaps of samplings 0, 1 and 2 by making a linear regression of biomass as a function of abundance. 
+# 1. Calculating biomass with linear regression model: 
 
-
-# Removing outliers from biomass_s
-# At this point, it is worth considering the removal of outlier for biomass_s. To reach this information we have: 
-# 1) Used abundance data gathered from the field by direct observations
-# 2) Used morphological measurements taken in the field in the application of a biomass equation
-# 3) Used the available data of number of individuals / m2 and species that was gathered in the field by visual estimation
-# 4) Used a linear model to estimate the number of individuals per m2 for all species, samplings and plots. 
-# 5) Calculated the biomass at species level by biomass_i * nind_m2. 
-# So, here there is an accumulation of calculations that has undoubtfully led to error accumulation. 
-
-
-par(mfrow = c(1,2))
-boxplot(flora_biomass_lm$biomass_s, main = "biomass_s")
-hist(flora_biomass_lm$biomass_s, breaks = 50, main = "biomass_s")
-
-#With log transformation
-boxplot(log(flora_biomass_lm$biomass_s), main = "log(biomass_s)")
-hist(log(flora_biomass_lm$biomass_s), breaks = 50, main = "log(biomass_s)")
+source("code/0.1linear_regression.R")
 
 
 
-# Step 1: Calculate IQR for log-transformed biomass_s
-Q1 <- quantile(log(flora_biomass_lm$biomass_s), 0.25, na.rm = TRUE)
-Q3 <- quantile(log(flora_biomass_lm$biomass_s), 0.75, na.rm = TRUE)
-IQR <- Q3 - Q1
+# 2. Calculating biomass with no linear models 
 
-# Step 2: Remove outliers
-flora_biomass_lm_clean <- flora_biomass_lm %>%
-  filter(log(biomass_s) >= Q1 - 1.5 * IQR & log(biomass_s) <= Q3 + 1.5 * IQR)
-
-# View the cleaned data
-
-# Without ouliers 
-boxplot(flora_biomass_lm_clean$biomass_s, main = "Without ouliers")
-hist(flora_biomass_lm_clean$biomass_s, breaks = 50, main = "Without outliers")
-
-# Without ouliers + logtrasnform
-boxplot(log(flora_biomass_lm_clean$biomass_s), main = "No outliers (log(biomass_s))")
-hist(log(flora_biomass_lm_clean$biomass_s), breaks = 50, main = "Without outliers (log(biomass_S))")
-
-#There is almost no difference. Mark proposes to work on biomass as log(biomass) since it is the most common way of working
-# in ecology
-
-######################|||||||||||||||||||||####################|||||||||||||||||||
-######################|
-######################|asdasd
-######################|asdasd
-# Okey, there is a PLOT TWIST. We can calculate biomass_s in another way. NO LM involved. 
-
-#This method has a lot of problems. :( 
-# We can approach the calculation of biomass at species level (biomass_s) 
-
-
-
-
-
-hist(log(flora_biomass_raw$biomass_s), breaks = 100)
-
-boxplot(log(flora_biomass_raw$biomass_s))
-
-
-
-
+source("code/0.4.biomass_no_lm.R")
 
 
 
@@ -453,7 +396,8 @@ flora_biomass_nolm <- flora_biomass_nolm %>%
 
 
 
-rm(list = setdiff(ls(), c("flora_abrich", "flora_biomass_lm", "flora_biomass_lm_clean")))
+rm(list = setdiff(ls(), c("flora_abrich", "flora_biomass_lm",
+                          "flora_biomass_lm_clean", "flora_biomass_nolm")))
 
 
 

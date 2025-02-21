@@ -372,7 +372,7 @@ summary(excluded_sp)
 
 excluded_sp <- left_join(excluded_sp, nind0)
 summary(excluded_sp)
-excluded_sp_NA <- excluded_sp_nind[which(is.na(excluded_sp_nind$nind_m2)),]
+excluded_sp_NA <- excluded_sp[which(is.na(excluded_sp$nind_m2)),]
 
 ggplot(excluded_sp_NA, aes(x = sampling, fill = code)) +
   geom_bar()
@@ -382,4 +382,45 @@ excluded_sp <- excluded_sp %>%
   mutate(biomass_s = biomass_i * nind_m2)
 
 flora_biomass_lm <- bind_rows(flora_biomass_lm, excluded_sp)
+
+
+
+# Removing outliers from biomass_s
+# At this point, it is worth considering the removal of outlier for biomass_s. To reach this information we have: 
+# 1) Used abundance data gathered from the field by direct observations
+# 2) Used morphological measurements taken in the field in the application of a biomass equation
+# 3) Used the available data of number of individuals / m2 and species that was gathered in the field by visual estimation
+# 4) Used a linear model to estimate the number of individuals per m2 for all species, samplings and plots. 
+# 5) Calculated the biomass at species level by biomass_i * nind_m2. 
+# So, here there is an accumulation of calculations that has undoubtfully led to error accumulation. 
+
+
+par(mfrow = c(1,2))
+boxplot(flora_biomass_lm$biomass_s, main = "biomass_s")
+hist(flora_biomass_lm$biomass_s, breaks = 50, main = "biomass_s")
+
+#With log transformation
+boxplot(log(flora_biomass_lm$biomass_s), main = "log(biomass_s)")
+hist(log(flora_biomass_lm$biomass_s), breaks = 50, main = "log(biomass_s)")
+
+
+
+# Step 1: Calculate IQR for log-transformed biomass_s
+Q1 <- quantile(log(flora_biomass_lm$biomass_s), 0.25, na.rm = TRUE)
+Q3 <- quantile(log(flora_biomass_lm$biomass_s), 0.75, na.rm = TRUE)
+IQR <- Q3 - Q1
+
+# Step 2: Remove outliers
+flora_biomass_lm_clean <- flora_biomass_lm %>%
+  filter(log(biomass_s) >= Q1 - 1.5 * IQR & log(biomass_s) <= Q3 + 1.5 * IQR)
+
+# View the cleaned data
+
+# Without ouliers 
+boxplot(flora_biomass_lm_clean$biomass_s, main = "Without ouliers")
+hist(flora_biomass_lm_clean$biomass_s, breaks = 50, main = "Without outliers")
+
+# Without ouliers + logtrasnform
+boxplot(log(flora_biomass_lm_clean$biomass_s), main = "No outliers (log(biomass_s))")
+hist(log(flora_biomass_lm_clean$biomass_s), breaks = 50, main = "Without outliers (log(biomass_S))")
 

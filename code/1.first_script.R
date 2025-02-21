@@ -1,9 +1,9 @@
 
 
 
-
 # Revisar samplin 15, plot 5, especie shar. Le faltan datos.
 # Reisar sampling 17, plot 3, especie apar. Le faltan datos. 
+
 
 
 rm(list = ls(all.names = TRUE))
@@ -58,9 +58,10 @@ flora_rare <- flora_raw %>%
   select(sampling, one_month_window, omw_date, plot, treatment, code, abundance, height, Cb, Db, Cm, Dm, date, month)
 
 
+
 #Adding species information
 species_code <- read.csv("data/species_code.csv")
-species_code <- select(species_code, species, code, family, genus_level, species_level)
+species_code <- select(species_code, species, code, family, genus_level, species_level, growing_type)
 species_code <- species_code %>%
   mutate(across(where(is.character), as.factor))
 
@@ -72,10 +73,9 @@ flora_rare <- merge(flora_rare, species_code, by = "code")
 # Cambios de los datos morfológicos antes de agrupar la base de datos por especie, muestro y sampling 
 
 #Sumar 0.01 cm a los diámetros por el error del calibre con el que medimos
+
 flora_rare$Dm <- flora_rare$Dm + 0.01
 flora_rare$Db <- flora_rare$Db + 0.01
-
-
 
 ## BIOMASS AT INDIVIDUAL LEVEL ####
 
@@ -88,9 +88,6 @@ flora_rare$cb <- round(ifelse(!is.na(flora_rare$Db), flora_rare$Db * pi, flora_r
 flora_rare$Ah <- ((flora_rare$cm)^2)/(4*pi)
 flora_rare$Ab <- ((flora_rare$cb)^2)/(4*pi)
 
-nrow({checkingNA <- flora_rare %>%
-  filter(rowSums(is.na(select(., height, Ah, Ab))) > 1) %>%  #Checking if the area of any individual is above 1 square meter
-  filter(!sampling %in% c("0", "1", "2", "3", "12"))})
 
 #At the first samplings, we were collecting information of all possible species. With the pass of time, we
 # realized we could not identify every species at every sampling, 
@@ -130,15 +127,12 @@ flora_medium <- flora_medium %>%
 
 # ABUNDANCE ########
 
-
 flora_medium <- flora_medium %>% 
   group_by(plot, sampling) %>% 
   mutate(abundance_community = sum(abundance, na.rm = T)) %>% 
   ungroup()
 
-
 flora_abrich <- flora_medium
-
 
 flora_medium$code_ordered <- reorder(flora_medium$code, -flora_medium$abundance, FUN = mean)
 
@@ -161,265 +155,35 @@ flora_nobs$code_nobs <- factor(flora_nobs$code,
 flora_biomass_raw <- flora_medium %>% 
   filter(!sampling %in% c("0", "1", "2", "12"))
 
-# To calculate the biomass at species level (biomass_s) on a plot at sampling based on the biomass at individual level (biomass_i) we
-# need to know the number of individuals that were on that plot for that species. Because biomass_i * number of indivuals /m2 (ninc_m2). However, 
-# the information about nind_m2 is not available for all species at all plots an samplings. Therefore, we have to estimate it. 
 
-#But, before that, we know that there are some species for which we only have measured 1 individual per plot and sampling every time we have spot it. 
-# Therefore, for these species we do not need to estimate the number of individuals. In this case, biomass_i = biomass_s. 
+# 1. Calculating biomass with linear regression model: 
 
+source("code/0.1linear_regression.R")
 
-one_ind_species <- c("rucr", "amsp", "kisp","brasicaceae")
 
-flora_biomass_oneind <- flora_biomass_raw %>% 
-  filter(code %in% one_ind_species)
 
-flora_biomass_oneind$biomass_s <- flora_biomass_oneind$biomass_i
+# 2. Calculating biomass with no linear models 
 
-flora_biomass_oneind <- flora_biomass_oneind %>% 
-  group_by(sampling, plot, code) %>% 
-  mutate(n_observations = n()) %>% 
-  ungroup()
+source("code/0.4.biomass_no_lm.R")
 
-flora_biomass_raw <- flora_biomass_raw %>% 
-  filter(!code %in% one_ind_species)
-## Estimating number of individuals
 
-# To be able to estimate abundance based on the number of individuals we need data were abundance and number of individuals per species,
-# plot and sampling were available. Since we have been learning the application of this non-destructive methodology in the go,
-# we have 2 different groups of data:
-
-#1.  Since sampling 12, we have been estimating the number of individuals per species and plot based on direct field observations.
-
-nind1 <- read.csv("data/n_individuals.csv")
-plots <- read.csv("data/plots.csv") %>% 
-  select(nplot, treatment_code) %>% 
-  rename(treatment = treatment_code,
-         plot = nplot)
-
-nind1 <- merge(nind1, plots)
-
-
-#source("code/first_script_old.R")
-
-nind1$code <- as.factor(nind1$code)
-
-nind1 <- nind1 %>% 
-  select(sampling, treatment,  plot, code, nind_m2, abundance)
-
-#flora_nind <-  flora %>% select(code, family) %>% distinct(code, .keep_all = TRUE)
-
-nind1 <- nind1 %>%
-  group_by(sampling, treatment, plot, code) %>%
-  summarize(nind_m2 = sum(nind_m2), abundance = sum(abundance))
-
-{
-  nind1$sampling <- as.factor(nind1$sampling)
-  nind1$treatment <- as.factor(nind1$treatment)
-  nind1$plot <- as.factor(nind1$plot)
-  nind1$code <- as.factor(nind1$code)
-  nind1$nind_m2 <- as.numeric(nind1$nind_m2)
-  nind1$abundance <- as.numeric(nind1$abundance)}
-
-## Las especies de asteraceae que hemos agrupado por familia se recalculan sus individuos y abundancias aquí
-
-#2.  Up to sampling 11, We only measured the morphological parameters of 5 individuals per specie as maximum. 
-#    If there were less than 5 species, we know that number was the total amount of individuals in the plot.
-
-nind2 <- flora_raw %>%
-  filter(!sampling %in% c("12", "13", "14", "15", "16", "17", "18", "19", "20"))  %>%
-  group_by(sampling, treatment, plot, code) %>%
-  mutate(n_individuals = n())
-
-nind2 <- nind2 %>%
-  group_by(sampling, plot, treatment, code, abundance) %>%
-  summarize(n_individuals_mean = mean(n_individuals, na.rm = T))  #corrección de asteraceae y poaceae #corrección de asteraceae y poaceae
-
-nind2 <- nind2 %>%
-  filter(n_individuals_mean < 5)
-names(nind2)[names(nind2) == "n_individuals_mean"] <- "nind_m2"
-
-nind <- full_join(nind1, nind2)
-
-# ** We could discuss the question: if we have some species for which the number of individuals measured in the plot was the total amount
-# of individuals in that plot, why we are not calculating the biomass of that species as biomass_s = biomass_1 + biomass_2 ...biomass_i ?
-# I think this is worthy to be considered. At the begining we did this. But, I think we decided that, for the shake of consistency, 
-# we do not want to mix biomass_s estimation approaches for the same species. For the case of one_ind_species, these species have only been
-# spotted isolately. Therefore, biomass_i = biomass_s is valid for these species since it will be the only approach used for them. 
-
-# Once that we have the dataset for stablishing the estimation, we have applied a linear regression model where we plot the number of individuals
-# per m$^2$ as a function of abundance. There are some species for which just one individual was found in one plot at different samplings,
-# meaning that these won't be considered in the regression and their biomass will be the biomass of the measured individual.
-# These species are *Rumex crispus*, *Amaranthus sp.*, *Kickxia supuria* and an unidentified species of the family *brasicaceae*.
-# For the lineal regression we applied the code: lm(nind_m2 \~ abundance). On example of the output is the following:
-
-### Regresión lineal. 
-
-nind$code <- as.character(nind$code)
-
-#The lm model is actually no needed for species "rucr", "amsp", "kips" and "brasicaceae" since these are
-# just one individual found in one plot at different times. So the estimated biomass will be for 1 square meter
-nind <- nind %>% 
-  filter(!code %in% one_ind_species)
-
-
-code_levels <- unique(nind$code)
-gglist <- list()
-
-nind_lm_data <- matrix(nrow = length(code_levels), ncol = 6)
-colnames(nind_lm_data) <- c("code", "intercept", "slope", "r_squared", "p_value", "n_points_lm")
-nind_lm_data <- as.data.frame(nind_lm_data)
-
-counter <- 0
-
-library(broom)
-
-for (i in 1: length(code_levels)) {
-  
-  nind_i <- subset(nind, code == code_levels[i])
-  lm_i <- lm(nind_m2 ~ abundance, data = nind_i)
-  
-  # Extract coefficients, R^2, and p-value
-  lm_i_summary <- summary(lm_i)
-  lm_i_tidy <- tidy(lm_i)
-  lm_i_glance <- glance(lm_i)
-  
-  intercept_i <- lm_i_tidy$estimate[1]
-  slope_i <- lm_i_tidy$estimate[2]
-  r_squared_i <- lm_i_glance$r.squared
-  p_value_i <- lm_i_tidy$p.value[2]
-  n_observations_i <- nrow(nind_i)
-  
-  counter <- counter + 1
-  
-  gglist[[counter]] <- ggplot(nind_i, aes(x = abundance, y = nind_m2)) +
-    geom_point(aes(color = treatment), alpha = 0.5) +
-    scale_colour_manual(values = c("c" = "green2", "w" = "red", "p" = "blue3", "wp" = "purple")) +
-    geom_smooth(method = "lm", se = FALSE, color = "black") +
-    labs(title = paste("LM ", code_levels[i]),
-         subtitle = paste("Equation: y =", round(intercept_i, 2), "+", round(slope_i, 2), "* x\n",
-                          "R2:", round(r_squared_i, 2), ", p-value:", round(p_value_i, 4), "\n",
-                          "n observations", n_observations_i),
-         x = "Abundance",
-         y = "Numbers of individual per m2") +
-    theme_minimal()
-  
-  nind_lm_data$code[counter] <- code_levels[i]
-  nind_lm_data$intercept[counter] <- intercept_i
-  nind_lm_data$slope[counter] <- slope_i
-  nind_lm_data$r_squared[counter] <- r_squared_i
-  nind_lm_data$p_value[counter] <- p_value_i
-  nind_lm_data$n_points_lm[counter] <- n_observations_i
-  
-  
-}
-
-
-
-
-
-nind_lm_data$posneg_slope <- ifelse(nind_lm_data$slope < 0, paste("negative"), paste("positive"))
-#hist(nind_lm_data$slope)
-
-
-
-# We take out species with negative slope first 
-nind_lm_data <- nind_lm_data %>% 
-  filter(posneg_slope %in% "positive")
-
-
-# But,  !! Why do we choose R2 0.3?
-# Lets do a sensitivity analysis
-
-source("code/0.2sensitivity_analysis_lm.R")
-
-
-source("code/0.3species_presence.R")
-
-
-# Plus exploration by Dani
-
-nind_2 <- nind %>% 
-  filter(!code %in% excluded_species_lm_2)
-
-species_0_obs <- flora_nobs_presence %>% 
-  filter(n_obs_xtreat == 0)
-
-presence_2 <- flora_nobs_presence %>% 
-  # Filtro para las especies con p-value < 0.05
-  filter(!code %in% excluded_species_lm_2) %>% 
-  # Aseguro quedarme con las especies presentes en todos los tratamientos
-  filter(!code %in% unique(flora_nobs_presence$code[which(flora_nobs_presence$n_obs_xtreat == 0)])) 
-nind_2 <- merge(nind_2, presence_2)
-
-code_levels_2 <- unique(nind_2$code)
-
-
-#las especies para las que no funciona la función son especies sin representación en algo
-
-# Which set of species do we choose? 
-# I say we choose p-value < 0.05. Is the least arbitrary and we do not lose a lot of information. 
-
-flora_biomass_lm <- merge(flora_biomass_raw, nind_lm_species_2)
-
-
-#calculation of number of indivuals per m2 with the regression data for each species
-flora_biomass_lm$nind_m2 <- flora_biomass_lm$intercept + flora_biomass_lm$abundance * flora_biomass_lm$slope
-
-# Since there are some species for which its intercept is negative, the lm consider that nind_m2 <0 when abundance = 0. And that
-# cannot be the case. There are 3 species. We can either delete these species or make this "shitty" correction by sayin that if
-# nind_m2 < 0 , then nind_m2 = 0
-# Shitty correction ?????????????????????????????????????
-flora_biomass_lm <- flora_biomass_lm %>%
-  mutate(nind_m2 = ifelse(nind_m2 < 0, 1, nind_m2))
-
-
-# Calculation of species biomass per square meter by multiplying biomass at individual (biomass_i) level by the 
-# number of individuals per square meter (nind_m2)
-flora_biomass_lm$biomass_s <- flora_biomass_lm$biomass_i * flora_biomass_lm$nind_m2
-
-
-#Putting together lm species and one ind species
-flora_biomass <- bind_rows(flora_biomass_oneind, flora_biomass_lm)
-
-# There are some NAs comming from sampling 3, where we did not measure morphological data from species with very low abundance (decisions of
-# tired Javi and Laura :( ))
-
-# Removing outliers from biomass_s
-# At this point, it is worth considering the removal of outlier for biomass_s. To reach this information we have: 
-# 1) Used abundance data gathered from the field by direct observations
-# 2) Used morphological measurements taken in the field in the application of a biomass equation
-# 3) Used the available data of number of individuals / m2 and species that was gathered in the field by visual estimation
-# 4) Used a linear model to estimate the number of individuals per m2 for all species, samplings and plots. 
-# 5) Calculated the biomass at species level by biomass_i * nind_m2. 
-# So, here there is an accumulation of calculations that has undoubtfully led to error accumulation. 
-
-
-
-# Step 1: Calculate IQR for log-transformed biomass_s
-Q1 <- quantile(log(flora_biomass$biomass_s), 0.25, na.rm = TRUE)
-Q3 <- quantile(log(flora_biomass$biomass_s), 0.75, na.rm = TRUE)
-IQR <- Q3 - Q1
-
-# Step 2: Remove outliers
-flora_biomass_clean <- flora_biomass %>%
-  filter(log(biomass_s) >= Q1 - 1.5 * IQR & log(biomass_s) <= Q3 + 1.5 * IQR)
-
-
-#There is almost no difference. Mark proposes to work on biomass as log(biomass) since it is the most common way of working
-# in ecology
 
 
 
 #Calculation of total biomasss (community biomass) by summing all biomass at species level per square meter
 # I will keep the flora_biomass not cleaned in order to compare results with and without outliers
 
-flora_biomass <- flora_biomass %>% 
+flora_biomass_lm <- flora_biomass_lm %>% 
   group_by(plot, sampling, treatment) %>% 
   mutate(biomass_community =  sum(biomass_s, na.rm = TRUE)) %>%
   ungroup()
 
-flora_biomass_clean <- flora_biomass_clean %>% 
+flora_biomass_lm_clean <- flora_biomass_lm_clean %>% 
+  group_by(plot, sampling, treatment) %>% 
+  mutate(biomass_community =  sum(biomass_s, na.rm = TRUE)) %>%
+  ungroup()
+
+flora_biomass_nolm <- flora_biomass_nolm %>% 
   group_by(plot, sampling, treatment) %>% 
   mutate(biomass_community =  sum(biomass_s, na.rm = TRUE)) %>%
   ungroup()
@@ -427,5 +191,8 @@ flora_biomass_clean <- flora_biomass_clean %>%
 
 
 
-rm(list = setdiff(ls(), c("flora_abrich", "flora_biomass", "flora_biomass_raw", "flora_biomass_clean", "species_biomass_lm")))
+
+rm(list = setdiff(ls(), c("flora_abrich", "flora_biomass_lm",
+                          "flora_biomass_lm_clean", "flora_biomass_nolm")))
+
 

@@ -49,7 +49,7 @@ ab_rich_dynamics <- ab_rich_dynamics %>%
 
 # Database for biomass
 
-biomass_dynamics_cleaned <- flora_biomass_clean %>% 
+biomass_lm_dynamics_cleaned <- flora_biomass_lm_clean %>% 
   filter(!sampling %in% c("0", "1", "2", "12")) %>% 
   group_by(treatment, sampling, date, month) %>% 
   mutate(mean_biomass = mean(biomass_community, na.rm = T),
@@ -118,7 +118,7 @@ ggplot(ab_rich_dynamics, aes(x = treatment, y = richness)) +
   scale_fill_manual(values = c("c" = "#48A597", "w" = "#D94E47", "p" = "#3A7CA5", "wp" = "#6D4C7D")) +
   ggsignif::geom_signif(
     comparisons = list(c("c","w"), c("c", "p"), c("c", "wp"), c("wp", "w"), c("wp", "p")),  # Significant comparisons
-    annotations = c("***", "***", "NS", "***", "***"),,  # Asterisks for significance
+    annotations = c("***", "***", "***", "***", "***"),,  # Asterisks for significance
     map_signif_level = TRUE,  # Automatically map significance levels if p-values provided
     y_position = c(24, 26, 28, 30, 32, 34),  # Adjust bracket positions
     tip_length = 0.01,  # Length of bracket tips
@@ -142,11 +142,11 @@ kruskal.test(abundance_community ~ treatment, data = ab_rich_dynamics)
 dunn.test(ab_rich_dynamics$abundance_community, ab_rich_dynamics$treatment, method = "bonferroni")
 
 ggplot(ab_rich_dynamics, aes(x = treatment, y = abundance_community)) +
-  geom_violin(aes(fill = treatment), colour = "black", alpha = 0.5) + # Set the outline color to black
+  geom_boxplot(aes(fill = treatment), colour = "black", alpha = 0.5) + # Set the outline color to black
   scale_fill_manual(values = c("c" = "#48A597", "w" = "#D94E47", "p" = "#3A7CA5", "wp" = "#6D4C7D")) +
   ggsignif::geom_signif(
     comparisons = list(c("c","w"), c("c", "p"), c("c", "wp"), c("wp", "w"), c("wp", "p")),  # Significant comparisons
-    annotations = c("NS", "***", "***", "***", "NS"), # Asterisks for significance
+    annotations = c("***", "***", "***", "***", "NS"), # Asterisks for significance
     map_signif_level = TRUE,  # Automatically map significance levels if p-values provided
     y_position = c(150, 160, 170, 180, 190, 200),  # Adjust bracket positions
     tip_length = 0.01,  # Length of bracket tips
@@ -191,12 +191,17 @@ car::leveneTest(log(biomass_community) ~ treatment, data = biomass_nolm_dynamics
 kruskal.test(log(biomass_community) ~ treatment, data = biomass_nolm_dynamics)
 dunn.test(log(biomass_nolm_dynamics$biomass_community), biomass_nolm_dynamics$treatment, method = "bonferroni")
 
-ggplot(biomass_nolm_dynamics, aes(x = treatment, y = log(biomass_community))) +
+shapiro.test(biomass_nolm_dynamics$biomass_community)
+car::leveneTest(biomass_community ~ treatment, data = biomass_nolm_dynamics)
+kruskal.test(biomass_community ~ treatment, data = biomass_nolm_dynamics)
+dunn.test(biomass_nolm_dynamics$biomass_community, biomass_nolm_dynamics$treatment, method = "bonferroni")
+
+ggplot(biomass_nolm_dynamics, aes(x = treatment, y = biomass_community)) +
   geom_boxplot(aes(fill = treatment), colour = "black", alpha = 0.5) + # Set the outline color to black
   scale_fill_manual(values = c("c" = "#48A597", "w" = "#D94E47", "p" = "#3A7CA5", "wp" = "#6D4C7D")) 
 #ggsignif::geom_signif(
 #  comparisons = list(c("c","w"), c("c", "p"), c("c", "wp"), c("wp", "w"), c("wp", "p")),  # Significant comparisons
-#  annotations = c("NS", "***", "***","***", "**"), # Asterisks for significance
+#  annotations = c("NS", "NS", "***","***", "***"), # Asterisks for significance
 #  map_signif_level = TRUE,  # Automatically map significance levels if p-values provided
 #  y_position = c(9, 10, 11, 12, 13, 14),  # Adjust bracket positions
 #  tip_length = 0.01,  # Length of bracket tips
