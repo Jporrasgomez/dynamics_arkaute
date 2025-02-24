@@ -5,7 +5,7 @@
 # Reisar sampling 17, plot 3, especie apar. Le faltan datos. 
 
 
-
+{
 rm(list = ls(all.names = TRUE))
 pacman::p_load(dplyr, reshape2, tidyverse, lubridate, ggplot2, ggpubr, rpivotTable, ggrepel)
 
@@ -193,6 +193,13 @@ flora_rare$Db <- flora_rare$Db + 0.01
 
 
 
+#flora_rare <- flora_rare %>%
+#  mutate(Dm = coalesce(ifelse(Dm < 0.1, 0.1, Dm), Dm))
+#
+#flora_rare <- flora_rare %>%
+#  mutate(Db = coalesce(ifelse(Db < 0.1, 0.1, Db), Db))
+
+
 
 ## BIOMASS AT INDIVIDUAL LEVEL ####
 
@@ -349,7 +356,7 @@ ggplot(flora_nobs, aes(x = code_abnobs, y = abnobs, fill = abnobs)) +
   theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1)) + 
   labs(fill = "abnobs") # Add a color scale label
 
-
+}
 
 ## BIOMASS AT SPECIES LEVEL ###########
 
