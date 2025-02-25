@@ -5,7 +5,7 @@
 # Reisar sampling 17, plot 3, especie apar. Le faltan datos. 
 
 
-{
+
 rm(list = ls(all.names = TRUE))
 pacman::p_load(dplyr, reshape2, tidyverse, lubridate, ggplot2, ggpubr, rpivotTable, ggrepel)
 
@@ -19,7 +19,7 @@ theme_set(theme_bw() +
 
 
 
-
+{
 
 flora_raw <- read.csv("data/flora_db_raw.csv") # Opening and transforming data(opening_floradata.R) ####
 
@@ -187,17 +187,17 @@ flora_rare <- merge(flora_rare, species_code, by = "code")
 #Sumar 0.01 cm a los diámetros por el error del calibre con el que medimos
 
 
-
-flora_rare$Dm <- flora_rare$Dm + 0.01
-flora_rare$Db <- flora_rare$Db + 0.01
-
-
-
-#flora_rare <- flora_rare %>%
-#  mutate(Dm = coalesce(ifelse(Dm < 0.1, 0.1, Dm), Dm))
 #
-#flora_rare <- flora_rare %>%
-#  mutate(Db = coalesce(ifelse(Db < 0.1, 0.1, Db), Db))
+#flora_rare$Dm <- flora_rare$Dm + 0.01
+#flora_rare$Db <- flora_rare$Db + 0.01
+
+
+
+flora_rare <- flora_rare %>%
+  mutate(Dm = coalesce(ifelse(Dm < 0.1, 0.1, Dm), Dm))
+
+flora_rare <- flora_rare %>%
+  mutate(Db = coalesce(ifelse(Db < 0.1, 0.1, Db), Db))
 
 
 
@@ -363,7 +363,18 @@ ggplot(flora_nobs, aes(x = code_abnobs, y = abnobs, fill = abnobs)) +
 #For biomass, we do not have information for samplings 0, 1, 2 and 12. 
 
 flora_biomass_raw <- flora_medium %>% 
-  filter(!sampling %in% c("0", "1", "2", "12"))
+  filter(!sampling %in% c("0", "1", "2", "12")) %>%  # Remove samplings for which we have no morphological measurements
+  filter(!is.na(x)) %>%                              # Remove rows where x is NA since we do not have morph. meas. for those datapoints
+  filter(height > 5 & height < 200)               # Remove individuals with height < 5 cm or > 200 cm, because the equation does not properly work with them 
+
+flora_medium %>% 
+  filter(!(height > 5 & height < 200)) %>% 
+  nrow() # Only 187 datapoints are lost
+
+length(unique(flora_biomass_raw$code))
+length(unique(flora_medium$code))
+#There is no loss of species by taking out individuals with height > 5 cm 
+
 
 
 # 1. Calculating biomass with linear regression model: 
