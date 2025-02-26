@@ -375,6 +375,7 @@ length(unique(flora_biomass_raw$code))
 length(unique(flora_medium$code))
 #There is no loss of species by taking out individuals with height > 5 cm 
 
+source("code/0.1.number_of_individuals.csv")
 
 
 # 1. Calculating biomass with linear regression model: 
