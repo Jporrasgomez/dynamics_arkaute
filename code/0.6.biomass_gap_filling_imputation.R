@@ -205,7 +205,7 @@ ggplot(biomass_nolm_short, aes(x = treatment, y = biomass_community)) +
 
 
 
-biomass_nolm_dynamics %>% 
+biomass_nolm_short %>% 
   select(sampling, plot, treatment, date, biomass_community) %>% 
   distinct() %>% 
   ggplot(aes(x = date, y = biomass_community, color = treatment, fill = treatment)) + 
@@ -386,7 +386,7 @@ a_biomass_nolm <-
 
 
 biomass_nolm_mice <- biomass_nolm %>% 
-  select(sampling, plot, treatment, code, abundance, abundance_community, nind_m2)
+  select(sampling, plot, treatment, code, richness, abundance, abundance_community, nind_m2)
 
 
 biomass_nolm_mice <- biomass_nolm_mice %>% mutate(across(where(is.character), as.factor))
@@ -396,9 +396,14 @@ library(mice)
 
 # Aplicar imputación con Random Forest
 
-#biomass_nolm_mice <- mice(biomass_nolm_mice, method = "rf", m = 5, maxit = 200) # I tried with more iterations (maxit) but there was no difference
+# We use mice package
+##| method = "rf". Random forest models allow us to use both numerical and factorial variables in the imputation. Therefore, code, sampling and plot are used
+##| m = 5 is the number of datasets that imce creates. This is, 5 values of nind_m2
+##| maxit is the number of times that the imputation take place. 
 
-# saveRDS(biomass_nolm_mice, "data/biomass_nolm_mice.rds")
+biomass_nolm_mice <- mice(biomass_nolm_mice, method = "rf", m = 10, maxit = 100) # I tried with more iterations (maxit) but there was no difference
+
+ saveRDS(biomass_nolm_mice, "data/biomass_nolm_mice.rds")
 
 biomass_nolm_mice <- readRDS("data/biomass_nolm_mice.rds")
 
@@ -406,8 +411,10 @@ plot(biomass_nolm_mice) # Check if lines stabilize
 stripplot(biomass_nolm_mice, pch = 20, cex = 1.2) #If imputed values (blue dots) align well with observed values, MICE is working well.
 densityplot(biomass_nolm_mice)
 
+
 # Obtener dataset imputado
 biomass_nolm_imputed <- complete(biomass_nolm_mice)
+pool <- pool(biomas_nolm_mice)
 
 summary(biomass_nolm_imputed)
 
@@ -422,6 +429,8 @@ lm_model <- lm(nind_m2 ~ ., data = biomass_nolm_imputed)
 summary(lm_model)
 
 # I think the imputation works well enough considering we are only imputing 18% of the data. 
+
+
 
 source("code/0.1.1.mice_reliability.R")
 
