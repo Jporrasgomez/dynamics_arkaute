@@ -1,5 +1,114 @@
 
 
+
+
+
+
+#We calculate the mean area of the individual by taking Ah and Ab both and transform it into m2 (cm2/10000)
+biomass_nolm <- flora_biomass_raw
+
+biomass_nolm <- merge(biomass_nolm, species_code)
+
+biomass_nolm <- left_join(biomass_nolm, nind)
+
+sum(is.na(biomass_nolm$nind_m2)) 
+
+sum(is.na(biomass_nolm$nind_m2)) /length(biomass_nolm$code) * 100
+
+
+biomass_nolm$year <- year(biomass_nolm$date)
+
+
+
+#Where are the NA's?
+
+
+
+
+biomass_nolm %>% 
+  mutate(cell_content = case_when(is.na(nind_m2) ~ "NA",
+                                  !is.na(nind_m2)  ~ "nind_available")) %>%
+  # we create a new variable capturing cell content
+  # as we are interested in defining 3 different situations, we use the case_when function
+  ggplot(aes(x = as.numeric(sampling))) +
+  geom_histogram(aes(fill = cell_content),
+                 binwidth = .5, center = 0) +
+  scale_fill_discrete(drop = F) +
+  labs(y = "Number of rows", y = "Sampling") +
+  scale_x_continuous(breaks = scales::breaks_extended(n = 21))
+
+
+
+biomass_nolm %>% 
+  mutate(cell_content = case_when(is.na(nind_m2) ~ "NA",
+                                  !is.na(nind_m2)  ~ "nind_available")) %>%
+  ggplot(aes(x = as.numeric(plot))) +
+  geom_histogram(aes(fill = cell_content),
+                 binwidth = .5, center = 0) +
+  scale_fill_discrete(drop = F) +
+  labs(y = "Number of rows", x = "Plot") +
+  scale_x_continuous(breaks = scales::breaks_extended(n = 16))
+
+
+biomass_nolm %>% 
+  mutate(cell_content = case_when(is.na(nind_m2) ~ "NA",
+                                  !is.na(nind_m2)  ~ "nind_available")) %>%
+  # we create a new variable capturing cell content
+  # as we are interested in defining 3 different situations, we use the case_when function
+  ggplot(aes(y = code)) +
+  geom_bar(aes(fill = cell_content),
+           binwidth = .5, center = 0) +
+  scale_fill_discrete(drop = F) +
+  labs(x = "Number of rows")
+
+#NA's seem to be concentrated in the first year, as we already knew
+# NA's are randomly distributed across plots
+# NA's are randomly distributed across species, but we can see some that have more than others like: 
+# poaceae, coar or shar
+
+
+
+na <- biomass_nolm
+summary(na)
+
+na$nind_m2_na <- ifelse(is.na(na$nind_m2), -1, na$nind_m2)
+
+plots <- sort(unique(biomass_nolm$plot))
+nalist <- list()
+count = 0
+
+for(i in seq_along(plots)){
+  
+  count = count + 1
+  
+  nalist[[count]]<- 
+    ggplot(subset(na, plot == plots[i]), aes(x = sampling, y = code, fill = nind_m2_na)) +
+    geom_tile(color = "gray13") +  # Keep black grid lines
+    geom_text(aes(label = nind_m2_na), size = 2.3) +  # Add text labels
+    scale_fill_gradientn(
+      colors = c("red3", "#A9D8F2", "#2A5D9C"),  # Very pale gray (#F0F0F0), white, orange
+      values = scales::rescale(c(-1, 1, max(na$nind_m2, na.rm = TRUE))),
+      name = "Observations"
+    ) +
+    theme_minimal() +
+    theme(
+      panel.grid = element_blank(),  # Remove default grid lines
+      axis.text.y = element_text(face = "italic"),  # Italicize species names
+      legend.position = "bottom"  # Move legend to the bottom
+    ) +
+    labs(x = "Samplings", y = "Species", title = paste0("Plot ", plots[i]))
+  
+}
+
+for (i in seq_along(plots)) {
+  print(nalist[[i]])
+  
+}
+
+
+# MICE #####
+
+
 library(mice)
 
 biomass_mice <- biomass_nolm %>% 
@@ -14,19 +123,20 @@ biomass_mice <- biomass_nolm %>%
 
 
 #biomass_mice_imputed <- mice(biomass_mice, method = "rf", m = 10, maxit = 300)
-
-saveRDS(biomass_mice_imputed, "data/biomass_mice_imputed.rds")
+#saveRDS(biomass_mice_imputed, "data/biomass_mice_imputed.rds")
 biomass_mice_imputed <- readRDS("data/biomass_mice_imputed.rds")
 
+summary(biomass_mice_imputed)
 plot(biomass_mice_imputed) # Check if lines stabilize
-stripplot(biomass_mice_imputed, pch = 20, cex = 1.2) #If imputed values (blue dots) align well with observed values, MICE is working well.
+#stripplot(biomass_mice_imputed, pch = 20, cex = 1.2) #If imputed values (blue dots) align well with observed values, MICE is working well.
 densityplot(biomass_mice_imputed)
 
 
-imputed_db1 <- complete(biomass_mice_imputed, action = 1)
+i = 9
+imputed_dbi <- complete(biomass_mice_imputed, action = i)
 ggplot() +
   geom_density(aes(x = biomass_nolm$nind_m2), color = "blue3") +
-  geom_density(aes(x = imputed_db1$nind_m2), color = "red3") +
+  geom_density(aes(x = imputed_dbi$nind_m2), color = "red3") +
   labs(title = "Density Plot of Original (Red) vs Imputed (Blue) nind_m2")
 
 
@@ -35,12 +145,15 @@ imputed_db <- complete(biomass_mice_imputed, action = "long")
 # hay que intentar entender bien este gráfico
 ggplot() +
   geom_density(data = imputed_db, aes(x = nind_m2, color = as.factor(.imp))) +
-  geom_density(data = biomass_nolm, aes(x = nind_m2), color = "black") +
+  geom_density(data = biomass_nolm, aes(x = nind_m2), color = "black",
+               size = 0.8, linetype = "dashed") +
   labs(title = "Density Plot of Original (Blue) vs Imputed (Colored by .imp)",
        x = "nind_m2",
        y = "Density",
        color = "Imputation Number") +
   theme_minimal()
+
+# Calculation of average value for 10 imputations of nind_m2 (m = 10) and its sd. 
 
 imputed_db <- imputed_db %>% 
   group_by(plot, treatment, sampling, code) %>% 
@@ -52,6 +165,9 @@ imputed_db <- imputed_db %>%
 
 imputed_db$label_imputation <- ifelse(is.na(biomass_nolm$nind_m2), 1, 0)
 
+# Here I plot the CV (Coefficient of variation) of the imputed values (n = 10) So I can check the stability of the imputed
+# data. The more CV < 1, the more stable it is
+
 imputed_db %>% 
   filter(label_imputation == 1) %>% 
   mutate(CV = sd_imputation / nind_m2_imputed) %>% 
@@ -60,33 +176,12 @@ imputed_db %>%
   geom_vline(aes(xintercept = 1), color = "black", linetype = "dashed", size = 1) +
   scale_x_continuous(expand = expansion(mult = c(0.05, 0.1))) +
   labs(title = "Distribution of Coefficient of Variation for Imputed Values",
-       x = "SD / mean Ratio",
+       x = "(SD/mean) Ratio",
        y = "Count") +
   theme_minimal(base_size = 14) +
   theme(panel.grid.major = element_blank(),
         panel.grid.minor = element_blank(),
         plot.title = element_text(hjust = 0.5))
-
-
-
-# Tries
-try1 <- mice(biomass_mice, method = "rf", m = 5, maxit = 5)
-
-plot(try1) # Check if lines stabilize
-stripplot(try1, pch = 20, cex = 1.2) #If imputed values (blue dots) align well with observed values, MICE is working well.
-densityplot(try1)
-
-try1_db <- complete(try1, action = "long")
-
-try1_db <- try1_db %>% 
-  group_by(plot, treatment, sampling, code) %>% 
-  mutate(nind_m2_imputed = mean(nind_m2),
-         sd_imputation = sd(nind_m2)) %>% 
-  select(plot, treatment, sampling, code, nind_m2_imputed, sd_imputation) %>% 
-  distinct()
-
-
-try1_db$zeroriginal_oneimputed <- ifelse(is.na(biomass_nolm$nind_m2), 1, 0)
 
 
 
@@ -98,11 +193,21 @@ perc_NA <- ((biomass_nolm %>%
                filter(is.na(nind_m2)) %>% 
                nrow())) / nrow(biomass_nolm)
 
+##| I create a database where there are no NA in nind_m2.
+##| Also, in this db (nind_nona) i take out the species for which we always have found 1 individuals so they do not
+##| play a role in the original imputation because always nind_m2 = 1. And if we randomly create an NA in one of these species
+##| the imputation stability might be negatively and unnecessarilyaffected 
+
 nind_nona <- biomass_nolm %>% 
-  filter(!is.na(nind_m2))
+  filter(!is.na(nind_m2)) %>%  
+  filter(!code %in% one_ind_species)
+
+
+
 
 #Artificially creating the same percentage of NA as
-# there are in my original database and keeping the same variables as in the original imputation
+# there are in my original database  (perc_NA) and keeping the same variables as in the original imputation
+
 mice_check <- nind_nona %>%
   mutate(nind_m2 = ifelse(runif(n()) < perc_NA, NA, nind_m2)) %>% 
   select(year, sampling, plot, treatment, code, family, richness, abundance, abundance_community,
@@ -110,9 +215,6 @@ mice_check <- nind_nona %>%
   mutate(across(where(is.character), as.factor))
 
 
-mice_check %>% 
-  filter(is.na(nind_m2)) %>% 
-  nrow()
 
 # Dejo creada la base de datos de los NA creados artificialmente para nind_m2
 check_subset <- mice_check %>% 
@@ -122,48 +224,46 @@ check_subset <- mice_check %>%
             by = c("sampling", "plot", "treatment", "code", "abundance", "abundance_community")) %>% 
   rename(nind_m2_original = nind_m2)
 
-common <- check_subset %>% 
-  select(code, sampling, plot, treatment)
-
 # Same imputation as original 
-mice_check_imputed <- mice(mice_check,method = "rf", m = 10, maxit = 300) 
-saveRDS(tmice_check_imputed, "data/tmice_check_imputed.rds")
-tmice_check_imputed <- readRDS("data/tmice_check_imputed.rds")
+mice_check_imputed <- mice(mice_check,method = "rf", m = 10, maxit = 5) 
+#mice_check_imputed <- mice(mice_check,method = "rf", m = 10, maxit = 300) 
 
-check_imputed_db <- complete(mice_check_imputed, action = "long")
-
-check_imputed_db_wide <- check_imputed_db %>%
-  mutate(.imp = as.factor(.imp)) %>%  # Convert to factor
-  pivot_wider(
-    names_from = .imp, 
-    values_from = nind_m2,
-    names_prefix = "nind_m2_"
-  ) %>% 
-  left_join(check_subset) %>% 
-  filter(!is.na(nind_m2_original)) %>% 
-  ggplot(aes(x = nind_m2_original, y))
+#saveRDS(mice_check_imputed, "data/tmice_check_imputed.rds")
+#mice_check_imputed <- readRDS("data/mice_check_imputed.rds")
 
 
-check_imputed_db<- check_imputed_db %>%
-  mutate(.imp = as.factor(.imp)) %>%  # Convert to factor
-  left_join(check_subset) %>% 
-  filter(!is.na(nind_m2_original))
-
-  ggplot(check_imputed_db, aes(x = nind_m2_original, y = nind_m2, color = .imp)) + 
-  geom_point() + 
-  geom_smooth(method = "lm", se = F) +
-  theme_minimal()
-  
-  ggplot(check_imputed_db, aes(x = nind_m2_original, y = nind_m2, color = as.factor(.imp))) + 
+complete(mice_check_imputed, action = "long") %>%  
+  mutate(.imp = as.factor(.imp)) %>%      # Convert to factor
+  left_join(check_subset) %>%             # Adding original values of nind_m2
+  filter(!is.na(nind_m2_original)) %>%    # Keeping only original values
+  ggplot(aes(x = nind_m2_original, y = nind_m2, color = as.factor(.imp))) + 
     geom_point(alpha = 0.6) + 
     geom_smooth(method = "lm", se = FALSE) +
-    stat_cor(aes(label = paste(after_stat(r.label), after_stat(p.label), sep = "~`,`~")), 
+    stat_cor(aes(label = paste(after_stat(rr.label), after_stat(p.label), sep = "~`,`~")),  
              method = "pearson", 
              label.x.npc = "left", 
-             label.y.npc = "top") + # Adds R² and p-value
+             label.y.npc = "top") + # Displays R² and p-value
     theme_minimal() +
     labs(color = "Imputation Number") # Improve legend label
+  
 
-
+# Tries
+#try1 <- mice(biomass_mice, method = "rf", m = 5, maxit = 5)
+#
+#plot(try1) # Check if lines stabilize
+#stripplot(try1, pch = 20, cex = 1.2) #If imputed values (blue dots) align well with observed values, MICE is working well.
+#densityplot(try1)
+#
+#try1_db <- complete(try1, action = "long")
+#
+#try1_db <- try1_db %>% 
+#  group_by(plot, treatment, sampling, code) %>% 
+#  mutate(nind_m2_imputed = mean(nind_m2),
+#         sd_imputation = sd(nind_m2)) %>% 
+#  select(plot, treatment, sampling, code, nind_m2_imputed, sd_imputation) %>% 
+#  distinct()
+#
+#
+#try1_db$zeroriginal_oneimputed <- ifelse(is.na(biomass_nolm$nind_m2), 1, 0)
 
 

@@ -57,3 +57,13 @@ nind2 <- nind2 %>%
 names(nind2)[names(nind2) == "n_individuals_mean"] <- "nind_m2"
 
 nind <- bind_rows(nind1, nind2)
+
+
+
+##| Plus*
+##| There are some species for which we only have measured 1 individual per plot and sampling every time we have spot it.
+##|  Therefore, for these species we do not need to estimate the number of individuals.
+##|  In think is useful to keep a vector
+
+
+one_ind_species <- c("rucr", "amsp", "kisp")
