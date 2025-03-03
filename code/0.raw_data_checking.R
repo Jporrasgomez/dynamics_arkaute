@@ -378,46 +378,76 @@ length(unique(flora_medium$code))
 
 source("code/0.1.number_of_individuals.R")
 
-
-# 1. Calculating biomass with linear regression model: 
-
-source("code/0.1linear_regression.R")
+source("code/MICE.R")
 
 
+imput_stability
+imput_reliability_test
 
-# 2. Calculating biomass with no linear models 
+# Calculation of biomass at species level for both scenarios: with imputation of data with MICE and without it
 
-source("code/0.4.biomass_no_lm.R")
+biomass_imp <- biomass_imp %>% 
+  mutate(biomass_s = nind_m2_imputed * biomass_i)
+
+hist(biomass_imp$biomass_s, breaks = 100)
+hist(log(biomass_imp$biomass_s), breaks = 100)
+
+# Step 1: Calculate IQR for log-transformed biomass_s
+Q1 <- quantile(log(biomass_imp$biomass_s), 0.25, na.rm = TRUE)
+Q3 <- quantile(log(biomass_imp$biomass_s), 0.75, na.rm = TRUE)
+IQR <- Q3 - Q1
+
+# Step 2: Remove outliers
+biomass_imp_clean<- biomass_imp %>%
+  filter(log(biomass_s) >= Q1 - 1.5 * IQR & log(biomass_s) <= Q3 + 1.5 * IQR)
+
+hist(biomass_imp_clean$biomass_s, breaks = 100)
+hist(log(biomass_imp_clean$biomass_s), breaks = 100)
 
 
+biomass_noimp <- biomass %>% 
+  mutate(biomass_s = nind_m2* biomass_i, na.rm =T)  # We go ahead with the 18% of NA's of nind_m2
 
+hist(biomass_noimp$biomass_s, breaks = 100, main = "Log biomass_s without imputation")
+hist(log(biomass_noimp$biomass_s), breaks = 100, main = "Log biomass_s without imputation")
 
+# Step 1: Calculate IQR for log-transformed biomass_s
+Q1 <- quantile(log(biomass_noimp$biomass_s), 0.25, na.rm = TRUE)
+Q3 <- quantile(log(biomass_noimp$biomass_s), 0.75, na.rm = TRUE)
+IQR <- Q3 - Q1
 
+# Step 2: Remove outliers
+biomass_noimp_clean<- biomass_noimp %>%
+  filter(log(biomass_s) >= Q1 - 1.5 * IQR & log(biomass_s) <= Q3 + 1.5 * IQR)
+
+hist(biomass_noimp_clean$biomass_s, breaks = 100)
+hist(log(biomass_noimp_clean$biomass_s), breaks = 100)
+
+### 1. Calculating biomass with linear regression model: 
+##
+##source("code/0.1linear_regression.R")
+##
+### 2. Calculating biomass with no linear models 
+##
+##source("code/0.4.biomass_no_lm.R")
 
 #Calculation of total biomasss (community biomass) by summing all biomass at species level per square meter
 # I will keep the flora_biomass not cleaned in order to compare results with and without outliers
 
-flora_biomass_lm <- flora_biomass_lm %>% 
+flora_biomass_imp <- biomass_imp_clean %>% 
   group_by(plot, sampling, treatment) %>% 
   mutate(biomass_community =  sum(biomass_s, na.rm = TRUE)) %>%
   ungroup()
 
-flora_biomass_lm_clean <- flora_biomass_lm_clean %>% 
+flora_biomass_noimp <- biomass_noimp_clean %>% 
   group_by(plot, sampling, treatment) %>% 
   mutate(biomass_community =  sum(biomass_s, na.rm = TRUE)) %>%
   ungroup()
 
-flora_biomass_nolm <- flora_biomass_nolm %>% 
-  group_by(plot, sampling, treatment) %>% 
-  mutate(biomass_community =  sum(biomass_s, na.rm = TRUE)) %>%
-  ungroup()
-
-  
 
 
 
-rm(list = setdiff(ls(), c("flora_abrich", "flora_biomass_lm",
-                          "flora_biomass_lm_clean", "flora_biomass_nolm")))
+rm(list = setdiff(ls(), c("flora_abrich", "flora_biomass_imp", "flora_biomass_noimp")))
 
 
 

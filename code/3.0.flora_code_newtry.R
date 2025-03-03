@@ -29,7 +29,8 @@ radcoeff_df <- read.csv("data/radcoeff_df.csv")
 ab_rich_dynamics <- merge(flora_abrich, radcoeff_df)   
 
 ab_rich_dynamics <- ab_rich_dynamics %>% 
-  group_by(treatment, sampling, date, month) %>% 
+  distinct(treatment, plot, sampling, date, .keep_all = TRUE) %>% 
+  group_by(treatment, sampling, date) %>% 
   mutate(mean_richness = mean(richness, na.rm = T),
          sd_richness = sd(richness, na.rm = T),
          mean_abundance = mean(abundance_community, na.rm = T),
@@ -41,46 +42,34 @@ ab_rich_dynamics <- ab_rich_dynamics %>%
          mean_sigma_log = mean(sigma_log, na.rm = T),
          sd_sigma_log = sd(sigma_log, na.rm = T)) %>% 
   ungroup() %>% 
-  select(plot, sampling, treatment, date, code, richness, mean_richness, sd_richness, 
+  select(plot, sampling, treatment, date, richness, mean_richness, sd_richness, 
          abundance_community, mean_abundance, sd_abundance, Y_zipf, mean_Y_zipf, sd_Y_zipf,
          mu_log, mean_mu_log, sd_mu_log, sigma_log, mean_sigma_log, sd_sigma_log)
-
+  
 
 
 # Database for biomass
 
-biomass_lm_dynamics_cleaned <- flora_biomass_lm_clean %>% 
-  filter(!sampling %in% c("0", "1", "2", "12")) %>% 
-  group_by(treatment, sampling, date, month) %>% 
+biomass_imp_dynamics <- biomass_imp %>% 
+  distinct(treatment, plot, sampling, date, .keep_all = TRUE) %>% 
+  group_by(treatment, sampling, date) %>% 
   mutate(mean_biomass = mean(biomass_community, na.rm = T),
          sd_biomass = sd(biomass_community, na.rm = T)) %>% 
   ungroup() %>% 
-  select(treatment, sampling, date, plot, code, biomass_s, biomass_community, mean_biomass, 
+  select(treatment, sampling, year, date, plot, biomass_community, mean_biomass, 
          sd_biomass)
 
 
 
-biomass_lm_dynamics <- flora_biomass_lm %>%
-  filter(!sampling %in% c("0", "1", "2", "12")) %>% 
-  group_by(treatment, sampling, date, month) %>% 
+
+biomass_noimp_dynamics <- biomass_noimp %>%
+  distinct(treatment, plot, sampling, date, .keep_all = TRUE) %>% 
+  group_by(treatment, sampling, date) %>% 
   mutate(mean_biomass = mean(biomass_community, na.rm = T),
          sd_biomass = sd(biomass_community, na.rm = T)) %>% 
   ungroup() %>% 
-  select(treatment, sampling, date, plot, code, biomass_s, biomass_community, mean_biomass, 
+  select(treatment, sampling, year, date, plot, biomass_community, mean_biomass, 
          sd_biomass)
-
-
-biomass_nolm_dynamics <- flora_biomass_nolm %>%
-  filter(!sampling %in% c("0", "1", "2", "12")) %>% 
-  group_by(treatment, sampling, date, month) %>% 
-  mutate(mean_biomass = mean(biomass_community, na.rm = T),
-         sd_biomass = sd(biomass_community, na.rm = T)) %>% 
-  ungroup() %>% 
-  select(treatment, sampling, date, plot, code, biomass_s, biomass_community, mean_biomass, 
-         sd_biomass)
-
-
-
 
 
 # General differences between treatments
@@ -115,15 +104,15 @@ dunn_rich <- dunn.test::dunn.test(ab_rich_dynamics$richness, ab_rich_dynamics$tr
 
 ggplot(ab_rich_dynamics, aes(x = treatment, y = richness)) +
   geom_boxplot(aes(fill = treatment), colour = "black", alpha = 0.5) + # Set the outline color to black
-  scale_fill_manual(values = c("c" = "#48A597", "w" = "#D94E47", "p" = "#3A7CA5", "wp" = "#6D4C7D")) +
-  ggsignif::geom_signif(
-    comparisons = list(c("c","w"), c("c", "p"), c("c", "wp"), c("wp", "w"), c("wp", "p")),  # Significant comparisons
-    annotations = c("***", "***", "***", "***", "***"),,  # Asterisks for significance
-    map_signif_level = TRUE,  # Automatically map significance levels if p-values provided
-    y_position = c(24, 26, 28, 30, 32, 34),  # Adjust bracket positions
-    tip_length = 0.01,  # Length of bracket tips
-    textsize = 4  # Size of asterisks
-  )
+  scale_fill_manual(values = c("c" = "#48A597", "w" = "#D94E47", "p" = "#3A7CA5", "wp" = "#6D4C7D")) 
+  #ggsignif::geom_signif(
+  # comparisons = list(c("c","w"), c("c", "p"), c("c", "wp"), c("wp", "w"), c("wp", "p")),  # Significant comparisons
+  # annotations = c("***", "***", "***", "***", "***"),,  # Asterisks for significance
+  # map_signif_level = TRUE,  # Automatically map significance levels if p-values provided
+  # y_position = c(24, 26, 28, 30, 32, 34),  # Adjust bracket positions
+  # tip_length = 0.01,  # Length of bracket tips
+  # textsize = 4) # Size of asterisks
+
 
 
 # ABUNDANCE
@@ -133,8 +122,7 @@ hist((ab_rich_dynamics$abundance_community), breaks = 50)
 shapiro.test(log(ab_rich_dynamics$abundance_community))
 hist(log(ab_rich_dynamics$abundance_community), breaks = 50)
 
-hist(sqrt(ab_rich_dynamics$abundance_community), breaks = 50)
-hist((ab_rich_dynamics$abundance_community)^(1/3), breaks = 50)
+
 
 
 car::leveneTest(abundance_community ~ treatment, data = ab_rich_dynamics)
@@ -143,31 +131,35 @@ dunn.test(ab_rich_dynamics$abundance_community, ab_rich_dynamics$treatment, meth
 
 ggplot(ab_rich_dynamics, aes(x = treatment, y = abundance_community)) +
   geom_boxplot(aes(fill = treatment), colour = "black", alpha = 0.5) + # Set the outline color to black
-  scale_fill_manual(values = c("c" = "#48A597", "w" = "#D94E47", "p" = "#3A7CA5", "wp" = "#6D4C7D")) +
-  ggsignif::geom_signif(
-    comparisons = list(c("c","w"), c("c", "p"), c("c", "wp"), c("wp", "w"), c("wp", "p")),  # Significant comparisons
-    annotations = c("***", "***", "***", "***", "NS"), # Asterisks for significance
-    map_signif_level = TRUE,  # Automatically map significance levels if p-values provided
-    y_position = c(150, 160, 170, 180, 190, 200),  # Adjust bracket positions
-    tip_length = 0.01,  # Length of bracket tips
-    textsize = 4  # Size of asterisks
-  )
+  scale_fill_manual(values = c("c" = "#48A597", "w" = "#D94E47", "p" = "#3A7CA5", "wp" = "#6D4C7D")) 
+  #ggsignif::geom_signif(
+  #  comparisons = list(c("c","w"), c("c", "p"), c("c", "wp"), c("wp", "w"), c("wp", "p")),  # Significant comparisons
+  #  annotations = c("***", "***", "***", "***", "NS"), # Asterisks for significance
+  #  map_signif_level = TRUE,  # Automatically map significance levels if p-values provided
+  #  y_position = c(150, 160, 170, 180, 190, 200),  # Adjust bracket positions
+  #  tip_length = 0.01,  # Length of bracket tips
+  #  textsize = 4)  # Size of asterisks
+  #
 
 
 
 
-#BIOMASS_LM
-hist(biomass_lm_dynamics$biomass_community, breaks = 50)
-shapiro.test(biomass_lm_dynamics$biomass_community)
+#biomass_imp_dynamics
+hist(biomass_imp_dynamics$biomass_community, breaks = 50)
+shapiro.test(biomass_imp_dynamics$biomass_community)
 
-hist(log(biomass_lm_dynamics$biomass_community), breaks = 50)
-shapiro.test(log(biomass_lm_dynamics$biomass_community))
+hist(log(biomass_imp_dynamics$biomass_community), breaks = 50)
+shapiro.test(log(biomass_imp_dynamics$biomass_community))
 
-car::leveneTest(log(biomass_community) ~ treatment, data = biomass_lm_dynamics)
-kruskal.test(log(biomass_community) ~ treatment, data = biomass_lm_dynamics)
-dunn.test(log(biomass_lm_dynamics$biomass_community), biomass_lm_dynamics$treatment, method = "bonferroni")
+car::leveneTest(biomass_community ~ treatment, data = biomass_imp_dynamics)
+kruskal.test(biomass_community ~ treatment, data = biomass_imp_dynamics)
+dunn.test(biomass_imp_dynamics$biomass_community, biomass_imp_dynamics$treatment, method = "bonferroni")
 
-ggplot(biomass_lm_dynamics, aes(x = treatment, y = log(biomass_community))) +
+car::leveneTest(log(biomass_community) ~ treatment, data = biomass_imp_dynamics)
+kruskal.test(log(biomass_community) ~ treatment, data = biomass_imp_dynamics)
+dunn.test(log(biomass_imp_dynamics$biomass_community), biomass_imp_dynamics$treatment, method = "bonferroni")
+
+ggplot(biomass_imp_dynamics, aes(x = treatment, y = biomass_community)) +
   geom_boxplot(aes(fill = treatment), colour = "black", alpha = 0.5) + # Set the outline color to black
   scale_fill_manual(values = c("c" = "#48A597", "w" = "#D94E47", "p" = "#3A7CA5", "wp" = "#6D4C7D")) 
   #ggsignif::geom_signif(
@@ -181,22 +173,22 @@ ggplot(biomass_lm_dynamics, aes(x = treatment, y = log(biomass_community))) +
 
 
 #BIOMASS_NOLM
-hist(biomass_nolm_dynamics$biomass_community, breaks = 50)
-shapiro.test(biomass_nolm_dynamics$biomass_community)
+hist(biomass_noimp_dynamics$biomass_community, breaks = 50)
+shapiro.test(biomass_noimp_dynamics$biomass_community)
 
-hist(log(biomass_nolm_dynamics$biomass_community), breaks = 50)
-shapiro.test(log(biomass_nolm_dynamics$biomass_community))
+hist(log(biomass_noimp_dynamics$biomass_community), breaks = 50)
+shapiro.test(log(biomass_noimp_dynamics$biomass_community))
 
-car::leveneTest(log(biomass_community) ~ treatment, data = biomass_nolm_dynamics)
-kruskal.test(log(biomass_community) ~ treatment, data = biomass_nolm_dynamics)
-dunn.test(log(biomass_nolm_dynamics$biomass_community), biomass_nolm_dynamics$treatment, method = "bonferroni")
+car::leveneTest(log(biomass_community) ~ treatment, data = biomass_noimp_dynamics)
+kruskal.test(log(biomass_community) ~ treatment, data = biomass_noimp_dynamics)
+dunn.test(log(biomass_noimp_dynamics$biomass_community), biomass_noimp_dynamics$treatment, method = "bonferroni")
 
-shapiro.test(biomass_nolm_dynamics$biomass_community)
-car::leveneTest(biomass_community ~ treatment, data = biomass_nolm_dynamics)
-kruskal.test(biomass_community ~ treatment, data = biomass_nolm_dynamics)
-dunn.test(biomass_nolm_dynamics$biomass_community, biomass_nolm_dynamics$treatment, method = "bonferroni")
+shapiro.test(biomass_noimp_dynamics$biomass_community)
+car::leveneTest(biomass_community ~ treatment, data = biomass_noimp_dynamics)
+kruskal.test(biomass_community ~ treatment, data = biomass_noimp_dynamics)
+dunn.test(biomass_noimp_dynamics$biomass_community, biomass_noimp_dynamics$treatment, method = "bonferroni")
 
-ggplot(biomass_nolm_dynamics, aes(x = treatment, y = biomass_community)) +
+ggplot(biomass_noimp_dynamics, aes(x = treatment, y = biomass_community)) +
   geom_boxplot(aes(fill = treatment), colour = "black", alpha = 0.5) + # Set the outline color to black
   scale_fill_manual(values = c("c" = "#48A597", "w" = "#D94E47", "p" = "#3A7CA5", "wp" = "#6D4C7D")) 
 #ggsignif::geom_signif(
@@ -233,7 +225,7 @@ a_abundance <-
     ) +
   
   geom_point(aes(color = treatment),
-             alpha = 0.05, position = position_dodge(width = 8)) +
+             alpha = 0.5, position = position_dodge(width = 8)) +
     
   geom_errorbar(aes(ymax = mean_abundance + sd_abundance, ymin = mean_abundance - sd_abundance, color = treatment),
                 , alpha = 0.2, position = position_dodge(width = 8)) + 
@@ -368,13 +360,13 @@ ggcomb_richness
 
 
 
-a_biomass_lm <-
-  ggplot(biomass_lm_dynamics,
+a_biomass_imp_dynamics <- 
+  ggplot(biomass_imp_dynamics,
          aes(x = date, y = biomass_community)) + 
   
   geom_smooth(
-    se = TRUE, aes(color = treatment, fill = treatment),
-    method = "loess", span = 0.6, alpha = 0.2 
+    se = F, aes(color = treatment, fill = treatment),
+    method = "loess", span = 0.6, alpha = 0.2
   ) +
   
   geom_point(aes(color = treatment),
@@ -399,13 +391,13 @@ a_biomass_lm <-
   
   theme(axis.text.x = element_text(angle = 45, hjust = 1), legend.position = "none",
   ) +
-  scale_y_log10() +
+  #scale_y_log10() +
   
   labs(y = "log(Community biomass)", x = NULL) #
 
 # Box plot
 b_biomass_lm <- 
-  ggplot(biomass_lm_dynamics, aes(y = log(biomass_community),x = treatment)) +
+  ggplot(biomass_imp_dynamics, aes(y = log(biomass_community),x = treatment)) +
   geom_boxplot(aes(fill = treatment), colour = "black", alpha = 0.5) + # Set the outline color to black
   scale_fill_manual(values = c("c" = "#48A597", "w" = "#D94E47", "p" = "#3A7CA5", "wp" = "#6D4C7D")) +
   theme(legend.position = "none",
@@ -443,11 +435,11 @@ ggcomb_biomass_lm
 
 
 a_biomass_nolm <-
-  ggplot(biomass_nolm_dynamics,
+  ggplot(biomass_noimp_dynamics,
          aes(x = date, y = biomass_community)) + 
   
   geom_smooth(
-    se = TRUE, aes(color = treatment, fill = treatment),
+    se = F, aes(color = treatment, fill = treatment),
     method = "loess", span = 0.6, alpha = 0.2 
   ) +
   
@@ -473,7 +465,7 @@ a_biomass_nolm <-
   
   theme(axis.text.x = element_text(angle = 45, hjust = 1), legend.position = "none",
   ) +
-  scale_y_log10() +
+  #scale_y_log10() +
   
   labs(y = "log(Community biomass)", x = NULL) #
 

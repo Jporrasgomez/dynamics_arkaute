@@ -5,18 +5,18 @@
 
 
 #We calculate the mean area of the individual by taking Ah and Ab both and transform it into m2 (cm2/10000)
-biomass_nolm <- flora_biomass_raw
+biomass <- flora_biomass_raw
 
-biomass_nolm <- merge(biomass_nolm, species_code)
+biomass <- merge(biomass, species_code)
 
-biomass_nolm <- left_join(biomass_nolm, nind)
+biomass <- left_join(biomass, nind)
 
-sum(is.na(biomass_nolm$nind_m2)) 
+sum(is.na(biomass$nind_m2)) 
 
-sum(is.na(biomass_nolm$nind_m2)) /length(biomass_nolm$code) * 100
+sum(is.na(biomass$nind_m2)) /length(biomass$code) * 100
 
 
-biomass_nolm$year <- year(biomass_nolm$date)
+biomass$year <- year(biomass$date)
 
 
 
@@ -25,7 +25,7 @@ biomass_nolm$year <- year(biomass_nolm$date)
 
 
 
-biomass_nolm %>% 
+biomass %>% 
   mutate(cell_content = case_when(is.na(nind_m2) ~ "NA",
                                   !is.na(nind_m2)  ~ "nind_available")) %>%
   # we create a new variable capturing cell content
@@ -39,7 +39,7 @@ biomass_nolm %>%
 
 
 
-biomass_nolm %>% 
+biomass %>% 
   mutate(cell_content = case_when(is.na(nind_m2) ~ "NA",
                                   !is.na(nind_m2)  ~ "nind_available")) %>%
   ggplot(aes(x = as.numeric(plot))) +
@@ -50,7 +50,7 @@ biomass_nolm %>%
   scale_x_continuous(breaks = scales::breaks_extended(n = 16))
 
 
-biomass_nolm %>% 
+biomass %>% 
   mutate(cell_content = case_when(is.na(nind_m2) ~ "NA",
                                   !is.na(nind_m2)  ~ "nind_available")) %>%
   # we create a new variable capturing cell content
@@ -68,12 +68,12 @@ biomass_nolm %>%
 
 
 
-na <- biomass_nolm
+na <- biomass
 summary(na)
 
 na$nind_m2_na <- ifelse(is.na(na$nind_m2), -1, na$nind_m2)
 
-plots <- sort(unique(biomass_nolm$plot))
+plots <- sort(unique(biomass$plot))
 nalist <- list()
 count = 0
 
@@ -111,7 +111,7 @@ for (i in seq_along(plots)) {
 
 library(mice)
 
-biomass_mice <- biomass_nolm %>% 
+biomass_mice <- biomass %>% 
   select(year, sampling, plot, treatment, code, family, richness, abundance, abundance_community,
          height, Ah, Ab, biomass_i, nind_m2) %>% 
   mutate(across(where(is.character), as.factor))
@@ -135,7 +135,7 @@ densityplot(biomass_mice_imputed)
 i = 9
 imputed_dbi <- complete(biomass_mice_imputed, action = i)
 ggplot() +
-  geom_density(aes(x = biomass_nolm$nind_m2), color = "blue3") +
+  geom_density(aes(x = biomass$nind_m2), color = "blue3") +
   geom_density(aes(x = imputed_dbi$nind_m2), color = "red3") +
   labs(title = "Density Plot of Original (Red) vs Imputed (Blue) nind_m2")
 
@@ -145,7 +145,7 @@ imputed_db <- complete(biomass_mice_imputed, action = "long")
 # hay que intentar entender bien este gráfico
 ggplot() +
   geom_density(data = imputed_db, aes(x = nind_m2, color = as.factor(.imp))) +
-  geom_density(data = biomass_nolm, aes(x = nind_m2), color = "black",
+  geom_density(data = biomass, aes(x = nind_m2), color = "black",
                size = 0.8, linetype = "dashed") +
   labs(title = "Density Plot of Original (Blue) vs Imputed (Colored by .imp)",
        x = "nind_m2",
@@ -163,12 +163,12 @@ imputed_db <- imputed_db %>%
   distinct()
 
 
-imputed_db$label_imputation <- ifelse(is.na(biomass_nolm$nind_m2), 1, 0)
+imputed_db$label_imputation <- ifelse(is.na(biomass$nind_m2), 1, 0)
 
 # Here I plot the CV (Coefficient of variation) of the imputed values (n = 10) So I can check the stability of the imputed
 # data. The more CV < 1, the more stable it is
 
-imputed_db %>% 
+imput_stability <- imputed_db %>% 
   filter(label_imputation == 1) %>% 
   mutate(CV = sd_imputation / nind_m2_imputed) %>% 
   ggplot(aes(x = CV)) +
@@ -189,16 +189,16 @@ imputed_db %>%
 
 # Checking reliability of mice imputation 
 # Let's recreate
-perc_NA <- ((biomass_nolm %>% 
+perc_NA <- ((biomass %>% 
                filter(is.na(nind_m2)) %>% 
-               nrow())) / nrow(biomass_nolm)
+               nrow())) / nrow(biomass)
 
 ##| I create a database where there are no NA in nind_m2.
 ##| Also, in this db (nind_nona) i take out the species for which we always have found 1 individuals so they do not
 ##| play a role in the original imputation because always nind_m2 = 1. And if we randomly create an NA in one of these species
 ##| the imputation stability might be negatively and unnecessarilyaffected 
 
-nind_nona <- biomass_nolm %>% 
+nind_nona <- biomass %>% 
   filter(!is.na(nind_m2)) %>%  
   filter(!code %in% one_ind_species)
 
@@ -232,7 +232,9 @@ mice_check_imputed <- mice(mice_check,method = "rf", m = 10, maxit = 5)
 #mice_check_imputed <- readRDS("data/mice_check_imputed.rds")
 
 
-complete(mice_check_imputed, action = "long") %>%  
+           
+
+imput_reliability_test <- complete(mice_check_imputed, action = "long") %>%  
   mutate(.imp = as.factor(.imp)) %>%      # Convert to factor
   left_join(check_subset) %>%             # Adding original values of nind_m2
   filter(!is.na(nind_m2_original)) %>%    # Keeping only original values
@@ -246,24 +248,78 @@ complete(mice_check_imputed, action = "long") %>%
     theme_minimal() +
     labs(color = "Imputation Number") # Improve legend label
   
-
-# Tries
-#try1 <- mice(biomass_mice, method = "rf", m = 5, maxit = 5)
-#
-#plot(try1) # Check if lines stabilize
-#stripplot(try1, pch = 20, cex = 1.2) #If imputed values (blue dots) align well with observed values, MICE is working well.
-#densityplot(try1)
-#
-#try1_db <- complete(try1, action = "long")
-#
-#try1_db <- try1_db %>% 
-#  group_by(plot, treatment, sampling, code) %>% 
-#  mutate(nind_m2_imputed = mean(nind_m2),
-#         sd_imputation = sd(nind_m2)) %>% 
-#  select(plot, treatment, sampling, code, nind_m2_imputed, sd_imputation) %>% 
-#  distinct()
-#
-#
-#try1_db$zeroriginal_oneimputed <- ifelse(is.na(biomass_nolm$nind_m2), 1, 0)
+  
 
 
+
+biomass_imp <- biomass %>% 
+  select(year, date, sampling, plot, code, species_level, genus_level, family,
+         abundance, height, Ah, Ab, x, biomass_i, richness, abundance_community, nind_m2) %>% 
+  left_join(imputed_db)
+
+
+# hay que capar el nind_m2 imputado, sobre todo por arriba. LA idea es que nind_m2_imputed para una especie nunca sea mayor
+# que nind_m2 para esa misma especie en ese sampling
+
+codes <- sort(unique(biomass_imp$code))
+samps <- sort(unique(biomass_imp$samp))
+
+for (i in seq_along(samps)){
+  
+  samp_i <- biomass_imp %>% 
+    filter(sampling == samps[i])
+  
+  for (j in seq_along(codes)){
+    
+    # codigos presentes en ese muestreo
+    code_j <- samp_i %>% 
+      filter(code == codes[j]) %>% 
+      mutate(nind_m2_try = max(nind_m2), na.rm = T)
+    
+   
+    
+  }
+  
+}
+
+
+
+##library(broom)
+##library(purrr)  # Ensure purrr is loaded for map_dbl()
+##
+### Step 1: Prepare Data
+##data_for_lm <- complete(mice_check_imputed, action = "long") %>%
+##  left_join(check_subset) %>%
+##  filter(!is.na(nind_m2_original))
+##
+### Step 2: Compute R² and p-value for each imputation level
+##lm_results <- data_for_lm %>%
+##  group_by(.imp) %>%
+##  summarise(
+##    lm_model = list(lm(nind_m2 ~ nind_m2_original, data = pick(everything()))),  # Use pick()
+##    .groups = "drop"
+##  ) %>%
+##  mutate(
+##    r_squared = map_dbl(lm_model, ~summary(.)$r.squared),  # Extract R²
+##    p_value = map_dbl(lm_model, ~glance(.)$p.value)
+##    
+##  ) %>%
+##  select(.imp, r_squared, p_value)
+##
+### Step 3: Merge R² and p-value back into the dataset
+##data_for_plot <- data_for_lm %>%
+##  left_join(lm_results, by = ".imp")
+##
+### Step 4: Create the ggplot
+##ggplot(data_for_plot, aes(x = nind_m2_original, y = nind_m2, color = as.factor(.imp))) + 
+##  geom_point(alpha = 0.6) + 
+##  geom_smooth(method = "lm", se = FALSE) +
+##  geom_text(data = lm_results, 
+##            aes(x = min(data_for_plot$nind_m2_original, na.rm = TRUE),  # Align to the left
+##                y = max(data_for_plot$nind_m2, na.rm = TRUE) - (.imp * 2),  # Space labels out
+##                label = paste0("R² = ", round(r_squared, 3), 
+##                               ", p-value = ", signif(p_value, 3)), 
+##                color = as.factor(.imp)),  # Match text color with regression color
+##            size = 4, hjust = 0, vjust = 1) +  # Left align text
+##  theme_minimal() +
+##  labs(color = "Imputation Number")
