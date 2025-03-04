@@ -168,17 +168,21 @@ imputed_db$label_imputation <- ifelse(is.na(biomass$nind_m2), 1, 0)
 # Here I plot the CV (Coefficient of variation) of the imputed values (n = 10) So I can check the stability of the imputed
 # data. The more CV < 1, the more stable it is
 
+
 imput_stability <- imputed_db %>% 
   filter(label_imputation == 1) %>% 
   mutate(CV = sd_imputation / nind_m2_imputed) %>% 
   ggplot(aes(x = CV)) +
   geom_histogram(bins = 30, fill = "steelblue", color = "white", alpha = 0.8) +
   geom_vline(aes(xintercept = 1), color = "black", linetype = "dashed", size = 1) +
-  scale_x_continuous(expand = expansion(mult = c(0.05, 0.1))) +
+  scale_x_continuous(
+    expand = expansion(mult = c(0.05, 0.1)),
+    breaks = seq(0, max(imputed_db$sd_imputation / imputed_db$nind_m2_imputed, na.rm = TRUE), by = 0.2) # Adjust "by" as needed
+  ) +
   labs(title = "Distribution of Coefficient of Variation for Imputed Values",
        x = "(SD/mean) Ratio",
        y = "Count") +
-  theme_minimal(base_size = 14) +
+  theme_minimal(base_size = 10) +
   theme(panel.grid.major = element_blank(),
         panel.grid.minor = element_blank(),
         plot.title = element_text(hjust = 0.5))
@@ -258,29 +262,35 @@ biomass_imp <- biomass %>%
   left_join(imputed_db)
 
 
+#lets going to check the results
+
+ggplot(imputed_db, aes( x = sampling, y = nind_m2_imputed, color = as.factor(label_imputation))) +
+  facet_wrap(~code, ncol = 7, nrow = 6)+
+  geom_point(alpha = 0.5) +
+  scale_color_manual(values = c("0" = "cyan3", "1" = "red3")) +
+  labs(color = "Imputation")
+
+
 # hay que capar el nind_m2 imputado, sobre todo por arriba. LA idea es que nind_m2_imputed para una especie nunca sea mayor
-# que nind_m2 para esa misma especie en ese sampling
+# que nind_m2 max de esa especie en todo el experimento. 
 
-codes <- sort(unique(biomass_imp$code))
-samps <- sort(unique(biomass_imp$samp))
+biomass_imp <- biomass_imp %>% 
+  group_by(code) %>% 
+  mutate(nind_m2_max = max(nind_m2, na.rm = T)) 
 
-for (i in seq_along(samps)){
+biomass_imp <- biomass_imp %>% 
+  group_by(sampling, plot, code) %>% 
+  mutate(nind_m2_imputed = ifelse(nind_m2_imputed > nind_m2_max, nind_m2_max, nind_m2_imputed)) %>% 
+  ungroup()
+
+ggplot(imputed_db, aes( x = sampling, y = nind_m2_imputed, color = as.factor(label_imputation))) +
+  facet_wrap(~code, ncol = 7, nrow = 6)+
+  geom_point(alpha = 0.5) +
+  scale_color_manual(values = c("0" = "cyan3", "1" = "red3")) +
+  labs(color = "Imputation")
+
+
   
-  samp_i <- biomass_imp %>% 
-    filter(sampling == samps[i])
-  
-  for (j in seq_along(codes)){
-    
-    # codigos presentes en ese muestreo
-    code_j <- samp_i %>% 
-      filter(code == codes[j]) %>% 
-      mutate(nind_m2_try = max(nind_m2), na.rm = T)
-    
-   
-    
-  }
-  
-}
 
 
 

@@ -50,7 +50,7 @@ ab_rich_dynamics <- ab_rich_dynamics %>%
 
 # Database for biomass
 
-biomass_imp_dynamics <- biomass_imp %>% 
+biomass_imp_dynamics <- flora_biomass_imp %>% 
   distinct(treatment, plot, sampling, date, .keep_all = TRUE) %>% 
   group_by(treatment, sampling, date) %>% 
   mutate(mean_biomass = mean(biomass_community, na.rm = T),
@@ -62,7 +62,7 @@ biomass_imp_dynamics <- biomass_imp %>%
 
 
 
-biomass_noimp_dynamics <- biomass_noimp %>%
+biomass_noimp_dynamics <- flora_biomass_noimp %>%
   distinct(treatment, plot, sampling, date, .keep_all = TRUE) %>% 
   group_by(treatment, sampling, date) %>% 
   mutate(mean_biomass = mean(biomass_community, na.rm = T),
@@ -84,8 +84,9 @@ biomass_noimp_dynamics <- biomass_noimp %>%
 
 
 # Shapiro-Wilk test to check normality. If p-value <0.01 that means the distribution is not normal
-shapiro.test(ab_rich_dynamics$richness)
 hist((ab_rich_dynamics$richness), breaks = 20)
+shapiro.test(ab_rich_dynamics$richness)
+hist(log(ab_rich_dynamics$richness), breaks = 20)
 shapiro.test(log(ab_rich_dynamics$richness))
 
 
