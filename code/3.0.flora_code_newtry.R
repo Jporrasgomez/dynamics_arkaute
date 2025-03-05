@@ -9,7 +9,10 @@ pacman::p_load(dplyr,reshape2,tidyverse, lubridate, ggplot2, ggpubr, gridExtra,
 
 #Scripts 
 source("code/1.first_script.R")
-radcoeff_df <- read.csv("data/radcoeff_df.csv")
+radcoeff_df <- read.csv("data/radcoeff_df.csv") %>% 
+  mutate(treatment = as.factor(treatment), 
+         sampling = as.factor(sampling), 
+         plot = as.factor(plot))
 
 
 
@@ -26,7 +29,7 @@ radcoeff_df <- read.csv("data/radcoeff_df.csv")
 # Database for abundance and richness analysis
 
 
-ab_rich_dynamics <- merge(flora_abrich, radcoeff_df)   
+ab_rich_dynamics <- full_join(flora_abrich, radcoeff_df)   
 
 ab_rich_dynamics <- ab_rich_dynamics %>% 
   distinct(treatment, plot, sampling, date, .keep_all = TRUE) %>% 
@@ -50,7 +53,7 @@ ab_rich_dynamics <- ab_rich_dynamics %>%
 
 # Database for biomass
 
-biomass_imp_dynamics <- flora_biomass_imp %>% 
+biomass_imp_dynamics <- biomass_imp %>%
   distinct(treatment, plot, sampling, date, .keep_all = TRUE) %>% 
   group_by(treatment, sampling, date) %>% 
   mutate(mean_biomass = mean(biomass_community, na.rm = T),
@@ -60,9 +63,7 @@ biomass_imp_dynamics <- flora_biomass_imp %>%
          sd_biomass)
 
 
-
-
-biomass_noimp_dynamics <- flora_biomass_noimp %>%
+biomass_noimp_dynamics <- biomass_noimp %>%
   distinct(treatment, plot, sampling, date, .keep_all = TRUE) %>% 
   group_by(treatment, sampling, date) %>% 
   mutate(mean_biomass = mean(biomass_community, na.rm = T),
@@ -77,7 +78,6 @@ biomass_noimp_dynamics <- flora_biomass_noimp %>%
 #Statistical tests
 
 # RICHNES 
-
 
 #ab_rich_dynamics <- ab_rich_dynamics %>% 
 #  filter(code %in% species_biomass_lm)
@@ -361,14 +361,15 @@ ggcomb_richness
 
 
 
-a_biomass_imp_dynamics <- 
+#a_biomass_imp_dynamics <- 
   ggplot(biomass_imp_dynamics,
-         aes(x = date, y = biomass_community)) + 
+         aes(x = date, y = biomass_community)) +
   
   geom_smooth(
-    se = F, aes(color = treatment, fill = treatment),
+    se = T, aes(color = treatment, fill = treatment),
     method = "loess", span = 0.6, alpha = 0.2
   ) +
+  
   
   geom_point(aes(color = treatment),
              alpha = 0.5, position = position_dodge(width = 8)) +

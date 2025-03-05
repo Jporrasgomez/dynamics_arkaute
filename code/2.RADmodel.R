@@ -9,11 +9,11 @@ source("code/1.first_script.R")
 #flora <- flora[which(flora$sampling == "sampling 2"),]
 
 #reshape df (species as columns, treatments as rows)
-flora_rad <- flora_abrich %>% select(plot,sampling, treatment, code, abundance_s)
+flora_rad <- flora_abrich %>% select(plot,sampling, treatment, code, abundance)
 
 #We've detected that "radfit" does not like decimals. THe only decimal numbers that we have in the
 #database are between 0 and 1. So we round these numbers to 1. 
-flora_rad <- mutate(flora_rad, abundance = ifelse(abundance_s < 1, 1, abundance_s))
+flora_rad <- mutate(flora_rad, abundance = ifelse(abundance < 1, 1, abundance))
 
 
 # Which model we are going to use for the entire dataset? #########
@@ -73,8 +73,8 @@ for(i in 1:length(unique(flora_no1$sampling))){
     count <- count + 1
     subset_data <- subset(flora_no1, sampling == unique(flora_no1$sampling)[i] & plot == unique(flora_no1$plot)[j])
     subrad <- summarise(group_by(subset_data, code),
-                        abundance_s = round(mean(abundance_s), 0)) 
-    subrad <- pivot_wider(subrad, names_from = code, values_from = abundance_s, values_fill = 0)
+                        abundance = round(mean(abundance), 0)) 
+    subrad <- pivot_wider(subrad, names_from = code, values_from = abundance, values_fill = 0)
     subrad <- as.data.frame(subrad)
     rad_sub <- radfit(subrad)
     
@@ -104,8 +104,10 @@ radcoeff_df$sampling <- factor(as.integer(radcoeff_df$sampling) - 1,
 radcoeff_df$plot <- as.factor(radcoeff_df$plot )
 radcoeff_df$sampling <- as.factor(radcoeff_df$sampling)
 
-plots <- read.csv("data/plots.csv") %>%
-  select(plot, treatment)
+plots <- read.csv("data/plots.csv") %>% 
+  mutate(across(where(is.character), as.factor)) %>% 
+  mutate(plot = nplot, treatment = treatment_code) %>% 
+  select(treatment, plot)
 
 
 radcoeff_df <- merge(radcoeff_df, plots, by = "plot")
@@ -123,8 +125,8 @@ for(i in 1:length(unique(flora_s1cw$plot))){
   count <- count + 1
   subset_data <- subset(flora_s1cw, sampling == "1" & plot == unique(flora_s1cw$plot)[i])
   subrad <- summarise(group_by(subset_data, code),
-                      abundance_s = round(mean(abundance_s), 0))
-  subrad <- pivot_wider(subrad, names_from = code, values_from = abundance_s, values_fill = 0)
+                      abundance = round(mean(abundance), 0))
+  subrad <- pivot_wider(subrad, names_from = code, values_from = abundance, values_fill = 0)
   subrad <- as.data.frame(subrad)
   rad_sub <- radfit(subrad)
   
@@ -147,6 +149,7 @@ radcoeff_s1cw$sampling <- as.factor(radcoeff_s1cw$sampling)
 radcoeff_s1cw <- merge(radcoeff_s1cw, plots, by = "plot")
 
 
+
 #Adding muestreo 1 de c y w. 
 
 radcoeff_df <- rbind(radcoeff_df, radcoeff_s1cw)
@@ -156,6 +159,37 @@ radcoeff_df$plot <- factor(radcoeff_df$plot, levels = sort(unique(radcoeff_df$pl
 radcoeff_df$treatment <- as.factor(radcoeff_df$treatment) 
 radcoeff_df$treatment <- factor(radcoeff_df$treatment, levels = c("c", "w", "p", "wp"))
 radcoeff_df$sampling <- factor(radcoeff_df$sampling, levels = sort(unique(radcoeff_df$sampling)))  #Sort from lowest to highest
+
+
+dummy_rows_p <- matrix(nrow = 4, ncol = 6)
+  colnames(dummy_rows_p) <- c("sampling", "plot", "treatment", "Y_zipf", "mu_log", "sigma_log")
+  dummy_rows_p <- as.data.frame(dummy_rows_p)
+  
+  dummy_rows_p[] <- NA
+  dummy_rows_p[, 1] <- 1
+  dummy_rows_p[, 2] <- c(3, 6, 10, 15)
+  dummy_rows_p[, 3] <- "p"
+  
+  
+  dummy_rows_wp <- matrix(nrow = 4, ncol = 6)
+  colnames(dummy_rows_wp) <- c("sampling", "plot", "treatment", "Y_zipf", "mu_log", "sigma_log")
+  dummy_rows_wp <- as.data.frame(dummy_rows_wp)
+  
+  dummy_rows_wp[] <- NA
+  dummy_rows_wp[, 1] <- 1
+  dummy_rows_wp[, 2] <- c(4, 5, 12, 13)
+  dummy_rows_wp[, 3] <- "wp"
+  
+  
+  dummy_rows <- bind_rows(dummy_rows_p, dummy_rows_wp)%>% 
+    mutate(treatment = as.factor(treatment), 
+           sampling = as.factor(sampling), 
+           plot = as.factor(plot))
+ 
+
+
+radcoeff_df <- bind_rows(radcoeff_df, dummy_rows) 
+
 
 radcoeff_df %>% write.csv("data/radcoeff_df.csv", row.names = FALSE)
 

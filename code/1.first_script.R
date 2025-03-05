@@ -219,22 +219,83 @@ biomass_noimp_clean<- biomass_noimp %>%
   filter(log(biomass_s) >= Q1 - 1.5 * IQR & log(biomass_s) <= Q3 + 1.5 * IQR)
 
 
+# Can we now fill the gaps in samplings 0, 1 and 2 ? 
+
+source("code/lm_biomass012.R")
+
+print(results)
+
+flora_medium012 <- left_join(flora_medium, lm_data_filtered) %>%
+  filter(sampling %in% c("0", "1", "2")) %>% 
+  mutate(year = year(date)) %>% 
+  mutate(abundance = ifelse(abundance < 1, 1, abundance)) %>% 
+  mutate(biomass_s = exp(intercept + slope * log(abundance)) * smearing_factor)
+
+biomass_imp_clean_012 <- bind_rows(biomass_imp_clean, flora_medium012) 
+
+biomass_noimp_clean_012 <- bind_rows(biomass_noimp_clean, flora_medium012)
+
+
 
 #Calculation of total biomasss (community biomass) by summing all biomass at species level per square meter
 # I will keep the flora_biomass not cleaned in order to compare results with and without outliers
 
-biomass_imp <- biomass_imp_clean %>% 
+biomass_imp <- biomass_imp_clean_012 %>% 
+  group_by(plot, sampling, treatment) %>% 
+  mutate(biomass_community =  sum(biomass_s, na.rm = TRUE)) %>%
+  ungroup() 
+
+biomass_noimp <- biomass_noimp_clean_012 %>% 
   group_by(plot, sampling, treatment) %>% 
   mutate(biomass_community =  sum(biomass_s, na.rm = TRUE)) %>%
   ungroup()
 
-biomass_noimp <- biomass_noimp_clean %>% 
-  group_by(plot, sampling, treatment) %>% 
-  mutate(biomass_community =  sum(biomass_s, na.rm = TRUE)) %>%
-  ungroup()
+
+#Adding dummy rows for p and wp in sampling 1
+
+{dummy_rows_p <- matrix(nrow = 4, ncol = 8)
+  colnames(dummy_rows_p) <- c("sampling", "plot", "treatment", "richness","abundance", "abundance_community", 
+                              "biomass_s", "biomass_community")
+  dummy_rows_p <- as.data.frame(dummy_rows_p)
+  
+  dummy_rows_p[] <- 0
+  dummy_rows_p[, 1] <- 1
+  dummy_rows_p[, 2] <- c(3, 6, 10, 15)
+  dummy_rows_p[, 3] <- "p"
+  
+  
+  dummy_rows_wp <- matrix(nrow = 4, ncol = 8)
+  colnames(dummy_rows_wp) <- c("sampling", "plot", "treatment", "richness","abundance", "abundance_community", 
+                               "biomass_s", "biomass_community")
+  dummy_rows_wp <- as.data.frame(dummy_rows_wp)
+  
+  dummy_rows_wp[] <- 0
+  dummy_rows_wp[, 1] <- 1
+  dummy_rows_wp[, 2] <- c(4, 5, 12, 13)
+  dummy_rows_wp[, 3] <- "wp"
+  
+  
+  dummy_rows <- bind_rows(dummy_rows_p, dummy_rows_wp) %>% 
+    mutate(sampling = as.factor(sampling),
+           plot = as.factor(plot), 
+           treatment = as.factor(treatment))
+  
+  dummy_rows <- right_join(dummy_rows, sampling_dates, by = join_by(sampling)) %>% 
+    filter(sampling == "1") }
 
 
 
+biomass_imp <- bind_rows(biomass_imp, dummy_rows) %>% 
+  select(year, date, sampling, treatment, plot, code, abundance,
+         richness, biomass_s, biomass_community, abundance_community)
+
+biomass_noimp <- bind_rows(biomass_noimp, dummy_rows) %>% 
+  select(year, date, sampling, treatment, plot, code, abundance,
+         richness, biomass_s, biomass_community, abundance_community)
+
+flora_abrich <- bind_rows(flora_abrich, dummy_rows)%>% 
+  select(year, date, sampling, treatment, plot, code, abundance,
+         richness, abundance_community)
 
 rm(list = setdiff(ls(), c("flora_abrich", "biomass_imp", "biomass_noimp")))
 
