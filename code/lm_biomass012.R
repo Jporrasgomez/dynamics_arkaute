@@ -43,7 +43,7 @@ for (i in 1:length(code_levels)) {
   r_squared_i <- lm_i_glance$r.squared
   p_value_i <- lm_i_tidy$p.value[2]
   n_observations_i <- nrow(code_i)
-  smearing_factor_i <- mean(exp(residuals(lm_i)))  # Correct calculation
+  smearing_factor_i <- mean(exp(residuals(lm_i)))  # When log-transformed a variable, a retransformation has to be done with a smearing factor
   
   counter <- counter + 1
   

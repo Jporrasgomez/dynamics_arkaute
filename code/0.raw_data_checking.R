@@ -378,7 +378,7 @@ length(unique(flora_medium$code))
 
 source("code/0.1.number_of_individuals.R")
 
-source("code/MICE.R")
+source("code/0.2.MICE.R")
 
 
 imput_stability
@@ -386,7 +386,7 @@ imput_reliability_test
 
 # Calculation of biomass at species level for both scenarios: with imputation of data with MICE and without it
 
-biomass_imp <- biomass_imp %>% 
+{biomass_imp <- biomass_imp %>% 
   mutate(biomass_s = nind_m2_imputed * biomass_i)
 
 hist(biomass_imp$biomass_s, breaks = 100)
@@ -422,7 +422,7 @@ biomass_noimp_clean<- biomass_noimp %>%
 
 hist(biomass_noimp_clean$biomass_s, breaks = 100)
 hist(log(biomass_noimp_clean$biomass_s), breaks = 100, main = "log biomass_noimp without outliers")
-
+}
 ### 1. Calculating biomass with linear regression model: 
 ##
 ##source("code/0.1linear_regression.R")
