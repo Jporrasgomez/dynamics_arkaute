@@ -702,7 +702,7 @@ ggarrange(
 
 ```
 
-Therefore, we can assess which set of species we use based on the p-value and R$^2$. R$^2$ is .............. EXPLICAR COMO DECIDIMOS COGER SOLO P-VALUE < 0.05
+Therefore, we can assess which set of species we use based on the p-value and R$^2$. R$^2$ is .............. EXPLICAR COMO DECIDIMOS COGER SOLO P-VALUE \< 0.05
 
 ```{r linear regression 5 }
 
@@ -754,7 +754,6 @@ lm_function(nind_2, code_levels_2[21])
 
 
 ```
-
 
 I get the following table:
 

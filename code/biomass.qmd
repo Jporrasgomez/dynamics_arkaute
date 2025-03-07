@@ -1,0 +1,690 @@
+---
+title: "Biomass"
+author: "Javier Porras"
+date: today
+execute:
+  warning: false # Oculta advertencias
+  message: false # Oculta mensajes de la consola
+  error: false  
+  fig-width: 9
+  fig-height: 9
+format:
+  html:
+    toc: true
+    toc-depth: 3
+    code-fold: true
+    number-sections: true
+    embed-resources: true
+editor: visual
+bibliography: "C:/Users/javier.porras/Documents/dynamics_arkaute/code/experiment_references.bib"
+
+---
+
+
+
+# Biomass estimation
+
+
+```{r Opening data}
+
+#| echo: false
+#| warning: false
+
+pacman::p_load(dplyr, reshape2, tidyverse, lubridate, ggplot2, ggpubr, rpivotTable, ggrepel, here)
+
+theme_set(theme_bw() +
+            theme(
+                  legend.position = "right",
+                  panel.grid = element_blank(),
+                  strip.background = element_blank(),
+                  strip.text = element_text(face = "bold"),
+                  text = element_text(size = 11)))
+
+flora_raw <- read.csv(here("data","flora_db_raw.csv"))
+
+flora_raw <- flora_raw %>%
+  mutate(across(where(is.character), as.factor),
+         plot = factor(plot),
+         sampling = factor(sampling, levels = sort(unique(flora_raw$sampling))),
+         treatment =  factor(flora_raw$treatment, levels =  c("c", "w", "p", "wp")),
+         plot = factor(plot, levels = sort(unique(flora_raw$plot)))) %>% 
+  select(-date, -category, -OBS, -ni.agrupado, -familia, -species_old_1, -species_old_2)
+
+# Adding dates
+
+sampling_dates <- read.csv(here("data","sampling_dates.csv")) %>% 
+  mutate(sampling = as.factor(sampling),
+         date = ymd(date), 
+         month = month(date, label = TRUE),
+         day = day(date), 
+         year = year(date)) %>% 
+  select(sampling, date, day, month, year, one_month_window, omw_date) %>% 
+  mutate(across(where(is.character), as.factor))
+
+
+flora_rare <- flora_raw %>% 
+  right_join(sampling_dates, by = join_by(sampling)) %>% 
+  select(sampling, one_month_window, omw_date, plot, treatment,
+         code, abundance, height, Cb, Db, Cm, Dm, date, month)
+
+#Adding species information
+species_code <- read.csv(here("data","species_code.csv")) %>% 
+  select(species, code, family, genus_level, species_level, growing_type) %>%
+  mutate(across(where(is.character), as.factor))
+
+
+flora_rare <- merge(flora_rare, species_code, by = "code") 
+
+# Morphological measurements}
+
+
+# Adjustment: everything below 0.1 cm is transformed into 0.1 cm in order to avoid the effect of 
+# pressing the stem with the caliber. 
+
+flora_rare <- flora_rare %>%
+  mutate(Dm = coalesce(ifelse(Dm < 0.1, 0.1, Dm), Dm))
+
+flora_rare <- flora_rare %>%
+  mutate(Db = coalesce(ifelse(Db < 0.1, 0.1, Db), Db))
+
+## BIOMASS AT INDIVIDUAL LEVEL ####
+
+#Transforming diameters into circumferences
+flora_rare$cm <- round(ifelse(!is.na(flora_rare$Dm), flora_rare$Dm * pi, flora_rare$Cm), 2)
+flora_rare$cb <- round(ifelse(!is.na(flora_rare$Db), flora_rare$Db * pi, flora_rare$Cb), 2)
+
+#Calculating area of circle with circumference values
+flora_rare$Ah <- ((flora_rare$cm)^2)/(4*pi)
+flora_rare$Ab <- ((flora_rare$cb)^2)/(4*pi)
+
+
+#Merging by families (poaceae, asteraceae)}
+
+#At the first samplings, we were collecting information of all possible species. With the pass of time, we
+# realized we could not identify every species at every sampling, 
+taxongroups <- flora_rare %>%
+  filter(code %in% c("poaceae", "asteraceae", "tosp", "orchidaceae"))%>%
+  group_by(code, sampling, one_month_window, omw_date, plot, treatment, date, month, species, family, genus_level, species_level) %>%
+  summarize(abundance = sum(unique(abundance), na.rm = T), #here we sum abundances 
+            height = mean(height, na.rm = T),
+            Ah = mean(Ah, na.rm = T),
+            Ab = mean(Ab, na.rm = T))
+  
+species <- anti_join(flora_rare, taxongroups, by = "code") %>%
+  group_by(code, sampling, one_month_window, omw_date, plot, treatment, date, month, species, family, genus_level, species_level) %>%
+  summarize(abundance = mean(abundance, na.rm = T), #here we mean abundances (fake mean, species in the same plot and sampling have the same abundance info)
+            height = mean(height, na.rm = T),
+            Ah = mean(Ah, na.rm = T),
+            Ab = mean(Ab, na.rm = T))
+
+flora_medium <- bind_rows(taxongroups, species)
+
+
+##Biomass equation
+d <- 1.96
+z <- 2/3
+flora_medium$x <- (flora_medium$height/2)*(flora_medium$Ab + flora_medium$Ah)
+
+flora_medium$biomass_i <- d*(flora_medium$x^z)
+
+
+# RICHNESSS ########
+
+flora_medium <- flora_medium %>% 
+  group_by(plot, sampling) %>% 
+  mutate(richness = n_distinct(code, na.rm = T)) %>% 
+  ungroup()
+  
+# ABUNDANCE ########
+
+flora_medium <- flora_medium %>% 
+  group_by(plot, sampling) %>% 
+  mutate(abundance_community = sum(abundance, na.rm = T)) %>% 
+  ungroup()
+
+
+flora_abrich <- flora_medium
+
+
+```
+
+
+### Biomass at species level
+
+ 
+
+```{r Preparing db for biomass}
+
+#| echo: false
+#| warning: false
+
+## BIOMASS AT SPECIES LEVEL ###########
+
+#For biomass, we do not have information for samplings 0, 1, 2 and 12. 
+
+flora_biomass_raw <- flora_medium %>% 
+  filter(!sampling %in% c("0", "1", "2", "12")) %>%  # Remove samplings for which we have no morphological measurements
+  filter(!is.na(x)) %>%                              # Remove rows where x is NA since we do not have morph. meas. for those datapoints
+  filter(height > 5 & height < 200)               # Remove individuals with height < 5 cm or > 200 cm, because the equation does not properly work with them 
+
+f_5_200 <- flora_medium %>% 
+  filter(!(height > 5 & height < 200)) %>% 
+  nrow() # Only 187 datapoints are lost
+
+
+#There is no loss of species by taking out individuals with height > 5 cm
+```
+
+To avoid coffounding effects,  biomass sampling was performed by following a non-destructive methodology described in Pottier and Jabot, 2017, which estimates herbaceous dry biomass (g) using allometric equations. To do this, we took three biometric measurements  of the plant: height ($H$, from the rooting point to the highest green area), basal circumference ( $A_b$, at ground level), and half height circumference ($A_h$, at mid-height). These parameters express the minimum volume of the plant, which is defined as the space occupied by the aerial organs of each individual when extended along the plant's longitudinal axis [@pottier2017]. These were measured with a measuring tape for the height, and a caliber or flexible measuring tape for the areas, depending on the thickness of the plant. A maximum of five individuals per species, sampling and plot were measured. For the taxonomic groups that aggregate several species, 10 individuals were measured when there were morphologically distinguishable species. We define an individual as [@perronne2021]: a ramet or collection of clumped ramets with the highest degree of physiological integration. 
+
+The total biomass of the community was calculated following the steps described below:  
+
+---
+
+**1. Estimation of biomass for the average individual**
+
+The biomass per individual is estimated using the general equation model proposed by [@perronne2021]. Let *j* be the species and *i* the individual, where \( (i_j \epsilon [1, n_j]) \): 
+
+$$
+B_{ij} = 1.96 \left[{\frac{\bar{H}}{2}}(\bar{A_{bi_{j}}} + \bar{A_{hi_{j}}})\right]^{2/3}
+$$  
+
+where:  
+- $B_i$is the estimated biomass per average individual,  
+- $\bar{H}$ is the average maximum plant height,  
+- $\bar{A_b}$ is the mean basal area,  
+- $\bar{A_h}$ is the mean mid-height area.  
+
+The values 1.96 and $\frac{2}{3}$ are commonly used in allometric estimations. ***MEntion the senstivity analysis we performed to chech changes in biomass results.
+
+The model only fits to individuals between 5 and 200 cm, so all individuals beyond those thresholds have to be removed. This modification did not affected the pool of species of the experiment and it only meant the rejection of `r nrow(f_5_200)/nrow(flora_medium)*100 `% datapoints. 
+
+---
+
+**2. Calculation of the average biomass of the measured individuals for each species**
+
+
+$$
+\bar{B_{ij}} = \frac{1}{n_j} \sum_{i_j=1}^{n_j} B_{ij}
+$$  
+
+
+---
+
+3. Estimation of biomass per square meter (\( m^2 \)) and per species  
+
+This is done by multiplying the mean biomass of each species by the total number of individuals per square meter ($\delta_j$).  
+
+Since $\delta_j$ was not collected across all measurements, we perform a linear model relating $\delta_j$ with $K_j$, where $K_j$ is the cover of each species:  
+
+$$
+\delta_j = a + b \cdot K_j
+$$  
+
+Thus, the biomass per species per square meter is given by:  
+
+$$
+B_j = \bar{B_j} \cdot \delta_j
+$$  
+
+---
+
+4. Calculation of community-level biomass 
+
+The total biomass of the community is obtained by summing the total biomass of each species \( j \), where \( \alpha \) is the total number of identified species in each plot:  
+
+$$
+B = \sum_{j=1}^{\alpha} B_j
+$$  
+
+
+
+```{r Collecting information for number of individuals}
+
+#| echo: false
+#| warning: false
+
+# To be able to estimate abundance based on the number of individuals we need data were abundance and number of individuals per species,
+# plot and sampling were available. Since we have been learning the application of this non-destructive methodology in the go,
+# we have 2 different groups of data:
+
+#1.  Since sampling 12, we have been estimating the number of individuals per species and plot based on direct field observations.
+
+plots <- read.csv(here("data", "plots.csv")) %>% 
+  select(nplot, treatment_code) %>% 
+  rename(treatment = treatment_code,
+         plot = nplot)
+
+nind1 <- read.csv(here("data", "n_individuals.csv")) %>% 
+  merge(plots) %>% 
+  select(sampling, treatment,  plot, code, abundance, nind_m2) %>%
+  group_by(sampling, treatment, plot, code) %>%
+  summarize(nind_m2 = sum(nind_m2), abundance = sum(abundance)) %>% 
+  mutate(sampling = as.factor(sampling),
+         treatment = as.factor(treatment), 
+         plot = as.factor(plot), 
+         code = as.factor(code), 
+         nind_m2 = as.numeric(nind_m2), 
+         abundance = as.numeric(abundance))
+
+## Las especies de asteraceae que hemos agrupado por familia se recalculan sus individuos y abundancias aquí
+
+#2.  Up to sampling 11, We only measured the morphological parameters of 5 individuals per specie as maximum. 
+#    If there were less than 5 species, we know that number was the total amount of individuals in the plot.
+
+nind2<- flora_raw %>%
+  filter(!sampling %in% c( "12", "13", "14", "15", "16", "17", "18", "19", "20"))  %>%
+  group_by(sampling, treatment, plot, code) %>%
+  mutate(n_individuals = n()) %>%
+  group_by(sampling, treatment, plot, code, abundance) %>%
+  summarize(nind_m2 = mean(n_individuals, na.rm = T)) %>%
+  filter(nind_m2 < 5) 
+
+nind <- bind_rows(nind1, nind2)
+
+##| Plus*
+##| There are some species for which we only have measured 1 individual per plot and sampling every time we have spot it.
+##|  Therefore, for these species we do not need to estimate the number of individuals.
+##|  In think is useful to keep a vector
+
+one_ind_species <- c("rucr", "amsp", "kisp")
+
+
+```
+
+
+```{r Imputation with MICE1. Where are the NAs}
+#| echo: false
+#| warning: false
+
+#We calculate the mean area of the individual by taking Ah and Ab both and transform it into m2 (cm2/10000)
+biomass <- flora_biomass_raw
+
+biomass <- merge(biomass, species_code)
+
+biomass <- left_join(biomass, nind)
+
+sum(is.na(biomass$nind_m2)) 
+
+sum(is.na(biomass$nind_m2)) /length(biomass$code) * 100
+
+biomass$year <- year(biomass$date)
+
+
+#Where are the NA's?
+
+print(biomass %>% 
+  mutate(cell_content = case_when(is.na(nind_m2) ~ "NA",
+                                  !is.na(nind_m2)  ~ "nind_available")) %>%
+  # we create a new variable capturing cell content
+  # as we are interested in defining 3 different situations, we use the case_when function
+  ggplot(aes(x = as.numeric(sampling))) +
+  geom_histogram(aes(fill = cell_content),
+                 binwidth = .5, center = 0) +
+  scale_fill_discrete(drop = F) +
+  labs(y = "Number of rows", y = "Sampling") +
+  scale_x_continuous(breaks = scales::breaks_extended(n = 21)))
+
+print(biomass %>% 
+  mutate(cell_content = case_when(is.na(nind_m2) ~ "NA",
+                                  !is.na(nind_m2)  ~ "nind_available")) %>%
+  ggplot(aes(x = as.numeric(plot))) +
+  geom_histogram(aes(fill = cell_content),
+                 binwidth = .5, center = 0) +
+  scale_fill_discrete(drop = F) +
+  labs(y = "Number of rows", x = "Plot") +
+  scale_x_continuous(breaks = scales::breaks_extended(n = 16)))
+
+
+print(biomass %>% 
+  mutate(cell_content = case_when(is.na(nind_m2) ~ "NA",
+                                  !is.na(nind_m2)  ~ "nind_available")) %>%
+  # we create a new variable capturing cell content
+  # as we are interested in defining 3 different situations, we use the case_when function
+  ggplot(aes(y = code)) +
+  geom_bar(aes(fill = cell_content),
+           binwidth = .5, center = 0) +
+  scale_fill_discrete(drop = F) +
+  labs(x = "Number of rows"))
+
+#NA's seem to be concentrated in the first year, as we already knew
+# NA's are randomly distributed across plots
+# NA's are randomly distributed across species, but we can see some that have more than others like: 
+# poaceae, coar or shar
+
+# MICE #####
+```
+
+
+```{r Imputation with MICE2}
+
+#| echo: false
+#| warning: false
+
+
+library(mice)
+
+# Choosing varibales for imputation
+biomass_mice <- biomass %>% 
+  select(year, sampling, plot, treatment, code, family, richness, abundance, abundance_community,
+         height, Ah, Ab, biomass_i, nind_m2) %>% 
+  mutate(across(where(is.character), as.factor))
+
+# We use mice package
+##| method = "rf". Random forest models allow us to use both numerical and factorial variables in the imputation. Therefore, code, sampling and plot are used
+##| m = 10 is the number of datasets that mice creates. This is, 10 values of nind_m2
+##| maxit is the number of times that mice iterates through each dataset. The higher, the more stable (in complex database)
+
+#biomass_mice_imputed <- mice(biomass_mice, method = "rf", m = 10, maxit = 300)
+#saveRDS(biomass_mice_imputed, "data/biomass_mice_imputed.rds")
+biomass_mice_imputed <- readRDS(here("data", "biomass_mice_imputed.rds"))
+```
+
+
+```{r Imputation with MICE3: checking stability of imputations}
+
+#| echo: false
+#| warning: false
+
+plot(biomass_mice_imputed) # Check if lines stabilize
+stripplot(biomass_mice_imputed, pch = 20, cex = 1.2) #If imputed values (blue dots) align well with observed values, MICE is working well.
+densityplot(biomass_mice_imputed)
+
+imputed_db <- complete(biomass_mice_imputed, action = "long")
+
+# hay que intentar entender bien este gráfico
+ggplot() +
+  geom_density(data = imputed_db, aes(x = nind_m2, color = as.factor(.imp))) +
+  geom_density(data = biomass, aes(x = nind_m2), color = "black",
+               size = 0.8, linetype = "dashed") +
+  labs(title = "Density Plot of Original (Blue) vs Imputed (Colored by .imp)",
+       x = "nind_m2",
+       y = "Density",
+       color = "Imputation Number") +
+  theme_minimal()
+
+# Calculation of average value for 10 imputations of nind_m2 (m = 10) and its sd. 
+imputed_db <- imputed_db %>% 
+  group_by(plot, treatment, sampling, code) %>% 
+  mutate(nind_m2_imputed = round(mean(nind_m2, 0)),
+         sd_imputation = sd(nind_m2)) %>% 
+  select(plot, treatment, sampling, code, nind_m2_imputed, sd_imputation) %>% 
+  distinct()
+
+imputed_db$label_imputation <- ifelse(is.na(biomass$nind_m2), 1, 0)
+
+# Here I plot the CV (Coefficient of variation) of the imputed values (n = 10) So I can check the stability of the imputed
+# data. The more CV < 1, the more stable it is
+
+imput_stability <- imputed_db %>% 
+  filter(label_imputation == 1) %>% 
+  mutate(CV = sd_imputation / nind_m2_imputed) %>% 
+  ggplot(aes(x = CV)) +
+  geom_histogram(bins = 30, fill = "steelblue", color = "white", alpha = 0.8) +
+  geom_vline(aes(xintercept = 1), color = "black", linetype = "dashed", size = 1) +
+  scale_x_continuous(
+    expand = expansion(mult = c(0.05, 0.1)),
+    breaks = seq(0, max(imputed_db$sd_imputation / imputed_db$nind_m2_imputed, na.rm = TRUE), by = 0.2) # Adjust "by" as needed
+  ) +
+  labs(title = "Distribution of Coefficient of Variation for Imputed Values",
+       x = "(SD/mean) Ratio",
+       y = "Count") +
+  theme_minimal(base_size = 10) +
+  theme(panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        plot.title = element_text(hjust = 0.5))
+
+print(imput_stability)
+```
+
+
+```{r Imputation with MICE4: checking reliability of imputations}
+
+#| echo: false
+#| warning: false
+
+# Reliability
+
+# Checking reliability of mice imputation 
+# Let's recreate
+perc_NA <- ((biomass %>% 
+               filter(is.na(nind_m2)) %>% 
+               nrow())) / nrow(biomass)
+
+##| I create a database where there are no NA in nind_m2.
+##| Also, in this db (nind_nona) i take out the species for which we always have found 1 individuals so they do not
+##| play a role in the original imputation because always nind_m2 = 1. And if we randomly create an NA in one of these species
+##| the imputation stability might be negatively and unnecessarilyaffected 
+
+nind_nona <- biomass %>% 
+  filter(!is.na(nind_m2)) %>%  
+  filter(!code %in% one_ind_species)
+
+#Artificially creating the same percentage of NA as
+# there are in my original database  (perc_NA) and keeping the same variables as in the original imputation
+
+mice_check <- nind_nona %>%
+  mutate(nind_m2 = ifelse(runif(n()) < perc_NA, NA, nind_m2)) %>% 
+  select(year, sampling, plot, treatment, code, family, richness, abundance, abundance_community,
+         height, Ah, Ab, biomass_i, nind_m2) %>% 
+  mutate(across(where(is.character), as.factor))
+
+# Dejo creada la base de datos de los NA creados artificialmente para nind_m2
+check_subset <- mice_check %>% 
+  filter(is.na(nind_m2)) %>% 
+  select(sampling, plot, treatment, code, abundance, abundance_community) %>%  # Keeping only necessary identifiers
+  left_join(nind_nona %>% select(sampling, plot, treatment, code, abundance, abundance_community, nind_m2), 
+            by = c("sampling", "plot", "treatment", "code", "abundance", "abundance_community")) %>% 
+  rename(nind_m2_original = nind_m2)
+
+# Same imputation as original 
+mice_check_imputed <- mice(mice_check,method = "rf", m = 10, maxit = 5) 
+#mice_check_imputed <- mice(mice_check,method = "rf", m = 10, maxit = 300) 
+
+#saveRDS(mice_check_imputed, "data/tmice_check_imputed.rds")
+#mice_check_imputed <- readRDS("data/mice_check_imputed.rds")
+
+imput_reliability_test <- complete(mice_check_imputed, action = "long") %>%  
+  mutate(.imp = as.factor(.imp)) %>%      # Convert to factor
+  left_join(check_subset) %>%             # Adding original values of nind_m2
+  filter(!is.na(nind_m2_original)) %>%    # Keeping only original values
+  ggplot(aes(x = nind_m2_original, y = nind_m2, color = as.factor(.imp))) + 
+    geom_point(alpha = 0.6) + 
+    geom_smooth(method = "lm", se = FALSE) +
+    stat_cor(aes(label = paste(after_stat(rr.label), after_stat(p.label), sep = "~`,`~")),  
+             method = "pearson", 
+             label.x.npc = "left", 
+             label.y.npc = "top") + # Displays R² and p-value
+    theme_minimal() +
+    labs(color = "Imputation Number") # Improve legend label
+  
+print(imput_reliability_test)
+```
+
+
+```{r Imputation with MICE5: checking results of imputations}
+#| echo: false
+#| warning: false
+
+biomass_imp <- biomass %>% 
+  select(year, date, sampling, plot, code, species_level, genus_level, family,
+         abundance, height, Ah, Ab, x, biomass_i, richness, abundance_community, nind_m2) %>% 
+  left_join(imputed_db)
+
+
+#lets going to check the results
+
+ggplot(imputed_db, aes( x = sampling, y = nind_m2_imputed, color = as.factor(label_imputation))) +
+  facet_wrap(~code, ncol = 7, nrow = 6)+
+  geom_point(alpha = 0.5) +
+  scale_color_manual(values = c("0" = "cyan3", "1" = "red3")) +
+  labs(color = "Imputation")
+
+
+```
+
+
+```{r Biomass at SPECIES LEVEL and removing outliers: with imputation}
+
+#| echo: false
+#| warning: false
+
+# Calculation of biomass at species level for both scenarios: with imputation of data with MICE and without it
+
+biomass_imp <- biomass_imp %>% 
+  mutate(biomass_s = nind_m2_imputed * biomass_i)
+
+# Step 1: Calculate IQR for log-transformed biomass_s
+Q1 <- quantile(log(biomass_imp$biomass_s), 0.25, na.rm = TRUE)
+Q3 <- quantile(log(biomass_imp$biomass_s), 0.75, na.rm = TRUE)
+IQR <- Q3 - Q1
+
+# Step 2: Remove outliers
+biomass_imp_clean<- biomass_imp %>%
+  filter(log(biomass_s) >= Q1 - 1.5 * IQR & log(biomass_s) <= Q3 + 1.5 * IQR)
+
+biomass_noimp <- biomass %>% 
+  mutate(biomass_s = nind_m2* biomass_i, na.rm =T)  # We go ahead with the 18% of NA's of nind_m2
+
+# Step 1: Calculate IQR for log-transformed biomass_s
+Q1 <- quantile(log(biomass_noimp$biomass_s), 0.25, na.rm = TRUE)
+Q3 <- quantile(log(biomass_noimp$biomass_s), 0.75, na.rm = TRUE)
+IQR <- Q3 - Q1
+
+# Step 2: Remove outliers
+biomass_noimp_clean<- biomass_noimp %>%
+  filter(log(biomass_s) >= Q1 - 1.5 * IQR & log(biomass_s) <= Q3 + 1.5 * IQR)
+
+
+```
+
+
+
+
+
+```{r Regression of biomass~abundance to fill 0,1&2 sampling gaps}
+
+#| echo: false
+#| warning: false
+
+codes_123 <- flora_medium %>% 
+  filter(sampling %in% c("0", "1", "2"))
+
+
+code_levels <- droplevels(codes_123$code)  # Drop unused levels first
+code_levels <- levels(code_levels)       # Extract only the actual levels
+length(code_levels)  # Should correctly match the number of unique codes
+
+gglist <- list()
+
+lm_data <- matrix(nrow = length(code_levels), ncol = 8)
+colnames(lm_data) <- c("code", "intercept", "slope", "r_squared", "p_value", "n_points_lm", "shapiro_pvalue", "smearing_factor")
+lm_data <- as.data.frame(lm_data)
+
+counter <- 0
+
+library(broom)
+
+for (i in 1:length(code_levels)) {
+  
+  code_i <- subset(biomass_imp, code == code_levels[i])
+  
+  if (nrow(code_i) < 2) next  # Skip if not enough data
+  
+  lm_i <- lm(log(biomass_s) ~ log(abundance), data = code_i)
+  shapiro_i <- shapiro.test(residuals(lm_i))
+  
+  # Extract coefficients, R^2, and p-value
+  lm_i_summary <- summary(lm_i)
+  lm_i_tidy <- tidy(lm_i)
+  lm_i_glance <- glance(lm_i)
+  
+  intercept_i <- lm_i_tidy$estimate[1]
+  slope_i <- lm_i_tidy$estimate[2]
+  r_squared_i <- lm_i_glance$r.squared
+  p_value_i <- lm_i_tidy$p.value[2]
+  n_observations_i <- nrow(code_i)
+  smearing_factor_i <- mean(exp(residuals(lm_i)))  # When log-transformed a variable, a retransformation has to be done with a smearing factor
+  
+  counter <- counter + 1
+  
+  # Store results in lm_data dataframe
+  lm_data$code[counter] <- code_levels[i]
+  lm_data$intercept[counter] <- intercept_i
+  lm_data$slope[counter] <- slope_i
+  lm_data$r_squared[counter] <- r_squared_i
+  lm_data$p_value[counter] <- p_value_i
+  lm_data$n_points_lm[counter] <- n_observations_i
+  lm_data$shapiro_pvalue[counter] <- shapiro_i$p.value
+  lm_data$smearing_factor[counter] <- smearing_factor_i  # Store correctly
+  
+}
+
+lm_data$posneg_slope <- ifelse(lm_data$slope < 0, paste("negative"), paste("positive"))
+#hist(nind_lm_data$slope)
+
+#Let's check results
+results <- 
+  ggplot(lm_data, aes( x = r_squared, y = p_value, 
+                       label = paste(code, n_points_lm, sep = ", "),
+                       color = posneg_slope))+
+  geom_point()+ 
+  geom_hline(yintercept = 0.05, linetype = "dashed", color = "gray40") +
+  
+  geom_text_repel(
+    size = 3,                # Text size
+    min.segment.length = 0.1,  # Ensures lines are always drawn
+    segment.color = "gray50",# Line color
+    segment.size = 0.5, 
+    max.overlaps = 15# Line thickness
+  )
+
+print(results)
+
+#print(results)
+
+# Criteria: ???? 
+
+lm_data_filtered <- lm_data %>% 
+  filter(p_value < 0.05)
+```
+
+
+```{r Regression of biomass~abundance to fill 0,1&2 sampling gaps: estimating biomass}
+
+#| echo: false
+#| warning: false
+
+flora_medium012 <- left_join(flora_medium, lm_data_filtered) %>%
+  filter(sampling %in% c("0", "1", "2")) %>% 
+  mutate(year = year(date)) %>% 
+  mutate(abundance = ifelse(abundance < 1, 1, abundance)) %>% 
+  mutate(biomass_s = exp(intercept + slope * log(abundance)) * smearing_factor)
+
+biomass_imp_clean_012 <- bind_rows(biomass_imp_clean, flora_medium012) 
+
+biomass_noimp_clean_012 <- bind_rows(biomass_noimp_clean, flora_medium012)
+
+```
+
+
+```{r Community biomass calculation}
+
+#| echo: false
+#| warning: false
+
+#Calculation of total biomasss (community biomass) by summing all biomass at species level per square meter
+# I will keep the flora_biomass not cleaned in order to compare results with and without outliers
+
+biomass_imp <- biomass_imp_clean_012 %>% 
+  group_by(plot, sampling, treatment) %>% 
+  mutate(biomass_community =  sum(biomass_s, na.rm = TRUE)) %>%
+  ungroup() 
+
+biomass_noimp <- biomass_noimp_clean_012 %>% 
+  group_by(plot, sampling, treatment) %>% 
+  mutate(biomass_community =  sum(biomass_s, na.rm = TRUE)) %>%
+  ungroup()
+
+```
+

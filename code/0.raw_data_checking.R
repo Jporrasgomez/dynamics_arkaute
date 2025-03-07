@@ -16,24 +16,18 @@ theme_set(theme_bw() +
                   strip.background = element_blank(),
                   strip.text = element_text(face = "bold"),
                   text = element_text(size = 11)))
-
-
-
 {
 
-flora_raw <- read.csv("data/flora_db_raw.csv") # Opening and transforming data(opening_floradata.R) ####
+flora_raw <- read.csv("data/flora_db_raw.csv")
 
 flora_raw <- flora_raw %>%
-  mutate(across(where(is.character), as.factor))
+  mutate(across(where(is.character), as.factor),
+         plot = factor(plot),
+         sampling = factor(sampling, levels = sort(unique(flora_raw$sampling))),
+         treatment =  factor(flora_raw$treatment, levels =  c("c", "w", "p", "wp")),
+         plot = factor(plot, levels = sort(unique(flora_raw$plot)))) %>% 
+  select(-date, -category, -OBS, -ni.agrupado, -familia, -species_old_1, -species_old_2)
 
-flora_raw$plot <- factor(flora_raw$plot)
-
-
-flora_raw$sampling <- factor(flora_raw$sampling, levels = sort(unique(flora_raw$sampling)))
-flora_raw$treatment <- factor(flora_raw$treatment, levels =  c("c", "w", "p", "wp") )
-flora_raw$plot <- factor(flora_raw$plot, levels = sort(unique(flora_raw$plot)))
-
-flora_raw <- select(flora_raw, -date, -category, -OBS, -ni.agrupado, -familia, -species_old_1, -species_old_2)
 
 boxplot(flora_raw$abundance, main = "Abundance")
 boxplot(flora_raw$height, main = "Height")
@@ -138,25 +132,20 @@ ggplot(
 }
 
 # Adding dates
-sampling_dates <- read.csv("data/sampling_dates.csv")
-sampling_dates$sampling <- factor(sampling_dates$sampling)
-
-sampling_dates$date <-  ymd(sampling_dates$date)
-sampling_dates$month <- month(sampling_dates$date, label = TRUE)
-sampling_dates$day <- day(sampling_dates$date)
-sampling_dates$year <- year(sampling_dates$date)
-
-sampling_dates <- sampling_dates %>% 
-  select(sampling, date, day, month, year, one_month_window, omw_date)
-
-sampling_dates <- sampling_dates %>%
+sampling_dates <- read.csv("data/sampling_dates.csv") %>% 
+  mutate(sampling = as.factor(sampling),
+         date = ymd(date), 
+         month = month(date, label = TRUE),
+         day = day(date), 
+         year = year(date)) %>% 
+  select(sampling, date, day, month, year, one_month_window, omw_date) %>% 
   mutate(across(where(is.character), as.factor))
 
-flora_raw <- right_join(flora_raw, sampling_dates, by = join_by(sampling))
 
-
-flora_rare <- flora_raw %>%
-  select(sampling, one_month_window, omw_date, plot, treatment, code, abundance, height, Cb, Db, Cm, Dm, date, month)
+flora_rare <- flora_raw %>% 
+  right_join(sampling_dates, by = join_by(sampling)) %>% 
+  select(sampling, one_month_window, omw_date, plot, treatment,
+         code, abundance, height, Cb, Db, Cm, Dm, date, month)
 
 
 
@@ -172,9 +161,8 @@ nrow({checkingNA <- flora_rare %>%
 
 
 #Adding species information
-species_code <- read.csv("data/species_code.csv")
-species_code <- select(species_code, species, code, family, genus_level, species_level, growing_type)
-species_code <- species_code %>%
+species_code <- read.csv("data/species_code.csv") %>% 
+  select(species, code, family, genus_level, species_level, growing_type) %>%
   mutate(across(where(is.character), as.factor))
 
 
@@ -198,7 +186,6 @@ flora_rare <- flora_rare %>%
 
 flora_rare <- flora_rare %>%
   mutate(Db = coalesce(ifelse(Db < 0.1, 0.1, Db), Db))
-
 
 
 ## BIOMASS AT INDIVIDUAL LEVEL ####
@@ -374,9 +361,61 @@ flora_medium %>%
 length(unique(flora_biomass_raw$code))
 
 length(unique(flora_medium$code))
+
 #There is no loss of species by taking out individuals with height > 5 cm 
 
-source("code/0.1.number_of_individuals.R")
+## NUMBER OF INDIVIDUALS ####
+
+# To be able to estimate abundance based on the number of individuals we need data were abundance and number of individuals per species,
+# plot and sampling were available. Since we have been learning the application of this non-destructive methodology in the go,
+# we have 2 different groups of data:
+
+#1.  Since sampling 12, we have been estimating the number of individuals per species and plot based on direct field observations.
+
+plots <- read.csv("data/plots.csv") %>% 
+  select(nplot, treatment_code) %>% 
+  rename(treatment = treatment_code,
+         plot = nplot)
+
+nind1 <- read.csv("data/n_individuals.csv") %>% 
+  merge(plots) %>% 
+  select(sampling, treatment,  plot, code, abundance, nind_m2) %>%
+  group_by(sampling, treatment, plot, code) %>%
+  summarize(nind_m2 = sum(nind_m2), abundance = sum(abundance)) %>% 
+  mutate(sampling = as.factor(sampling),
+         treatment = as.factor(treatment), 
+         plot = as.factor(plot), 
+         code = as.factor(code), 
+         nind_m2 = as.numeric(nind_m2), 
+         abundance = as.numeric(abundance))
+
+## Las especies de asteraceae que hemos agrupado por familia se recalculan sus individuos y abundancias aquí
+
+#2.  Up to sampling 11, We only measured the morphological parameters of 5 individuals per specie as maximum. 
+#    If there were less than 5 species, we know that number was the total amount of individuals in the plot.
+
+nind2 <- flora_raw %>%
+  filter(!sampling %in% c( "12", "13", "14", "15", "16", "17", "18", "19", "20"))  %>%
+  group_by(sampling, treatment, plot, code) %>%
+  mutate(n_individuals = n()) %>%
+  group_by(sampling, treatment, plot, code, abundance) %>%
+  summarize(nind_m2 = mean(n_individuals, na.rm = T)) %>%
+  filter(nind_m2 < 5) 
+
+# Final database for number of individuals
+
+nind <- bind_rows(nind1, nind2)
+
+##| Plus*
+##| There are some species for which we only have measured 1 individual per plot and sampling every time we have spot it.
+##|  Therefore, for these species we do not need to estimate the number of individuals.
+##|  In think is useful to keep a vector
+
+one_ind_species <- c("rucr", "amsp", "kisp")
+
+
+## IMPUTATION OF is.na(nind_m2)  ####
+
 
 source("code/0.2.MICE.R")
 
@@ -432,7 +471,7 @@ hist(log(biomass_noimp_clean$biomass_s), breaks = 100, main = "log biomass_noimp
 ##source("code/0.4.biomass_no_lm.R")
 
 
-source("code/lm_biomass012.R")
+source("code/0.3.lm_biomass012.R")
 
 print(results)
 
@@ -445,7 +484,6 @@ flora_medium012 <- left_join(flora_medium, lm_data_filtered) %>%
 biomass_imp_clean_012 <- bind_rows(biomass_imp_clean, flora_medium012) 
 
 biomass_noimp_clean_012 <- bind_rows(biomass_noimp_clean, flora_medium012)
-
 
 
 #Calculation of total biomasss (community biomass) by summing all biomass at species level per square meter
