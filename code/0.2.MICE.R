@@ -169,10 +169,12 @@ imputed_db$label_imputation <- ifelse(is.na(biomass$nind_m2), 1, 0)
 # data. The more CV < 1, the more stable it is
 
 
-imput_stability <- imputed_db %>% 
+imput_stability_db <- imputed_db %>% 
   filter(label_imputation == 1) %>% 
   mutate(CV = sd_imputation / nind_m2_imputed) %>% 
-  ggplot(aes(x = CV)) +
+  as.data.frame()
+
+  imput_stability <- ggplot(imput_stability_db, aes(x = CV)) +
   geom_histogram(bins = 30, fill = "steelblue", color = "white", alpha = 0.8) +
   geom_vline(aes(xintercept = 1), color = "black", linetype = "dashed", size = 1) +
   scale_x_continuous(
@@ -187,6 +189,9 @@ imput_stability <- imputed_db %>%
         panel.grid.minor = element_blank(),
         plot.title = element_text(hjust = 0.5))
 
+  mean(imput_stability_db$CV, na.rm = T)
+  sd(imput_stability_db$CV, na.rm = T)
+  
 
 
 # Reliability
@@ -206,43 +211,64 @@ nind_nona <- biomass %>%
   filter(!is.na(nind_m2)) %>%  
   filter(!code %in% one_ind_species)
 
-
-
-
 #Artificially creating the same percentage of NA as
 # there are in my original database  (perc_NA) and keeping the same variables as in the original imputation
 
+#Hacer esto con un loop varias veces y guardar los resultados de R2 y p value en una base de datos
+
+reliability_db <-
+  
+  
+for (i in c(1:5)){
 mice_check <- nind_nona %>%
   mutate(nind_m2 = ifelse(runif(n()) < perc_NA, NA, nind_m2)) %>% 
   select(year, sampling, plot, treatment, code, family, richness, abundance, abundance_community,
          height, Ah, Ab, biomass_i, nind_m2) %>% 
   mutate(across(where(is.character), as.factor))
 
-
-
-# Dejo creada la base de datos de los NA creados artificialmente para nind_m2
-check_subset <- mice_check %>% 
+subset_check <- mice_check %>% 
   filter(is.na(nind_m2)) %>% 
   select(sampling, plot, treatment, code, abundance, abundance_community) %>%  # Keeping only necessary identifiers
   left_join(nind_nona %>% select(sampling, plot, treatment, code, abundance, abundance_community, nind_m2), 
             by = c("sampling", "plot", "treatment", "code", "abundance", "abundance_community")) %>% 
   rename(nind_m2_original = nind_m2)
 
-# Same imputation as original 
-mice_check_imputed <- mice(mice_check,method = "rf", m = 10, maxit = 5) 
+mice_imputed_check <- mice(mice_check, method = "rf", m = 10, maxit = 5) 
+
+mice_check_db <- complete(mice_check_imputed, action = "long") %>%  
+  mutate(.imp = as.factor(.imp)) %>%      # Convert to factor
+  left_join(check_subset) %>%             # Adding original values of nind_m2
+  filter(!is.na(nind_m2_original))   # Keeping only original values
+
+# Compute R² and p-value for each imputation
+reliability_db <- mice_check_db %>% 
+  group_by(.imp) %>%   # Group by imputation number
+  do({
+    model <- lm(nind_m2 ~ nind_m2_original, data = .)  # Fit model
+    stats <- glance(model) %>% select(r.squared, p.value)  # Extract R² and p-value
+    stats$.imp <- unique(.$.imp)  # Add imputation number
+    stats
+  }) %>% 
+  ungroup() %>% 
+  rename(R2 = r.squared, p_value = p.value)
+
+}
+
+
+
 #mice_check_imputed <- mice(mice_check,method = "rf", m = 10, maxit = 300) 
 
 #saveRDS(mice_check_imputed, "data/tmice_check_imputed.rds")
 #mice_check_imputed <- readRDS("data/mice_check_imputed.rds")
 
 
-           
 
-imput_reliability_test <- complete(mice_check_imputed, action = "long") %>%  
-  mutate(.imp = as.factor(.imp)) %>%      # Convert to factor
-  left_join(check_subset) %>%             # Adding original values of nind_m2
-  filter(!is.na(nind_m2_original)) %>%    # Keeping only original values
-  ggplot(aes(x = nind_m2_original, y = nind_m2, color = as.factor(.imp))) + 
+
+
+
+  
+
+  ggplot(mice_check_db, aes(x = nind_m2_original, y = nind_m2, color = as.factor(.imp))) + 
     geom_point(alpha = 0.6) + 
     geom_smooth(method = "lm", se = FALSE) +
     stat_cor(aes(label = paste(after_stat(rr.label), after_stat(p.label), sep = "~`,`~")),  
@@ -253,16 +279,24 @@ imput_reliability_test <- complete(mice_check_imputed, action = "long") %>%
     labs(color = "Imputation Number") # Improve legend label
   
   
+  
+  
+  # Print the results
+  print(reliability_db)
+  
 
 
+
+
+
+
+#lets going to check the results
 
 biomass_imp <- biomass %>% 
   select(year, date, sampling, plot, code, species_level, genus_level, family,
          abundance, height, Ah, Ab, x, biomass_i, richness, abundance_community, nind_m2) %>% 
   left_join(imputed_db)
 
-
-#lets going to check the results
 
 ggplot(imputed_db, aes( x = sampling, y = nind_m2_imputed, color = as.factor(label_imputation))) +
   facet_wrap(~code, ncol = 7, nrow = 6)+

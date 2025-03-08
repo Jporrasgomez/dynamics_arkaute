@@ -17,13 +17,9 @@ format:
     embed-resources: true
 editor: visual
 bibliography: "C:/Users/javier.porras/Documents/dynamics_arkaute/code/experiment_references.bib"
-
 ---
 
-
-
 # Biomass estimation
-
 
 ```{r Opening data}
 
@@ -148,10 +144,7 @@ flora_abrich <- flora_medium
 
 ```
 
-
 ### Biomass at species level
-
- 
 
 ```{r Preparing db for biomass}
 
@@ -175,69 +168,47 @@ f_5_200 <- flora_medium %>%
 #There is no loss of species by taking out individuals with height > 5 cm
 ```
 
-To avoid coffounding effects,  biomass sampling was performed by following a non-destructive methodology described in Pottier and Jabot, 2017, which estimates herbaceous dry biomass (g) using allometric equations. To do this, we took three biometric measurements  of the plant: height ($H$, from the rooting point to the highest green area), basal circumference ( $A_b$, at ground level), and half height circumference ($A_h$, at mid-height). These parameters express the minimum volume of the plant, which is defined as the space occupied by the aerial organs of each individual when extended along the plant's longitudinal axis [@pottier2017]. These were measured with a measuring tape for the height, and a caliber or flexible measuring tape for the areas, depending on the thickness of the plant. A maximum of five individuals per species, sampling and plot were measured. For the taxonomic groups that aggregate several species, 10 individuals were measured when there were morphologically distinguishable species. We define an individual as [@perronne2021]: a ramet or collection of clumped ramets with the highest degree of physiological integration. 
+To avoid coffounding effects, biomass sampling was performed by following a non-destructive methodology described in Pottier and Jabot, 2017, which estimates herbaceous dry biomass (g) using allometric equations. To do this, we took three biometric measurements of the plant: height ($H$, from the rooting point to the highest green area), basal circumference ( $A_b$, at ground level), and half height circumference ($A_h$, at mid-height). These parameters express the minimum volume of the plant, which is defined as the space occupied by the aerial organs of each individual when extended along the plant's longitudinal axis [@pottier2017]. These were measured with a measuring tape for the height, and a caliber or flexible measuring tape for the areas, depending on the thickness of the plant. A maximum of five individuals per species, sampling and plot were measured. For the taxonomic groups that aggregate several species, 10 individuals were measured when there were morphologically distinguishable species. We define an individual as [@perronne2021]: a ramet or collection of clumped ramets with the highest degree of physiological integration.
 
-The total biomass of the community was calculated following the steps described below:  
+The total biomass of the community was calculated following the steps described below:
 
----
+------------------------------------------------------------------------
 
 **1. Estimation of biomass for the average individual**
 
-The biomass per individual is estimated using the general equation model proposed by [@perronne2021]. Let *j* be the species and *i* the individual, where \( (i_j \epsilon [1, n_j]) \): 
+The biomass per individual is estimated using the general equation model proposed by [@perronne2021]. Let *j* be the species and *i* the individual, where ( (i_j \epsilon [1, n_j]) ):
 
 $$
 B_{ij} = 1.96 \left[{\frac{\bar{H}}{2}}(\bar{A_{bi_{j}}} + \bar{A_{hi_{j}}})\right]^{2/3}
-$$  
+$$
 
-where:  
-- $B_i$is the estimated biomass per average individual,  
-- $\bar{H}$ is the average maximum plant height,  
-- $\bar{A_b}$ is the mean basal area,  
-- $\bar{A_h}$ is the mean mid-height area.  
+where:\
+- $B_i$is the estimated biomass per average individual,\
+- $\bar{H}$ is the average maximum plant height,\
+- $\bar{A_b}$ is the mean basal area,\
+- $\bar{A_h}$ is the mean mid-height area.
 
-The values 1.96 and $\frac{2}{3}$ are commonly used in allometric estimations. ***MEntion the senstivity analysis we performed to chech changes in biomass results.
+The values 1.96 and $\frac{2}{3}$ are commonly used in allometric estimations. \*\*\*MEntion the senstivity analysis we performed to chech changes in biomass results.
 
-The model only fits to individuals between 5 and 200 cm, so all individuals beyond those thresholds have to be removed. This modification did not affected the pool of species of the experiment and it only meant the rejection of `r nrow(f_5_200)/nrow(flora_medium)*100 `% datapoints. 
+The model only fits to individuals between 5 and 200 cm, so all individuals beyond those thresholds have to be removed. This modification did not affected the pool of species of the experiment and it only meant the rejection of `r nrow(f_5_200)/nrow(flora_medium)*100`% datapoints.
 
----
+------------------------------------------------------------------------
 
 **2. Calculation of the average biomass of the measured individuals for each species**
 
-
 $$
 \bar{B_{ij}} = \frac{1}{n_j} \sum_{i_j=1}^{n_j} B_{ij}
-$$  
-
-
----
-
-3. Estimation of biomass per square meter (\( m^2 \)) and per species  
-
-This is done by multiplying the mean biomass of each species by the total number of individuals per square meter ($\delta_j$).  
-
-Since $\delta_j$ was not collected across all measurements, we perform a linear model relating $\delta_j$ with $K_j$, where $K_j$ is the cover of each species:  
-
 $$
-\delta_j = a + b \cdot K_j
-$$  
 
-Thus, the biomass per species per square meter is given by:  
+-------------------------------------------------------------------------
+
+**3.  Estimation of biomass per square meter ($m\^2$) and per species**´
+
+The biomass at species level ($B_j$) is calculated by multiplying $B_i$ by the total number of individuals  ($\delta_j$).
 
 $$
 B_j = \bar{B_j} \cdot \delta_j
-$$  
-
----
-
-4. Calculation of community-level biomass 
-
-The total biomass of the community is obtained by summing the total biomass of each species \( j \), where \( \alpha \) is the total number of identified species in each plot:  
-
 $$
-B = \sum_{j=1}^{\alpha} B_j
-$$  
-
-
 
 ```{r Collecting information for number of individuals}
 
@@ -290,25 +261,31 @@ nind <- bind_rows(nind1, nind2)
 one_ind_species <- c("rucr", "amsp", "kisp")
 
 
-```
 
+# Adding nind information to biomass data
 
-```{r Imputation with MICE1. Where are the NAs}
-#| echo: false
-#| warning: false
-
-#We calculate the mean area of the individual by taking Ah and Ab both and transform it into m2 (cm2/10000)
 biomass <- flora_biomass_raw
 
 biomass <- merge(biomass, species_code)
 
 biomass <- left_join(biomass, nind)
 
-sum(is.na(biomass$nind_m2)) 
 
-sum(is.na(biomass$nind_m2)) /length(biomass$code) * 100
+
+percNa <- sum(is.na(biomass$nind_m2)) /length(biomass$code) * 100
 
 biomass$year <- year(biomass$date)
+
+
+
+
+```
+
+We have `r round(percNa, 2)`% NAs for $\delta_j$ since it was not collected across all samplings due to the novelty of the non-destructive method. NAs are randomly distributed through plots and species, but they are concentrated on the first sampling season. 
+
+```{r nind_m2 NAs}
+#| echo: false
+#| warning: false
 
 
 #Where are the NA's?
@@ -355,12 +332,11 @@ print(biomass %>%
 # MICE #####
 ```
 
+We used the *mice* package in R to address missing values of $\delta_j$, which performs multiple imputation by iteratively predicting missing values of $\delta_j$ using a Random Forest model trained on a set of chosen variables. In our case we used the variables year, sampling, plot, treatment, species code, species family, richness, abundance of species, total abundance, mean height, mean $A_h$, $A_b$ and $B_i$. Specifically, we generated 10 imputed datasets (ie. 10 possible values to fill NA) and run 300 iterations to ensure convergence. 
 
-```{r Imputation with MICE2}
+```{r MICE}
 
-#| echo: false
 #| warning: false
-
 
 library(mice)
 
@@ -370,29 +346,29 @@ biomass_mice <- biomass %>%
          height, Ah, Ab, biomass_i, nind_m2) %>% 
   mutate(across(where(is.character), as.factor))
 
-# We use mice package
-##| method = "rf". Random forest models allow us to use both numerical and factorial variables in the imputation. Therefore, code, sampling and plot are used
-##| m = 10 is the number of datasets that mice creates. This is, 10 values of nind_m2
-##| maxit is the number of times that mice iterates through each dataset. The higher, the more stable (in complex database)
-
 #biomass_mice_imputed <- mice(biomass_mice, method = "rf", m = 10, maxit = 300)
 #saveRDS(biomass_mice_imputed, "data/biomass_mice_imputed.rds")
 biomass_mice_imputed <- readRDS(here("data", "biomass_mice_imputed.rds"))
+
+
 ```
 
+The distribution of imputed data followed the same distribution of original data. 
 
-```{r Imputation with MICE3: checking stability of imputations}
+```{r MICE distribution of imputations}
 
 #| echo: false
 #| warning: false
 
-plot(biomass_mice_imputed) # Check if lines stabilize
-stripplot(biomass_mice_imputed, pch = 20, cex = 1.2) #If imputed values (blue dots) align well with observed values, MICE is working well.
+ #If imputed values (blue dots) align well with observed values, MICE is working well.
 densityplot(biomass_mice_imputed)
 
 imputed_db <- complete(biomass_mice_imputed, action = "long")
 
-# hay que intentar entender bien este gráfico
+# Distribution of imputed data and distribution of original data 
+
+stripplot(biomass_mice_imputed, pch = 20, cex = 1.2)
+
 ggplot() +
   geom_density(data = imputed_db, aes(x = nind_m2, color = as.factor(.imp))) +
   geom_density(data = biomass, aes(x = nind_m2), color = "black",
@@ -402,6 +378,12 @@ ggplot() +
        y = "Density",
        color = "Imputation Number") +
   theme_minimal()
+
+```
+
+
+
+```{r MICE stability of imputations}
 
 # Calculation of average value for 10 imputations of nind_m2 (m = 10) and its sd. 
 imputed_db <- imputed_db %>% 
@@ -418,8 +400,17 @@ imputed_db$label_imputation <- ifelse(is.na(biomass$nind_m2), 1, 0)
 
 imput_stability <- imputed_db %>% 
   filter(label_imputation == 1) %>% 
-  mutate(CV = sd_imputation / nind_m2_imputed) %>% 
-  ggplot(aes(x = CV)) +
+  mutate(CV = sd_imputation / nind_m2_imputed)
+
+
+
+```
+
+The coefficient of variation for the ten possible values fell on `r quantile(imput_stability$CV, 0.5)`, being the mean CV `r mean(imput_stability$CV) \pm sd(imput_stability$CV)`. A CV below 1 indicates a stable imputation of mice package. 
+
+```{r  MICE stability of imputations2}
+
+print(ggplot(imput_stability, aes(x = CV)) +
   geom_histogram(bins = 30, fill = "steelblue", color = "white", alpha = 0.8) +
   geom_vline(aes(xintercept = 1), color = "black", linetype = "dashed", size = 1) +
   scale_x_continuous(
@@ -432,10 +423,17 @@ imput_stability <- imputed_db %>%
   theme_minimal(base_size = 10) +
   theme(panel.grid.major = element_blank(),
         panel.grid.minor = element_blank(),
-        plot.title = element_text(hjust = 0.5))
+        plot.title = element_text(hjust = 0.5)))
 
-print(imput_stability)
+
+
 ```
+
+The reliability of results was assessed by running the same Random Forest model  artificially adding the same percentage of NAs to a subset of the original data without missing values. 
+
+We used the *mice* package in R to address missing values of $\delta_j$, which performs multiple imputation by iteratively predicting missing values of $\delta_j$ using a Random Forest model trained on a set of chosen variables. In our case we used the variables year, sampling, plot, treatment, species code, species family, richness, abundance of species, total abundance, mean height, mean $A_h$, $A_b$ and $B_i$. Specifically, we generated 10 imputed datasets (ie. 10 possible values to fill NA) and run 300 iterations to ensure convergence. 
+
+
 
 
 ```{r Imputation with MICE4: checking reliability of imputations}
@@ -499,7 +497,24 @@ imput_reliability_test <- complete(mice_check_imputed, action = "long") %>%
     labs(color = "Imputation Number") # Improve legend label
   
 print(imput_reliability_test)
+
 ```
+------------------------------------------------------------------------
+
+4.  Calculation of community-level biomass
+
+The total biomass of the community is obtained by summing the total biomass of each species ( j ), where ( \alpha ) is the total number of identified species in each plot:
+
+$$
+B = \sum_{j=1}^{\alpha} B_j
+$$
+
+
+
+
+
+
+
 
 
 ```{r Imputation with MICE5: checking results of imputations}
@@ -522,7 +537,6 @@ ggplot(imputed_db, aes( x = sampling, y = nind_m2_imputed, color = as.factor(lab
 
 
 ```
-
 
 ```{r Biomass at SPECIES LEVEL and removing outliers: with imputation}
 
@@ -557,10 +571,6 @@ biomass_noimp_clean<- biomass_noimp %>%
 
 
 ```
-
-
-
-
 
 ```{r Regression of biomass~abundance to fill 0,1&2 sampling gaps}
 
@@ -649,7 +659,6 @@ lm_data_filtered <- lm_data %>%
   filter(p_value < 0.05)
 ```
 
-
 ```{r Regression of biomass~abundance to fill 0,1&2 sampling gaps: estimating biomass}
 
 #| echo: false
@@ -666,7 +675,6 @@ biomass_imp_clean_012 <- bind_rows(biomass_imp_clean, flora_medium012)
 biomass_noimp_clean_012 <- bind_rows(biomass_noimp_clean, flora_medium012)
 
 ```
-
 
 ```{r Community biomass calculation}
 
@@ -687,4 +695,3 @@ biomass_noimp <- biomass_noimp_clean_012 %>%
   ungroup()
 
 ```
-
