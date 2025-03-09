@@ -209,19 +209,63 @@ perc_NA <- ((biomass %>%
 
 nind_nona <- biomass %>% 
   filter(!is.na(nind_m2)) %>%  
-  filter(!code %in% one_ind_species)
+  filter(!code %in% one_ind_species) 
 
 #Artificially creating the same percentage of NA as
 # there are in my original database  (perc_NA) and keeping the same variables as in the original imputation
 
 #Hacer esto con un loop varias veces y guardar los resultados de R2 y p value en una base de datos
 
-reliability_db <-
-  
-  
-for (i in c(1:5)){
+
+
+# Let's recreate
+perc_NA <- ((biomass %>% 
+               filter(is.na(nind_m2)) %>% 
+               nrow())) / nrow(biomass)
+
+
+# Subset de datos sin NA para nind_m2
+nind_nona <- biomass %>% 
+  filter(!is.na(nind_m2)) %>%  
+  filter(!code %in% one_ind_species) 
+
+# Step 1: Filter rows where nind_m2 > 4
+eligible_rows <- nind_nona %>% 
+  filter(nind_m2 > 4)
+
+# Step 2: Randomly sample 441 rows
+rows_to_NA <- sample(nrow(eligible_rows), perc_NA*nrow(biomass)) ########################### CREO QUE ESTO NO ESTÁ FUNCIONANDO BIEN
+
+# Step 2: Randomly sample 441 rows from nind_nona
+#rows_to_NA <- sample(nrow(nind_nona), perc_NA * nrow(biomass))
+
+# Step 3: Set nind_m2 to NA for the sampled rows
 mice_check <- nind_nona %>%
-  mutate(nind_m2 = ifelse(runif(n()) < perc_NA, NA, nind_m2)) %>% 
+  mutate(nind_m2 = replace(nind_m2, rows_to_NA, NA))
+
+
+# Check the result
+sum(is.na(mice_check$nind_m2)) == perc_NA*nrow(biomass) 
+
+((mice_check %>% 
+    filter(is.na(nind_m2)) %>% 
+    nrow())) / nrow(biomass)
+
+
+#reliability_db <-
+#  
+#  
+#micelist <- list()
+#
+#reliability_db <- matrix(nrow = length(50), ncol = 3)
+#colnames(reliability_db) <- c("R2", "p-value", ".imp")
+#reliability_db <- as.data.frame(reliability_db)
+#  
+#
+#for (i in c(1:5)){
+  
+mice_check <- nind_nona %>%
+    mutate(nind_m2 = replace(nind_m2, rows_to_NA, NA)) %>% 
   select(year, sampling, plot, treatment, code, family, richness, abundance, abundance_community,
          height, Ah, Ab, biomass_i, nind_m2) %>% 
   mutate(across(where(is.character), as.factor))
@@ -235,9 +279,49 @@ subset_check <- mice_check %>%
 
 mice_imputed_check <- mice(mice_check, method = "rf", m = 10, maxit = 5) 
 
-mice_check_db <- complete(mice_check_imputed, action = "long") %>%  
+
+plot(mice_imputed_check) # Check if lines stabilize
+stripplot(mice_imputed_check, pch = 20, cex = 1.2) #If imputed values (blue dots) align well with observed values, MICE is working well.
+densityplot(mice_imputed_check)
+
+imputed_db_check <- complete(mice_imputed_check, action = "long")
+
+imputed_db_check <- imputed_db_check %>% 
+  group_by(plot, treatment, sampling, code) %>% 
+  mutate(nind_m2_imputed = round(mean(nind_m2, 0)),
+         sd_imputation = sd(nind_m2)) %>% 
+  select(plot, treatment, sampling, code, nind_m2_imputed, sd_imputation) %>% 
+  distinct()
+
+imputed_db_check$label_imputation <- ifelse(is.na(mice_check$nind_m2), 1, 0)
+
+imput_stability_db_check <- imputed_db_check %>% 
+  filter(label_imputation == 1) %>% 
+  mutate(CV = sd_imputation / nind_m2_imputed) %>% 
+  as.data.frame()
+
+print(imput_stability <- ggplot(imput_stability_db_check, aes(x = CV)) +
+  geom_histogram(bins = 30, fill = "steelblue", color = "white", alpha = 0.8) +
+  geom_vline(aes(xintercept = 1), color = "black", linetype = "dashed", size = 1) +
+  scale_x_continuous(
+    expand = expansion(mult = c(0.05, 0.1)),
+    breaks = seq(0, max(imputed_db$sd_imputation / imputed_db$nind_m2_imputed, na.rm = TRUE), by = 0.2) # Adjust "by" as needed
+  ) +
+  labs(title = "Distribution of Coefficient of Variation for Imputed Values",
+       x = "(SD/mean) Ratio",
+       y = "Count") +
+  theme_minimal(base_size = 10) +
+  theme(panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        plot.title = element_text(hjust = 0.5)))
+
+mean(imput_stability_db_check$CV, na.rm = T)
+sd(imput_stability_db_check$CV, na.rm = T)
+
+
+mice_check_db <- complete(mice_imputed_check, action = "long") %>%  
   mutate(.imp = as.factor(.imp)) %>%      # Convert to factor
-  left_join(check_subset) %>%             # Adding original values of nind_m2
+  left_join(subset_check) %>%             # Adding original values of nind_m2
   filter(!is.na(nind_m2_original))   # Keeping only original values
 
 # Compute R² and p-value for each imputation
@@ -252,7 +336,22 @@ reliability_db <- mice_check_db %>%
   ungroup() %>% 
   rename(R2 = r.squared, p_value = p.value)
 
-}
+ggplot(mice_check_db, aes(x = nind_m2_original, y = nind_m2, color = as.factor(.imp))) + 
+  geom_point(alpha = 0.6) + 
+  geom_smooth(method = "lm", se = FALSE) +
+  stat_cor(aes(label = paste(after_stat(rr.label), after_stat(p.label), sep = "~`,`~")),  
+           method = "pearson", 
+           label.x.npc = "left", 
+           label.y.npc = "top") + # Displays R² and p-value
+  theme_minimal() +
+  labs(color = "Imputation Number") # Improve legend label
+
+
+
+#}
+
+
+
 
 
 
@@ -268,16 +367,7 @@ reliability_db <- mice_check_db %>%
 
   
 
-  ggplot(mice_check_db, aes(x = nind_m2_original, y = nind_m2, color = as.factor(.imp))) + 
-    geom_point(alpha = 0.6) + 
-    geom_smooth(method = "lm", se = FALSE) +
-    stat_cor(aes(label = paste(after_stat(rr.label), after_stat(p.label), sep = "~`,`~")),  
-             method = "pearson", 
-             label.x.npc = "left", 
-             label.y.npc = "top") + # Displays R² and p-value
-    theme_minimal() +
-    labs(color = "Imputation Number") # Improve legend label
-  
+
   
   
   
