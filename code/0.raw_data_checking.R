@@ -6,8 +6,9 @@
 
 
 
+
 rm(list = ls(all.names = TRUE))
-pacman::p_load(dplyr, reshape2, tidyverse, lubridate, ggplot2, ggpubr, rpivotTable, ggrepel)
+pacman::p_load(dplyr, reshape2, tidyverse, lubridate, ggplot2, ggpubr, rpivotTable, ggrepel, here)
 
 theme_set(theme_bw() +
             theme(
@@ -421,7 +422,7 @@ source("code/0.2.MICE.R")
 
 
 plot(biomass_mice_imputed) 
-stripplot(biomass_mice_imputed, pch = 20, cex = 1.2) 
+#stripplot(biomass_mice_imputed, pch = 20, cex = 1.2) 
 densityplot(biomass_mice_imputed)
 imput_stability
 mice_results
