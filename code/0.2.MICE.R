@@ -184,7 +184,6 @@ imput_stability_db <- imputed_db %>%
   labs(title = "Distribution of Coefficient of Variation for Imputed Values",
        x = "(SD/mean) Ratio",
        y = "Count") +
-  theme_minimal(base_size = 10) +
   theme(panel.grid.major = element_blank(),
         panel.grid.minor = element_blank(),
         plot.title = element_text(hjust = 0.5))
@@ -192,8 +191,16 @@ imput_stability_db <- imputed_db %>%
   mean(imput_stability_db$CV, na.rm = T)
   sd(imput_stability_db$CV, na.rm = T)
   
-
-
+  
+  
+  mice_results <- ggplot(imputed_db, aes( x = sampling, y = nind_m2_imputed, color = as.factor(label_imputation))) +
+    facet_wrap(~code, ncol = 7, nrow = 6)+
+    geom_point(alpha = 0.5) +
+    scale_color_manual(values = c("0" = "cyan3", "1" = "red3")) +
+    scale_x_discrete(breaks = levels(imputed_db$sampling)[seq(1, length(levels(imputed_db$sampling)), by = 5)]) +  # Show every 2nd label
+    labs(color = "Imputation")
+  
+  
 # Reliability
 
 # Checking reliability of mice imputation 
@@ -211,176 +218,86 @@ nind_nona <- biomass %>%
   filter(!is.na(nind_m2)) %>%  
   filter(!code %in% one_ind_species) 
 
-#Artificially creating the same percentage of NA as
-# there are in my original database  (perc_NA) and keeping the same variables as in the original imputation
-
-#Hacer esto con un loop varias veces y guardar los resultados de R2 y p value en una base de datos
+######### LONG TIME TO RUN LOOP : #
+#source("code/0.2.loop_reliability.R")
 
 
-
-# Let's recreate
-perc_NA <- ((biomass %>% 
-               filter(is.na(nind_m2)) %>% 
-               nrow())) / nrow(biomass)
+#stability_db_combined <- imap_dfr(stability_list, ~ mutate(.x, counter = .y)) 
+#stability_db_combined %>% write.csv("data/stability_test.csv", row.names = F)
+stability_test <- read.csv(here("data", "stability_test.csv"))
 
 
-# Subset de datos sin NA para nind_m2
-nind_nona <- biomass %>% 
-  filter(!is.na(nind_m2)) %>%  
-  filter(!code %in% one_ind_species) 
-
-# Step 1: Filter rows where nind_m2 > 4
-eligible_rows <- nind_nona %>% 
-  filter(nind_m2 > 4)
-
-# Step 2: Randomly sample 441 rows
-rows_to_NA <- sample(nrow(eligible_rows), perc_NA*nrow(biomass)) ########################### CREO QUE ESTO NO ESTÁ FUNCIONANDO BIEN
-
-# Step 2: Randomly sample 441 rows from nind_nona
-#rows_to_NA <- sample(nrow(nind_nona), perc_NA * nrow(biomass))
-
-# Step 3: Set nind_m2 to NA for the sampled rows
-mice_check <- nind_nona %>%
-  mutate(nind_m2 = replace(nind_m2, rows_to_NA, NA))
-
-
-# Check the result
-sum(is.na(mice_check$nind_m2)) == perc_NA*nrow(biomass) 
-
-((mice_check %>% 
-    filter(is.na(nind_m2)) %>% 
-    nrow())) / nrow(biomass)
-
-
-#reliability_db <-
-#  
-#  
-#micelist <- list()
-#
-#reliability_db <- matrix(nrow = length(50), ncol = 3)
-#colnames(reliability_db) <- c("R2", "p-value", ".imp")
-#reliability_db <- as.data.frame(reliability_db)
-#  
-#
-#for (i in c(1:5)){
-  
-mice_check <- nind_nona %>%
-    mutate(nind_m2 = replace(nind_m2, rows_to_NA, NA)) %>% 
-  select(year, sampling, plot, treatment, code, family, richness, abundance, abundance_community,
-         height, Ah, Ab, biomass_i, nind_m2) %>% 
-  mutate(across(where(is.character), as.factor))
-
-subset_check <- mice_check %>% 
-  filter(is.na(nind_m2)) %>% 
-  select(sampling, plot, treatment, code, abundance, abundance_community) %>%  # Keeping only necessary identifiers
-  left_join(nind_nona %>% select(sampling, plot, treatment, code, abundance, abundance_community, nind_m2), 
-            by = c("sampling", "plot", "treatment", "code", "abundance", "abundance_community")) %>% 
-  rename(nind_m2_original = nind_m2)
-
-mice_imputed_check <- mice(mice_check, method = "rf", m = 10, maxit = 5) 
-
-
-plot(mice_imputed_check) # Check if lines stabilize
-stripplot(mice_imputed_check, pch = 20, cex = 1.2) #If imputed values (blue dots) align well with observed values, MICE is working well.
-densityplot(mice_imputed_check)
-
-imputed_db_check <- complete(mice_imputed_check, action = "long")
-
-imputed_db_check <- imputed_db_check %>% 
-  group_by(plot, treatment, sampling, code) %>% 
-  mutate(nind_m2_imputed = round(mean(nind_m2, 0)),
-         sd_imputation = sd(nind_m2)) %>% 
-  select(plot, treatment, sampling, code, nind_m2_imputed, sd_imputation) %>% 
-  distinct()
-
-imputed_db_check$label_imputation <- ifelse(is.na(mice_check$nind_m2), 1, 0)
-
-imput_stability_db_check <- imputed_db_check %>% 
-  filter(label_imputation == 1) %>% 
-  mutate(CV = sd_imputation / nind_m2_imputed) %>% 
-  as.data.frame()
-
-print(imput_stability <- ggplot(imput_stability_db_check, aes(x = CV)) +
+ggstability_test1 <- ggplot(stability_test, aes(x = CV)) +
+  facet_wrap(~ counter, nrow = 2, ncol = 3 ) + 
   geom_histogram(bins = 30, fill = "steelblue", color = "white", alpha = 0.8) +
-  geom_vline(aes(xintercept = 1), color = "black", linetype = "dashed", size = 1) +
+  geom_vline(aes(xintercept = 1), color = "red", linetype = "dashed", size = 1) +
   scale_x_continuous(
     expand = expansion(mult = c(0.05, 0.1)),
-    breaks = seq(0, max(imputed_db$sd_imputation / imputed_db$nind_m2_imputed, na.rm = TRUE), by = 0.2) # Adjust "by" as needed
+    breaks = seq(0, max(imputed_db$sd_imputation / imputed_db$nind_m2_imputed, na.rm = TRUE), by = 0.5) # Adjust "by" as needed
   ) +
   labs(title = "Distribution of Coefficient of Variation for Imputed Values",
        x = "(SD/mean) Ratio",
-       y = "Count") +
-  theme_minimal(base_size = 10) +
-  theme(panel.grid.major = element_blank(),
-        panel.grid.minor = element_blank(),
-        plot.title = element_text(hjust = 0.5)))
+       y = "Count") 
 
-mean(imput_stability_db_check$CV, na.rm = T)
-sd(imput_stability_db_check$CV, na.rm = T)
+ggstability_test2 <- ggplot(stability_test, aes(y = CV)) +
+  facet_wrap(~ counter, nrow = 1, ncol = 6 ) + 
+  geom_boxplot(fill = "steelblue", color = "black", alpha = 0.8) +
+  geom_hline(aes(yintercept = 1), color = "red", linetype = "dashed", size = 1) +
+  labs(title = "Distribution of Coefficient of Variation for Imputed Values",
+       x = NULL,  # Removes x-axis label
+       y = "(SD/mean) Ratio") +
+  theme(axis.text.x = element_blank(),  # Removes x-axis text
+        axis.ticks.x = element_blank()) # Removes x-axis ticks
 
 
-mice_check_db <- complete(mice_imputed_check, action = "long") %>%  
-  mutate(.imp = as.factor(.imp)) %>%      # Convert to factor
-  left_join(subset_check) %>%             # Adding original values of nind_m2
-  filter(!is.na(nind_m2_original))   # Keeping only original values
 
-# Compute R² and p-value for each imputation
-reliability_db <- mice_check_db %>% 
-  group_by(.imp) %>%   # Group by imputation number
-  do({
-    model <- lm(nind_m2 ~ nind_m2_original, data = .)  # Fit model
-    stats <- glance(model) %>% select(r.squared, p.value)  # Extract R² and p-value
-    stats$.imp <- unique(.$.imp)  # Add imputation number
-    stats
-  }) %>% 
-  ungroup() %>% 
-  rename(R2 = r.squared, p_value = p.value)
+#reliability_db_combined <- imap_dfr(reliability_db_list, ~ mutate(.x, counter = .y))
+#reliability_db_combined %>% write.csv("data/reliability_test.csv", row.names = F)
 
-ggplot(mice_check_db, aes(x = nind_m2_original, y = nind_m2, color = as.factor(.imp))) + 
-  geom_point(alpha = 0.6) + 
-  geom_smooth(method = "lm", se = FALSE) +
+reliability_test <- read.csv(here("data", "reliability_test.csv")) %>% 
+  mutate(counter = as.factor(counter))
+
+ggreliability_test1 <- ggplot(reliability_test, aes(y = R2, x = p_value, color = counter)) +
+  geom_point(alpha = 0.8) +
+  #geom_hline(aes(yintercept = 1), color = "red", linetype = "dashed", size = 1) +
+  labs(title = "R2 and p_value distribution for lm(imputed ~ original)",
+       x = "p_value",  # Removes x-axis label
+       y = " R2", 
+       color = "Imputation")
+
+
+ggreliability_test2 <-ggplot(reliability_test, aes(x = R2)) +
+  geom_histogram(bins = 30, fill = "red4", color = "white", alpha = 0.8) +
+  scale_x_continuous(
+    expand = expansion(mult = c(0.05, 0.1)),
+    breaks = seq(0, max(imputed_db$sd_imputation / imputed_db$nind_m2_imputed, na.rm = TRUE), by = 0.1) # Adjust "by" as needed
+  ) +
+  labs(title = "R2 for lm(imputed ~ original)",
+       x = "R2",
+       y = "Count") 
+
+#reliability_plot_combined <- imap_dfr(reliability_plot_list, ~ mutate(.x, counter = .y))
+#reliability_plot_combined %>% write.csv("data/reliability_LM_test.csv", row.names = F)
+
+reliability_LM_test <- read.csv(here("data", "reliability_LM_test.csv")) %>% 
+  mutate(counter = as.factor(counter))
+
+
+ggLM_test <- ggplot(reliability_LM_test, aes(x = nind_m2_original,
+                                      y = nind_m2,
+                                      color = as.factor(.imp))) + 
+  facet_wrap(~ counter, nrow = 2, ncol = 3) +
+  geom_point(alpha = 0.6, size = 0.3) + 
+  geom_smooth(method = "lm", se = FALSE, size = 0.5) +
   stat_cor(aes(label = paste(after_stat(rr.label), after_stat(p.label), sep = "~`,`~")),  
            method = "pearson", 
            label.x.npc = "left", 
            label.y.npc = "top") + # Displays R² and p-value
-  theme_minimal() +
-  labs(color = "Imputation Number") # Improve legend label
+  guides(color = "none") # Improve legend label
 
 
 
-#}
-
-
-
-
-
-
-#mice_check_imputed <- mice(mice_check,method = "rf", m = 10, maxit = 300) 
-
-#saveRDS(mice_check_imputed, "data/tmice_check_imputed.rds")
-#mice_check_imputed <- readRDS("data/mice_check_imputed.rds")
-
-
-
-
-
-
-  
-
-
-  
-  
-  
-  # Print the results
-  print(reliability_db)
-  
-
-
-
-
-
-
-#lets going to check the results
+## Merging imputation results with biomass database : 
 
 biomass_imp <- biomass %>% 
   select(year, date, sampling, plot, code, species_level, genus_level, family,
@@ -388,72 +305,6 @@ biomass_imp <- biomass %>%
   left_join(imputed_db)
 
 
-ggplot(imputed_db, aes( x = sampling, y = nind_m2_imputed, color = as.factor(label_imputation))) +
-  facet_wrap(~code, ncol = 7, nrow = 6)+
-  geom_point(alpha = 0.5) +
-  scale_color_manual(values = c("0" = "cyan3", "1" = "red3")) +
-  labs(color = "Imputation")
-
-
-# hay que capar el nind_m2 imputado, sobre todo por arriba. LA idea es que nind_m2_imputed para una especie nunca sea mayor
-# que nind_m2 max de esa especie en todo el experimento. 
-
-biomass_imp <- biomass_imp %>% 
-  group_by(code) %>% 
-  mutate(nind_m2_max = max(nind_m2, na.rm = T)) 
-
-biomass_imp <- biomass_imp %>% 
-  group_by(sampling, plot, code) %>% 
-  mutate(nind_m2_imputed = ifelse(nind_m2_imputed > nind_m2_max, nind_m2_max, nind_m2_imputed)) %>% 
-  ungroup()
-
-ggplot(imputed_db, aes( x = sampling, y = nind_m2_imputed, color = as.factor(label_imputation))) +
-  facet_wrap(~code, ncol = 7, nrow = 6)+
-  geom_point(alpha = 0.5) +
-  scale_color_manual(values = c("0" = "cyan3", "1" = "red3")) +
-  labs(color = "Imputation")
 
 
   
-
-
-
-##library(broom)
-##library(purrr)  # Ensure purrr is loaded for map_dbl()
-##
-### Step 1: Prepare Data
-##data_for_lm <- complete(mice_check_imputed, action = "long") %>%
-##  left_join(check_subset) %>%
-##  filter(!is.na(nind_m2_original))
-##
-### Step 2: Compute R² and p-value for each imputation level
-##lm_results <- data_for_lm %>%
-##  group_by(.imp) %>%
-##  summarise(
-##    lm_model = list(lm(nind_m2 ~ nind_m2_original, data = pick(everything()))),  # Use pick()
-##    .groups = "drop"
-##  ) %>%
-##  mutate(
-##    r_squared = map_dbl(lm_model, ~summary(.)$r.squared),  # Extract R²
-##    p_value = map_dbl(lm_model, ~glance(.)$p.value)
-##    
-##  ) %>%
-##  select(.imp, r_squared, p_value)
-##
-### Step 3: Merge R² and p-value back into the dataset
-##data_for_plot <- data_for_lm %>%
-##  left_join(lm_results, by = ".imp")
-##
-### Step 4: Create the ggplot
-##ggplot(data_for_plot, aes(x = nind_m2_original, y = nind_m2, color = as.factor(.imp))) + 
-##  geom_point(alpha = 0.6) + 
-##  geom_smooth(method = "lm", se = FALSE) +
-##  geom_text(data = lm_results, 
-##            aes(x = min(data_for_plot$nind_m2_original, na.rm = TRUE),  # Align to the left
-##                y = max(data_for_plot$nind_m2, na.rm = TRUE) - (.imp * 2),  # Space labels out
-##                label = paste0("R² = ", round(r_squared, 3), 
-##                               ", p-value = ", signif(p_value, 3)), 
-##                color = as.factor(.imp)),  # Match text color with regression color
-##            size = 4, hjust = 0, vjust = 1) +  # Left align text
-##  theme_minimal() +
-##  labs(color = "Imputation Number")

@@ -349,7 +349,7 @@ ggplot(flora_nobs, aes(x = code_abnobs, y = abnobs, fill = abnobs)) +
 
 #For biomass, we do not have information for samplings 0, 1, 2 and 12. 
 
-flora_biomass_raw <- flora_medium %>% 
+{flora_biomass_raw <- flora_medium %>% 
   filter(!sampling %in% c("0", "1", "2", "12")) %>%  # Remove samplings for which we have no morphological measurements
   filter(!is.na(x)) %>%                              # Remove rows where x is NA since we do not have morph. meas. for those datapoints
   filter(height > 5 & height < 200)               # Remove individuals with height < 5 cm or > 200 cm, because the equation does not properly work with them 
@@ -360,7 +360,7 @@ flora_medium %>%
 
 length(unique(flora_biomass_raw$code))
 
-length(unique(flora_medium$code))
+length(unique(flora_medium$code))}
 
 #There is no loss of species by taking out individuals with height > 5 cm 
 
@@ -372,7 +372,7 @@ length(unique(flora_medium$code))
 
 #1.  Since sampling 12, we have been estimating the number of individuals per species and plot based on direct field observations.
 
-plots <- read.csv("data/plots.csv") %>% 
+{plots <- read.csv("data/plots.csv") %>% 
   select(nplot, treatment_code) %>% 
   rename(treatment = treatment_code,
          plot = nplot)
@@ -411,7 +411,7 @@ nind <- bind_rows(nind1, nind2)
 ##|  Therefore, for these species we do not need to estimate the number of individuals.
 ##|  In think is useful to keep a vector
 
-one_ind_species <- c("rucr", "amsp", "kisp")
+one_ind_species <- c("rucr", "amsp", "kisp")}
 
 
 ## IMPUTATION OF is.na(nind_m2)  ####
@@ -420,8 +420,18 @@ one_ind_species <- c("rucr", "amsp", "kisp")
 source("code/0.2.MICE.R")
 
 
+plot(biomass_mice_imputed) 
+stripplot(biomass_mice_imputed, pch = 20, cex = 1.2) 
+densityplot(biomass_mice_imputed)
 imput_stability
-imput_reliability_test
+mice_results
+
+ggstability_test1
+ggstability_test2
+ggreliability_test1
+ggreliability_test2
+ggLM_test
+
 
 # Calculation of biomass at species level for both scenarios: with imputation of data with MICE and without it
 
