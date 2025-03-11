@@ -355,9 +355,10 @@ ggplot(flora_nobs, aes(x = code_abnobs, y = abnobs, fill = abnobs)) +
   filter(!is.na(x)) %>%                              # Remove rows where x is NA since we do not have morph. meas. for those datapoints
   filter(height > 5 & height < 200)               # Remove individuals with height < 5 cm or > 200 cm, because the equation does not properly work with them 
 
-flora_medium %>% 
+f_5_200 <- flora_medium %>% 
   filter(!(height > 5 & height < 200)) %>% 
   nrow() # Only 187 datapoints are lost
+
 
 length(unique(flora_biomass_raw$code))
 

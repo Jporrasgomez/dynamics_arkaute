@@ -25,7 +25,7 @@ biomass$year <- year(biomass$date)
 
 
 
-biomass %>% 
+ggNA_sampling <- biomass %>% 
   mutate(cell_content = case_when(is.na(nind_m2) ~ "NA",
                                   !is.na(nind_m2)  ~ "nind_available")) %>%
   # we create a new variable capturing cell content
@@ -39,7 +39,7 @@ biomass %>%
 
 
 
-biomass %>% 
+ggNA_plot <- biomass %>% 
   mutate(cell_content = case_when(is.na(nind_m2) ~ "NA",
                                   !is.na(nind_m2)  ~ "nind_available")) %>%
   ggplot(aes(x = as.numeric(plot))) +
@@ -50,7 +50,7 @@ biomass %>%
   scale_x_continuous(breaks = scales::breaks_extended(n = 16))
 
 
-biomass %>% 
+ggNA_species <- biomass %>% 
   mutate(cell_content = case_when(is.na(nind_m2) ~ "NA",
                                   !is.na(nind_m2)  ~ "nind_available")) %>%
   # we create a new variable capturing cell content
@@ -100,10 +100,10 @@ for(i in seq_along(plots)){
   
 }
 
-for (i in seq_along(plots)) {
-  print(nalist[[i]])
-  
-}
+#for (i in seq_along(plots)) {
+#  print(nalist[[i]])
+#  
+#}
 
 
 # MICE #####
@@ -126,24 +126,24 @@ biomass_mice <- biomass %>%
 #saveRDS(biomass_mice_imputed, "data/biomass_mice_imputed.rds")
 biomass_mice_imputed <- readRDS("data/biomass_mice_imputed.rds")
 
-summary(biomass_mice_imputed)
-plot(biomass_mice_imputed) # Check if lines stabilize
-#stripplot(biomass_mice_imputed, pch = 20, cex = 1.2) #If imputed values (blue dots) align well with observed values, MICE is working well.
-densityplot(biomass_mice_imputed)
+#summary(biomass_mice_imputed)
+#plot(biomass_mice_imputed) # Check if lines stabilize
+##stripplot(biomass_mice_imputed, pch = 20, cex = 1.2) #If imputed values (blue dots) align well with observed values, MICE is working well.
+#densityplot(biomass_mice_imputed)
 
 
-i = 9
-imputed_dbi <- complete(biomass_mice_imputed, action = i)
-ggplot() +
-  geom_density(aes(x = biomass$nind_m2), color = "blue3") +
-  geom_density(aes(x = imputed_dbi$nind_m2), color = "red3") +
-  labs(title = "Density Plot of Original (Red) vs Imputed (Blue) nind_m2")
+#i = 9
+#imputed_dbi <- complete(biomass_mice_imputed, action = i)
+#ggplot() +
+#  geom_density(aes(x = biomass$nind_m2), color = "blue3") +
+#  geom_density(aes(x = imputed_dbi$nind_m2), color = "red3") +
+#  labs(title = "Density Plot of Original (Red) vs Imputed (Blue) nind_m2")
 
 
 imputed_db <- complete(biomass_mice_imputed, action = "long")
 
 # hay que intentar entender bien este gráfico
-ggplot() +
+ggdensity <- ggplot() +
   geom_density(data = imputed_db, aes(x = nind_m2, color = as.factor(.imp))) +
   geom_density(data = biomass, aes(x = nind_m2), color = "black",
                size = 0.8, linetype = "dashed") +
@@ -161,7 +161,6 @@ imputed_db <- imputed_db %>%
          sd_imputation = sd(nind_m2)) %>% 
   select(plot, treatment, sampling, code, nind_m2_imputed, sd_imputation) %>% 
   distinct()
-
 
 imputed_db$label_imputation <- ifelse(is.na(biomass$nind_m2), 1, 0)
 
@@ -187,10 +186,6 @@ imput_stability_db <- imputed_db %>%
   theme(panel.grid.major = element_blank(),
         panel.grid.minor = element_blank(),
         plot.title = element_text(hjust = 0.5))
-
-  mean(imput_stability_db$CV, na.rm = T)
-  sd(imput_stability_db$CV, na.rm = T)
-  
   
   
   mice_results <- ggplot(imputed_db, aes( x = sampling, y = nind_m2_imputed, color = as.factor(label_imputation))) +
@@ -218,8 +213,9 @@ nind_nona <- biomass %>%
   filter(!is.na(nind_m2)) %>%  
   filter(!code %in% one_ind_species) 
 
-######### LONG TIME TO RUN LOOP : #
+######### LONG TIME TO RUN LOOP : ###########################################################
 #source("code/0.2.loop_reliability.R")
+######### LONG TIME TO RUN LOOP : ###########################################################
 
 
 #stability_db_combined <- imap_dfr(stability_list, ~ mutate(.x, counter = .y)) 

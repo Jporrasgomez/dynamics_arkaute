@@ -1,0 +1,184 @@
+---
+title: "Biomass"
+author: "Javier Porras"
+date: today
+execute:
+  echo: false
+  warning: false # Oculta advertencias
+  message: false # Oculta mensajes de la consola
+  error: false  
+  fig-width: 8
+  fig-height: 8
+format:
+  html:
+    toc: true
+    toc-depth: 3
+    code-fold: true
+    number-sections: true
+    embed-resources: true
+editor: visual
+bibliography: "C:/Users/javier.porras/Documents/dynamics_arkaute/code/experiment_references.bib"
+---
+
+# Biomass estimation
+
+```{r Opening data}
+
+
+library(here)
+
+setwd(here::here())
+source(here::here("code", "1.first_script.R"))
+
+```
+
+## Biomass at species level
+
+
+
+To avoid confounding effects with the perturbation, biomass sampling was performed by following a non-destructive methodology described in Pottier and Jabot, 2017, which estimates herbaceous dry biomass (g) using allometric equations. To do this, we took three biometric measurements of the plant: height ($H$, from the rooting point to the highest green area), basal circumference ( $A_b$, at ground level), and half height circumference ($A_h$, at mid-height). These parameters express the minimum volume of the plant, which is defined as the space occupied by the aerial organs of each individual when extended along the plant's longitudinal axis [@pottier2017]. These were measured with a measuring tape for the height, and a caliber or flexible measuring tape for the areas, depending on the thickness of the plant. A maximum of five individuals per species, sampling and plot were measured. For the taxonomic groups that aggregate several species, 10 individuals were measured when there were morphologically distinguishable species. We define an individual as [@perronne2021]: a ramet or collection of clumped ramets with the highest degree of physiological integration.
+
+The total biomass of the community was calculated following the steps described below:
+
+------------------------------------------------------------------------
+
+### Estimation of biomass for the average individual 
+
+The biomass per individual is estimated using the general equation model proposed by [@perronne2021]. Let *j* be the species and *i* the individual, where ($i_j$ $\epsilon$ $[1, n_j]$):
+
+$$
+\bar{B_{i_{j}}} = 1.96 \left[{\frac{\bar{H_{i_{j}}}}{2}}(\bar{A_{bi_{j}}} + \bar{A_{hi_{j}}})\right]^{2/3}
+$$
+
+where:\
+- $\bar{B}$is the estimated biomass per average individual,\
+- $\bar{H}$ is the average maximum plant height,\
+- $\bar{A_b}$ is the mean basal area,\
+- $\bar{A_h}$ is the mean mid-height area.
+
+The values 1.96 and $2/3$ are commonly used in allometric estimations. We performed sensitivity analysis for these coefficients and finally conveyed with the authors about using the same values.The model only fits to individuals between 5 and 200 cm, so all individuals beyond those thresholds had to be removed. This modification did not affect the pool of species of the experiment and it only meant the rejection of `r round(f_5_200/nrow(flora_medium)*100, 2)`% datapoints.
+
+------------------------------------------------------------------------
+
+### Estimation of biomass at species level
+
+The biomass at species level ($B_j$) is calculated by multiplying $B_i$ by the total number of individuals per square meter ($\delta$) for the species $j$ present in a plot at a given sampling. 
+
+$$
+B_j = \bar{B_{i_{j}}} \cdot \delta_j
+$$
+
+
+However, we have `r round(perc_NA, 2)`% NAs for $\delta_j$ since it was not collected across all samplings due to the novelty of the non-destructive method. NAs are randomly distributed through plots and species, yet they are concentrated on the first sampling season.
+
+```{r nind_m2 NAs}
+
+
+print(ggNA_sampling)
+print(ggNA_plot)
+print(ggNA_species)
+
+```
+
+We used the *mice* package in R to address missing values of $\delta_j$, which performs multiple imputation by iteratively predicting missing values of $\delta_j$ using a Random Forest model trained on a set of chosen variables. In our case we used the variables year, sampling, plot, treatment, species, species family, richness, abundance at species level, total abundance, mean $H$, mean $A_h$, mean $A_b$ and $B_i$. Specifically, we generated 10 imputed datasets (ie. 10 possible values to fill NA) and run 300 iterations to ensure convergence. The results can be observed in the following figure, where blue dots represent the original values, and the red dots represents the values that have been produced by the model to fill the gaps.
+
+```{r MICE}
+
+
+ print(mice_results)
+ 
+```
+
+To ensure that the imputation was accurate enough, we needed to check stability and reliability.
+
+-   **Stability** The stability of the of the imputed data was assessed by first, checking that the distribution of the imputed values followed the same distribution as the original data (Figures x and y), and second, by calculating the coefficient of variation, which presented an aggregate mean for the ten possible values iterated by the model of `r round(mean(imputed_db$CV),2)` $\pm$ `r round(sd(imputed_db$CV), 2)`(Figure z)
+
+```{r MICE distribution of imputations}
+
+
+# Distribution of imputed data and distribution of original data 
+
+stripplot(biomass_mice_imputed, pch = 20, cex = 1.2)
+
+```
+
+Figure x: Blue dots represent the original values, while red dots indicate the imputed values. If the red dots align closely with the blue ones, it suggests that the imputation model produced stable estimates.
+
+```{r MICE distribution of imputations2}
+
+ #If imputed values (blue dots) align well with observed values, MICE is working well.
+densityplot(biomass_mice_imputed)
+
+```
+
+Figure y: The density plot compares the distribution of imputed values (red) with the original values (blue). A close overlap between the two distributions indicates that the imputation model preserved the original data structure well.
+
+```{r MICE stability of imputations}
+print(imput_stability)
+
+```
+
+Figure z: Distribution of the Coefficient of Variation (CV) for imputed values. The histogram shows the spread of CV values, with a dashed vertical line at CV = 1 as a reference. A lower CV suggests greater imputation stability, while higher values indicate greater variability in imputed values
+
+-   **Reliability.** The reliability of the imputation was assessed by running the same Random Forest model on a subset of the original data (without missing values in $\delta_j$), where the same proportion of NAs was randomly generated. Since it is a random process, we run this "dummy model" six times. The imputation of this model appeared to work reasonably well. Aggregate mean of CV for the six iterations was `r round(mean(stability_test$CV, na.rm = T),2)` $\pm$ `r round(sd(stability_test$CV),2)`, which means the iterations were stable as in our real model.
+
+```{r MICE reliability of imputations2}
+
+print(ggstability_test2)
+
+```
+
+Then, we performed a linear model between original $\delta_j$ values and imputed ones, for which we got an aggregate mean of $R^2$ of`r round(mean(reliability_test$R2),2)` $\pm$ `r round(sd(reliability_test$R2),2)`, which is low, but all iterations showed a positive linear relationship between original $\delta_j$ and imputed values as we can see in the following figures
+
+```{r MICE reliability of imputations3}
+
+print(ggreliability_test2)
+print(ggLM_test)
+
+```
+
+After this discussion, we could finally go ahead with the imputation results. Filling gaps with *mice* package, despite having limitations, was the best option out of the scenarios considered. Once we had $\delta_j$ for all species and samplings, we could calculate $B_j$.
+
+------------------------------------------------------------------------
+
+### Removing outliers from biomass at species level
+
+Outliers were removed from log-transformed $B_j$ using 1.5 IQR method to reduce noise that might have been accumulated across estimations.
+
+
+## Biomass at species level for samplings 0, 1 and 2
+
+The same way the novelty of the non-destructive method application led us to miss some data on $\delta_j$, also resulted on lacking all morphological information for samplings 0, 1 and 2. To overcome this problem, we fitted a linear model $lm(log(B_j) \sim log(abundance_j))$ for the log-transformed variables to ensure normality. All species but 3 presented a good fit to the model ($p-value < 0.01 $). However, $R^2$ was between `r round(min(lm_data$r_squared), 2)` and `r round(max(lm_data$r_squared), 2)` (Fig. j). We considered that having a higher number of species would greatly benefit the interpretation of the results for biomass at community level. Thus, we decided to take in all species considering $p-value$ despite the simplification it compromises. 
+
+
+
+```{r Regression of biomass~abundance results}
+
+print(results)
+
+```
+
+Figure j: Plot of $R^2$ in the x-axis and $p-value$ in y-axis. A dashed line is drawn in x = 0.01. 
+
+
+Since we log-transformed both variables, to estimate biomass $B$ for the species $j$, we applied the formula
+
+$$
+B_j = exp(a_j + b_j ·log(abundance_j))·exp({\frac{\sigma^2_j}{2}})
+$$
+
+where:\
+- $a$ and $b$ are the incercept and slope of the model,\
+- $\sigma^2$ is the variance of the residual errors in a log-transformed regression model,\
+- $exp({\frac{\sigma^2_j}{2}})$ is the smearing factor, which corrects the bias introduced by log-transforming a linear regression model and then back-transforming to the original scale. (**Introducir referencia: Duan 1983 ? )
+
+
+## Biomass at community level
+
+The total biomass of the community was calculated by summing the total biomass of each species ($j$), where ($\alpha$) is the total number of identified species in each plot.
+
+$$
+B = \sum_{j=1}^{\alpha} B_j
+$$
+
+
