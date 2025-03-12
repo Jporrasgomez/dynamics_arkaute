@@ -34,27 +34,25 @@ source(here::here("code", "1.first_script.R"))
 
 ## Biomass at species level
 
-
-
-To avoid confounding effects with the perturbation, biomass sampling was performed by following a non-destructive methodology described in Pottier and Jabot, 2017, which estimates herbaceous dry biomass (g) using allometric equations. To do this, we took three biometric measurements of the plant: height ($H$, from the rooting point to the highest green area), basal circumference ( $A_b$, at ground level), and half height circumference ($A_h$, at mid-height). These parameters express the minimum volume of the plant, which is defined as the space occupied by the aerial organs of each individual when extended along the plant's longitudinal axis [@pottier2017]. These were measured with a measuring tape for the height, and a caliber or flexible measuring tape for the areas, depending on the thickness of the plant. A maximum of five individuals per species, sampling and plot were measured. For the taxonomic groups that aggregate several species, 10 individuals were measured when there were morphologically distinguishable species. We define an individual as [@perronne2021]: a ramet or collection of clumped ramets with the highest degree of physiological integration.
+Due to the small size of our plots and the big amount of samplings and therefore to avoid confounding effects with the perturbation treatment, biomass had to be measured following a non-destructive methodology described in Pottier and Jabot, 2017, which estimates herbaceous dry biomass (g) using allometric equations. To do this, we took three biometric measurements of the plant: height ($H$, from the rooting point to the highest green area), basal circumference ( $A_b$, at ground level), and half height circumference ($A_h$, at mid-height). These parameters express the minimum volume of the plant, which is defined as the space occupied by the aerial organs of each individual when extended along the plant's longitudinal axis [@pottier2017]. These were measured with a measuring tape for the height, and a caliber or flexible measuring tape for the areas, depending on the thickness of the plant. A maximum of five individuals per species, sampling and plot were measured. For the taxonomic groups that aggregate several species, 10 individuals were measured when there were morphologically distinguishable species. We define an individual as [@perronne2021]: a ramet or collection of clumped ramets with the highest degree of physiological integration.
 
 The total biomass of the community was calculated following the steps described below:
 
 ------------------------------------------------------------------------
 
-### Estimation of biomass for the average individual 
+### Estimation of biomass for the average individual
 
-The biomass per individual is estimated using the general equation model proposed by [@perronne2021]. Let *j* be the species and *i* the individual, where ($i_j$ $\epsilon$ $[1, n_j]$):
+The biomass per individual is estimated using the general equation model proposed by [@perronne2021]. Let *j* be the species and *i* the individual, where ($i_j\epsilon[1, n_j]$):
 
 $$
-\bar{B_{i_{j}}} = 1.96 \left[{\frac{\bar{H_{i_{j}}}}{2}}(\bar{A_{bi_{j}}} + \bar{A_{hi_{j}}})\right]^{2/3}
+\overline{B_{i_{j}}} = 1.96 \left[{\frac{\overline{H_{i_{j}}}}{2}}(\overline{A_{bi_{j}}} + \overline{A_{hi_{j}}})\right]^{2/3}
 $$
 
 where:\
-- $\bar{B}$is the estimated biomass per average individual,\
-- $\bar{H}$ is the average maximum plant height,\
-- $\bar{A_b}$ is the mean basal area,\
-- $\bar{A_h}$ is the mean mid-height area.
+- $\overline{B}$is the estimated biomass per average individual,\
+- $\overline{H}$ is the average maximum plant height,\
+- $\overline{A_b}$ is the mean basal area,\
+- $\overline{A_h}$ is the mean mid-height area.
 
 The values 1.96 and $2/3$ are commonly used in allometric estimations. We performed sensitivity analysis for these coefficients and finally conveyed with the authors about using the same values.The model only fits to individuals between 5 and 200 cm, so all individuals beyond those thresholds had to be removed. This modification did not affect the pool of species of the experiment and it only meant the rejection of `r round(f_5_200/nrow(flora_medium)*100, 2)`% datapoints.
 
@@ -62,12 +60,11 @@ The values 1.96 and $2/3$ are commonly used in allometric estimations. We perfor
 
 ### Estimation of biomass at species level
 
-The biomass at species level ($B_j$) is calculated by multiplying $B_i$ by the total number of individuals per square meter ($\delta$) for the species $j$ present in a plot at a given sampling. 
+The biomass at species level ($B_j$) is calculated by multiplying $B_i$ by the total number of individuals per square meter ($\delta$) for the species $j$ present in a plot at a given sampling.
 
 $$
-B_j = \bar{B_{i_{j}}} \cdot \delta_j
+B_j = \overline{B_{i_{j}}} \cdot \delta_j
 $$
-
 
 However, we have `r round(perc_NA, 2)`% NAs for $\delta_j$ since it was not collected across all samplings due to the novelty of the non-destructive method. NAs are randomly distributed through plots and species, yet they are concentrated on the first sampling season.
 
@@ -145,12 +142,9 @@ After this discussion, we could finally go ahead with the imputation results. Fi
 
 Outliers were removed from log-transformed $B_j$ using 1.5 IQR method to reduce noise that might have been accumulated across estimations.
 
-
 ## Biomass at species level for samplings 0, 1 and 2
 
-The same way the novelty of the non-destructive method application led us to miss some data on $\delta_j$, also resulted on lacking all morphological information for samplings 0, 1 and 2. To overcome this problem, we fitted a linear model $lm(log(B_j) \sim log(abundance_j))$ for the log-transformed variables to ensure normality. All species but 3 presented a good fit to the model ($p-value < 0.01 $). However, $R^2$ was between `r round(min(lm_data$r_squared), 2)` and `r round(max(lm_data$r_squared), 2)` (Fig. j). We considered that having a higher number of species would greatly benefit the interpretation of the results for biomass at community level. Thus, we decided to take in all species considering $p-value$ despite the simplification it compromises. 
-
-
+The same way the novelty of the non-destructive method application led us to miss some data on $\delta_j$, also resulted on lacking all morphological information for samplings 0, 1 and 2. To overcome this problem, we fitted a linear model $lm(log(B_j) \sim log(abundance_j))$ for the log-transformed variables to ensure normality. All species but 3 presented a good fit to the model (\$p-value \< 0.01 \$). However, $R^2$ was between `r round(min(lm_data$r_squared), 2)` and `r round(max(lm_data$r_squared), 2)` (Fig. j). We considered that having a higher number of species would greatly benefit the interpretation of the results for biomass at community level. Thus, we decided to take in all species considering $p-value$ despite the simplification it compromises.
 
 ```{r Regression of biomass~abundance results}
 
@@ -158,8 +152,7 @@ print(results)
 
 ```
 
-Figure j: Plot of $R^2$ in the x-axis and $p-value$ in y-axis. A dashed line is drawn in x = 0.01. 
-
+Figure j: Plot of $R^2$ in the x-axis and $p-value$ in y-axis. A dashed line is drawn in x = 0.01.
 
 Since we log-transformed both variables, to estimate biomass $B$ for the species $j$, we applied the formula
 
@@ -170,8 +163,7 @@ $$
 where:\
 - $a$ and $b$ are the incercept and slope of the model,\
 - $\sigma^2$ is the variance of the residual errors in a log-transformed regression model,\
-- $exp({\frac{\sigma^2_j}{2}})$ is the smearing factor, which corrects the bias introduced by log-transforming a linear regression model and then back-transforming to the original scale. (**Introducir referencia: Duan 1983 ? )
-
+- $exp({\frac{\sigma^2_j}{2}})$ is the smearing factor, which corrects the bias introduced by log-transforming a linear regression model and then back-transforming to the original scale. (\*\*Introducir referencia: Duan 1983 ? )
 
 ## Biomass at community level
 
@@ -180,5 +172,3 @@ The total biomass of the community was calculated by summing the total biomass o
 $$
 B = \sum_{j=1}^{\alpha} B_j
 $$
-
-

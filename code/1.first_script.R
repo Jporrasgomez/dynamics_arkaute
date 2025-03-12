@@ -319,8 +319,8 @@ biomass_noimp <- bind_rows(biomass_noimp, dummy_rows) %>%
          richness, biomass_s, biomass_community, abundance_community)
 
 flora_abrich <- bind_rows(flora_abrich, dummy_rows)%>% 
-  select(year, date, sampling, treatment, plot, code, abundance,
-         richness, abundance_community)
+  select(year, date, sampling, treatment, plot, code, family,  genus_level, species_level, abundance,
+         richness, abundance_community, code)
 
 
 

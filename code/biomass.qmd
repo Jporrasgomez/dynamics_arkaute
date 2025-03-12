@@ -168,7 +168,7 @@ f_5_200 <- flora_medium %>%
 #There is no loss of species by taking out individuals with height > 5 cm
 ```
 
-To avoid confounding effects with the perturbation, biomass sampling was performed by following a non-destructive methodology described in Pottier and Jabot, 2017, which estimates herbaceous dry biomass (g) using allometric equations. To do this, we took three biometric measurements of the plant: height ($H$, from the rooting point to the highest green area), basal circumference ( $A_b$, at ground level), and half height circumference ($A_h$, at mid-height). These parameters express the minimum volume of the plant, which is defined as the space occupied by the aerial organs of each individual when extended along the plant's longitudinal axis [@pottier2017]. These were measured with a measuring tape for the height, and a caliber or flexible measuring tape for the areas, depending on the thickness of the plant. A maximum of five individuals per species, sampling and plot were measured. For the taxonomic groups that aggregate several species, 10 individuals were measured when there were morphologically distinguishable species. We define an individual as [@perronne2021]: a ramet or collection of clumped ramets with the highest degree of physiological integration.
+Due to the small size of our plots and the big amount of samplings and therefore to avoid confounding effects with the perturbation treatment, biomass sampling was performed by following a non-destructive methodology described in Pottier and Jabot, 2017, which estimates herbaceous dry biomass (g) using allometric equations. To do this, we took three biometric measurements of the plant: height ($H$, from the rooting point to the highest green area), basal circumference ( $A_b$, at ground level), and half height circumference ($A_h$, at mid-height). These parameters express the minimum volume of the plant, which is defined as the space occupied by the aerial organs of each individual when extended along the plant's longitudinal axis [@pottier2017]. These were measured with a measuring tape for the height, and a caliber or flexible measuring tape for the areas, depending on the thickness of the plant. A maximum of five individuals per species, sampling and plot were measured. For the taxonomic groups that aggregate several species, 10 individuals were measured when there were morphologically distinguishable species. We define an individual as [@perronne2021]: a ramet or collection of clumped ramets with the highest degree of physiological integration.
 
 The total biomass of the community was calculated following the steps described below:
 
@@ -176,7 +176,7 @@ The total biomass of the community was calculated following the steps described 
 
 ### Estimation of biomass for the average individual 
 
-The biomass per individual is estimated using the general equation model proposed by [@perronne2021]. Let *j* be the species and *i* the individual, where ($i_j$ $\epsilon$ $[1, n_j]$):
+The biomass per individual is estimated using the general equation model proposed by [@perronne2021]. Let $j$ be the species and $i$ the individual, where ($i_j\epsilon[1, n_j]$):
 
 $$
 \bar{B_{i_{j}}} = 1.96 \left[{\frac{\bar{H_{i_{j}}}}{2}}(\bar{A_{bi_{j}}} + \bar{A_{hi_{j}}})\right]^{2/3}
@@ -324,7 +324,7 @@ print(biomass %>%
 # MICE #####
 ```
 
-We used the *mice* package in R to address missing values of $\delta_j$, which performs multiple imputation by iteratively predicting missing values of $\delta_j$ using a Random Forest model trained on a set of chosen variables. In our case we used the variables year, sampling, plot, treatment, species, species family, richness, abundance at species level, total abundance, mean $H$, mean $A_h$, mean $A_b$ and $B_i$. Specifically, we generated 10 imputed datasets (ie. 10 possible values to fill NA) and run 300 iterations to ensure convergence. The results can be observed in the following figure, where blue dots represent the original values, and the red dots represents the values that have been produced by the model to fill the gaps.
+We used the *mice* package in R to address missing values of $\delta_j$, which performs multiple imputation by iteratively predicting missing values of $\delta_j$ using a Random Forest model trained on a set of chosen variables. In our case we used the variables year, sampling, plot, treatment, species, species family, richness, abundance at species level, community abundance, mean $H$, mean $A_h$, mean $A_b$ and $B_i$. Specifically, we generated 10 imputed datasets (ie. 10 possible values to fill NA) and run 300 iterations to ensure convergence. The results can be observed in the following figure, where blue dots represent the original values, and the red dots represents the values that have been produced by the model to fill the gaps.
 
 ```{r MICE}
 
@@ -363,7 +363,7 @@ imputed_db$label_imputation <- ifelse(is.na(biomass$nind_m2), 1, 0)
 
 ```
 
-To ensure that the imputation was accurate enough, we needed to check stability and reliability.
+To ensure that the imputation was accurate enough, we needed to check stability and reliability of the model. 
 
 -   **Stability** The stability of the of the imputed data was assessed by first, checking that the distribution of the imputed values followed the same distribution as the original data (Figures x and y), and second, by calculating the coefficient of variation, which presented an aggregate mean for the ten possible values iterated by the model of `r round(mean(imputed_db$CV),2)` $\pm$ `r round(sd(imputed_db$CV), 2)`(Figure z)
 

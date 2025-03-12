@@ -8,7 +8,7 @@
 rm(list = ls(all.names = TRUE))
 pacman::p_load(dplyr, tidyverse, DT, viridis, ggrepel, codyn, vegan, eulerr, ggplot2, ggthemes, ggpubr, ggforce )
 
-source("code/1.first_script.R")
+source("code/1.first_script.R"); rm(list = setdiff(ls(), c("flora_abrich", "biomass_imp", "biomass_noimp")))
 
 theme_set(theme_bw() +
             theme(
@@ -19,8 +19,8 @@ theme_set(theme_bw() +
                   text = element_text(size = 11)))
 
 
-species_ab <-  summarise(group_by(flora_abrich, date, month, code, sampling, treatment, family,  genus_level, species_level),
-                         abundance = mean(abundance_s, na.rm = T)) #mean abundance of species per treatment and sampling  
+species_ab <-  summarise(group_by(flora_abrich, date, code, sampling, treatment, family,  genus_level, species_level),
+                         abundance = mean(abundance, na.rm = T)) #mean abundance of species per treatment and sampling  
 
 
 totals_df <- summarise(group_by(species_ab, sampling, treatment), #adding number of species per treatment and sampling to species_ab
@@ -227,8 +227,8 @@ ggplot(pcoa_df, aes(x = PC1, y = PC2, color = treatment)) +
 sp_wide_treat <- flora %>%
   pivot_wider(id_cols = c(plot, treatment, sampling),
               names_from = code,
-              values_from = abundance_s,
-              values_fill = list(abundance_s = 0))
+              values_from = abundance,
+              values_fill = list(abundance = 0))
 
 # create a distance matrix using Hellinger distances
 abundance_data_treat <- sp_wide_treat %>% select(-treatment, -sampling, -plot)
@@ -284,8 +284,8 @@ for (i in 1:length(samps)){
   list2[[count]] <-  subset(flora_abrich, sampling == samps[i]) %>%
     pivot_wider(id_cols = c(plot, treatment, sampling),
                 names_from = code,
-                values_from = abundance_s,
-                values_fill = list(abundance_s = 0))
+                values_from = abundance,
+                values_fill = list(abundance = 0))
   
   
   abundance_data <- list2[[count]] %>% select(-treatment, -plot, -sampling)
