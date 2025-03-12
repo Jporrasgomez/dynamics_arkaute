@@ -1,4 +1,7 @@
 
+# probar con log(abundance) u otras transformaciones 
+
+
 
 rm(list = ls(all.names = TRUE))
 pacman::p_load(dplyr, tidyverse, DT, viridis, ggrepel, codyn, vegan, eulerr, ggplot2, ggthemes, ggpubr, ggforce )
@@ -21,6 +24,7 @@ species_ab_plot <- flora_abrich %>%
   select(date, code, sampling, plot, treatment, family, genus_level, species_level, abundance)
 
 
+# Here there is a problem: the total abundance per sampling and treatment is sometimes higher than 200%
 totals_df <- summarise(group_by(species_ab, sampling, treatment), #adding number of species per treatment and sampling to species_ab
                        n_species = n_distinct(code),
                        total_abundance = sum(abundance))
@@ -31,13 +35,24 @@ species_ab <- merge(species_ab, totals_df)
 
 
 
+hist(species_ab$abundance)
+hist(log(species_ab$abundance))
+hist(sqrt(species_ab$abundance))
+hist((species_ab$abundance))
+
+
+
+
 species_ab <- species_ab %>% 
   filter(!(sampling == "1" & treatment %in% c("p", "wp")))
+
+
 
 treats <- unique(flora_abrich$treatment)
 
 list1 <- list()
 gglist1 <- list()
+gglist2 <- list()
 count = 0
 
 for(i in 1:length(treats)){
@@ -53,6 +68,9 @@ for(i in 1:length(treats)){
                 values_fill = list(abundance = 0)) %>% 
     column_to_rownames(var = "sampling") %>% 
     arrange(as.numeric(rownames(.)))
+  
+  
+  #Relative abundance
   
   # Perform NMDS using Bray-Curtis distance
   nmds_res <- metaMDS(sp_wide, distance = "bray", k = 3, trymax = 250, maxit = 999) 
@@ -87,6 +105,45 @@ for(i in 1:length(treats)){
          x = "NMDS1",
          y = "NMDS2")
   
+  #the same but for PRESENCE-ABSENCE
+  
+  sp_wide_pa <- sp_wide %>% 
+    mutate_all(~ ifelse(. > 0, 1, 0))
+  
+  # Perform NMDS using Bray-Curtis distance
+  nmds_res <- metaMDS(sp_wide_pa, distance = "bray", k = 3, trymax = 250, maxit = 999) 
+  
+  # Extract NMDS sample scores
+  nmds_samples <- as.data.frame(scores(nmds_res, display = "sites"))
+  
+  # Extract NMDS species scores (optional)
+  nmds_species <- as.data.frame(scores(nmds_res, display = "species"))
+  
+  gglist2[[count]] <- ggplot() +
+    geom_text_repel(data = nmds_species %>% 
+                      rownames_to_column(var = "sp"),
+                    aes(x = NMDS1, y = NMDS2, label = sp),
+                    color = "grey",
+                    max.overlaps = 30) +
+    geom_point(data = nmds_samples %>% 
+                 rownames_to_column(var = "sampling"),
+               aes(x = NMDS1, y = NMDS2),
+               size = 1.5) +
+    geom_text_repel(data = nmds_samples %>% 
+                      rownames_to_column(var = "sampling"),
+                    aes(x = NMDS1, y = NMDS2, label = sampling),
+                    max.overlaps = 9) +
+    geom_path(data = nmds_samples %>% 
+                rownames_to_column(var = "sampling"),
+              aes(x = NMDS1, y = NMDS2)) +
+    geom_hline(aes(yintercept = 0), color = "gray52", linetype = "dashed") +
+    geom_vline(aes(xintercept = 0), color = "gray52", linetype = "dashed") +
+    labs(title = paste("NMDS using Bray-Curtis:", treats[i], sep = " "),
+         subtitle = paste0("Stress = ", round(nmds_res$stress, 3)),
+         x = "NMDS1",
+         y = "NMDS2")
+  
+  
 }
 
 
@@ -96,6 +153,15 @@ ggarrange(
   gglist1[[3]],
   gglist1[[4]], 
   ncol = 2, nrow = 2)
+
+ggarrange(
+  gglist2[[2]],
+  gglist2[[1]],
+  gglist2[[3]],
+  gglist2[[4]], 
+  ncol = 2, nrow = 2)
+
+
 
 
 
@@ -115,15 +181,17 @@ ggarrange(
 #0.05 - 0.1 is good (can be confident in inferences from plot).
 #Less than 0.05 is excellent (this can be rare).
 
+#
+##Transformar log(abundance) ? 
+#species_ab <- species_ab %>% 
+#  mutate(log_abundance = log(abundance), na.rm = T)
 
-
-
-
-sp_wide <- species_ab %>%
+{sp_wide <- species_ab %>%
   pivot_wider(id_cols = c(sampling, treatment),
               names_from = code,
               values_from = abundance,
-              values_fill = list(abundance = 0))
+              values_fill = list(abundance = 0)) 
+  
 
 # create a distance matrix using Hellinger distances
 abundance_data <- sp_wide %>% select(-treatment, -sampling)
@@ -148,7 +216,7 @@ nmds_df <- nmds_df %>% arrange(sampling)
 # Plot NMDS results using ggplot
 ggnmds_alltreatments <- ggplot(nmds_df, aes(x = NMDS1, y = NMDS2, color = treatment)) +
   stat_ellipse(geom = "polygon", aes(fill = treatment),
-               alpha = 0.1, show.legend = FALSE, level = 0.9) + 
+               alpha = 0.1, show.legend = FALSE, level = 0.68) + 
   geom_point(size = 1.5) +
   geom_text_repel(aes(label = sampling), max.overlaps = 100, size = 3, show.legend = F) +
   geom_hline(yintercept = 0, color = "gray52", linetype = "dashed") +
@@ -160,7 +228,7 @@ ggnmds_alltreatments <- ggplot(nmds_df, aes(x = NMDS1, y = NMDS2, color = treatm
        subtitle = paste0("Stress = ", round(nmds_bc$stress, 3)),
        x = "NMDS1", y = "NMDS2", color = "Treatment")
 # Print the plot
-print(ggnmds_alltreatments)
+print(ggnmds_alltreatments)}
 
 ggplot(nmds_df, aes(x = sampling, y = NMDS1, color = treatment)) +
 facet_wrap(~ treatment, ncol = 4, nrow = 1) +
@@ -176,6 +244,46 @@ ggplot(nmds_df, aes(x = sampling, y = NMDS2, color = treatment)) +
 
 
 
+#PRESENCE-ABSENCE
+
+
+# create a distance matrix using Hellinger distances
+{abundance_data_pa <- abundance_data %>% 
+  mutate_all(~(ifelse(. > 0, 1, 0)))
+
+# Compute Bray-Curtis distance matrix
+distance_matrix_bc <- vegan::vegdist(abundance_data_pa, method = "bray")
+
+# Run NMDS (2 dimensions, 100 tries)
+nmds_bc <- metaMDS(distance_matrix_bc, k = 3, trymax = 250, maxit = 999)
+
+# Extract NMDS coordinates
+nmds_df <- data.frame(
+  NMDS1 = nmds_bc$points[, 1],
+  NMDS2 = nmds_bc$points[, 2],
+  treatment = sp_wide$treatment,
+  sampling = sp_wide$sampling
+)
+
+# Arrange by sampling order
+nmds_df <- nmds_df %>% arrange(sampling)
+
+# Plot NMDS results using ggplot
+ggnmds_alltreatments <- ggplot(nmds_df, aes(x = NMDS1, y = NMDS2, color = treatment)) +
+  stat_ellipse(geom = "polygon", aes(fill = treatment),
+               alpha = 0.1, show.legend = FALSE, level = 0.68) + 
+  geom_point(size = 1.5) +
+  geom_text_repel(aes(label = sampling), max.overlaps = 100, size = 3, show.legend = F) +
+  geom_hline(yintercept = 0, color = "gray52", linetype = "dashed") +
+  geom_path(aes(group = treatment), linetype = "dotted", alpha = 0.8) +
+  geom_vline(xintercept = 0, color = "gray52", linetype = "dashed") +
+  scale_colour_manual(values = c("c" = "#48A597", "w" = "#D94E47", "p" = "#3A7CA5", "wp" = "#6D4C7D")) +
+  scale_fill_manual(values = c("c" = "#48A597", "w" = "#D94E47", "p" = "#3A7CA5", "wp" = "#6D4C7D")) +
+  labs(title = "NMDS using Bray-Curtis distance",
+       subtitle = paste0("Stress = ", round(nmds_bc$stress, 3)),
+       x = "NMDS1", y = "NMDS2", color = "Treatment")
+# Print the plot
+print(ggnmds_alltreatments)}
 
 
 
@@ -221,6 +329,7 @@ nmds_df_plot <- nmds_df_plot %>%
   ungroup()
 
 
+hist(nmds_df_plot$NMDS1, breaks = 50)
 
 ggplot(nmds_df_plot,
       aes(x = date, y =  NMDS1)) + 
@@ -264,6 +373,8 @@ ggplot(nmds_df_plot, aes(y = NMDS1, x = treatment)) +
         panel.background = element_rect(fill = NA, colour = NA), # Transparent background
         plot.background = element_rect(fill = NA, colour = NA))
 
+
+hist(nmds_df_plot$NMDS2, breaks = 50)
 
 ggplot(nmds_df_plot,
        aes(x = date, y =  NMDS2)) + 

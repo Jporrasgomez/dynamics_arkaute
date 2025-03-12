@@ -23,6 +23,7 @@ species_ab <-  summarise(group_by(flora_abrich, date, code, sampling, treatment,
                          abundance = mean(abundance, na.rm = T)) #mean abundance of species per treatment and sampling  
 
 
+
 totals_df <- summarise(group_by(species_ab, sampling, treatment), #adding number of species per treatment and sampling to species_ab
                        n_species = n_distinct(code),
                        total_abundance = sum(abundance))
