@@ -168,7 +168,7 @@ f_5_200 <- flora_medium %>%
 #There is no loss of species by taking out individuals with height > 5 cm
 ```
 
-Due to the small size of our plots and the big amount of samplings and therefore to avoid confounding effects with the perturbation treatment, biomass sampling was performed by following a non-destructive methodology described in Pottier and Jabot, 2017, which estimates herbaceous dry biomass (g) using allometric equations. To do this, we took three biometric measurements of the plant: height ($H$, from the rooting point to the highest green area), basal circumference ( $A_b$, at ground level), and half height circumference ($A_h$, at mid-height). These parameters express the minimum volume of the plant, which is defined as the space occupied by the aerial organs of each individual when extended along the plant's longitudinal axis [@pottier2017]. These were measured with a measuring tape for the height, and a caliber or flexible measuring tape for the areas, depending on the thickness of the plant. A maximum of five individuals per species, sampling and plot were measured. For the taxonomic groups that aggregate several species, 10 individuals were measured when there were morphologically distinguishable species. We define an individual as [@perronne2021]: a ramet or collection of clumped ramets with the highest degree of physiological integration.
+Due to the small size of our plots and the big amount of samplings, biomass sampling was performed by following a non-destructive methodology described in Pottier and Jabot, 2017, which estimates herbaceous dry biomass (g) using allometric equations. To do this, we took three biometric measurements of the plant: height ($H$, from the rooting point to the highest green area), basal circumference ( $A_b$, at ground level), and half height circumference ($A_h$, at mid-height). These parameters express the minimum volume of the plant, which is defined as the space occupied by the aerial organs of each individual when extended along the plant's longitudinal axis [@pottier2017]. These were measured with a measuring tape for the height, and a caliber or flexible measuring tape for the areas, depending on the thickness of the plant. A maximum of five individuals per species, sampling and plot were measured. For the taxonomic groups that aggregate several species, 10 individuals were measured when there were morphologically distinguishable species. We define an individual as [@perronne2021]: a ramet or collection of clumped ramets with the highest degree of physiological integration.
 
 The total biomass of the community was calculated following the steps described below:
 
@@ -179,16 +179,16 @@ The total biomass of the community was calculated following the steps described 
 The biomass per individual is estimated using the general equation model proposed by [@perronne2021]. Let $j$ be the species and $i$ the individual, where ($i_j\epsilon[1, n_j]$):
 
 $$
-\bar{B_{i_{j}}} = 1.96 \left[{\frac{\bar{H_{i_{j}}}}{2}}(\bar{A_{bi_{j}}} + \bar{A_{hi_{j}}})\right]^{2/3}
+\overline{B_{i_{j}}} = 1.96 \left[{\frac{\overline{H_{i_{j}}}}{2}}(\overline{A_{bi_{j}}} + \overline{A_{hi_{j}}})\right]^{2/3}
 $$
 
 
 
 where:\
-- $\bar{B}$is the estimated biomass per average individual,\
-- $\bar{H}$ is the average maximum plant height,\
-- $\bar{A_b}$ is the mean basal area,\
-- $\bar{A_h}$ is the mean mid-height area.
+- $\overline{B}$is the estimated biomass per average individual,\
+- $\overline{H}$ is the average maximum plant height,\
+- $\overline{A_b}$ is the mean basal area,\
+- $\overline{A_h}$ is the mean mid-height area.
 
 The values 1.96 and $2/3$ are commonly used in allometric estimations. We performed sensitivity analysis for these coefficients and finally conveyed with the authors about using the same values.The model only fits to individuals between 5 and 200 cm, so all individuals beyond those thresholds had to be removed. This modification did not affect the pool of species of the experiment and it only meant the rejection of `r round(f_5_200/nrow(flora_medium)*100, 2)`% datapoints.
 
@@ -199,7 +199,7 @@ The values 1.96 and $2/3$ are commonly used in allometric estimations. We perfor
 The biomass at species level ($B_j$) is calculated by multiplying $B_i$ by the total number of individuals per square meter ($\delta$) for the species $j$ present in a plot at a given sampling. 
 
 $$
-B_j = \bar{B_{i_{j}}} \cdot \delta_j
+B_j = \overline{B_{i_{j}}} \cdot \delta_j
 $$
 
 ```{r Collecting information for number of individuals}
