@@ -17,6 +17,19 @@ theme_set(theme_bw() +
               strip.text = element_text(face = "bold"),
               text = element_text(size = 11)))
 
+palette1 <- c("c" = "#5AC9A5", "w" = "#E56B57", "p" = "#4A92CF", "wp" = "#87528C")
+palette2 <- c("c" = "#48A597", "w" = "#D94E47", "p" = "#4A92CF", "wp" = "#87528C")
+palette3 <- c("c" = "#1F8A8C", "w" = "#D93232", "p" = "#F4A300", "wp" = "#3A3A3A")
+palette4 <- c("c" = "#1F8A8C", "w" = "#D93232", "p" = "#4A92CF", "wp" = "#3A3A3A")
+
+labels1 <- c("c" = "Control", "w" = "Warming", "p" = "Perturbation", "wp" = "Combined")
+labels2 <- c("c" = "C", "w" = "W", "p" = "P", "wp" = "W+P")
+
+point_shapes <- c("c" = 16, "w" = 17, "p" = 15, "wp" = 18)
+
+
+
+
 
 species_ab <-  summarise(group_by(flora_abrich, date, code, sampling, treatment, family,  genus_level, species_level),
                          abundance = mean(abundance, na.rm = T)) #mean abundance of species per treatment and sampling  
@@ -32,13 +45,6 @@ totals_df <- summarise(group_by(species_ab, sampling, treatment), #adding number
 
 
 species_ab <- merge(species_ab, totals_df)
-
-
-
-
-hist(species_ab$abundance)
-hist(log(species_ab$abundance))
-hist(sqrt(species_ab$abundance))
 
 
 
@@ -119,9 +125,6 @@ for(i in 1:length(treats)){
   ncol = 2, nrow = 2)
 
 
-
-
-
 #https://rpubs.com/CPEL/NMDS
 #We will do so using the metaMDS function. When running an NMDS you will have to identify your distance matrix
 #(island.spp_distmat), your distance metric which should match the distance metric from your distance matrix 
@@ -138,10 +141,7 @@ for(i in 1:length(treats)){
 #0.05 - 0.1 is good (can be confident in inferences from plot).
 #Less than 0.05 is excellent (this can be rare).
 
-#
-##Transformar log(abundance) ? 
-#species_ab <- species_ab %>% 
-#  mutate(log_abundance = log(abundance), na.rm = T)
+
 
 sp_wide <- species_ab %>%
   pivot_wider(id_cols = c(sampling, date, treatment),
@@ -181,13 +181,40 @@ nmds_df <- nmds_df %>% arrange(sampling)
   geom_hline(yintercept = 0, color = "gray52", linetype = "dashed") +
   geom_path(aes(group = treatment), linetype = "dotted", alpha = 0.8) +
   geom_vline(xintercept = 0, color = "gray52", linetype = "dashed") +
-  scale_colour_manual(values = c("c" = "#48A597", "w" = "#D94E47", "p" = "#3A7CA5", "wp" = "#6D4C7D")) +
-  scale_fill_manual(values = c("c" = "#48A597", "w" = "#D94E47", "p" = "#3A7CA5", "wp" = "#6D4C7D")) +
+  scale_color_manual(values = palette2, labels = labels1, guide = "legend") +
+  scale_fill_manual(values = palette2, guide = "none" ) +
+  scale_shape_manual(values = point_shapes, guide = "none") +
   labs(title = "NMDS Bray-Curtis: mean abundance of species at sampling level",
        subtitle = paste0("Stress = ", round(nmds_bc$stress, 3)),
        x = "NMDS1", y = "NMDS2", color = "Treatment")
 # Print the plot
 print(ggnmds_alltreatments)}
+
+
+
+# Chat gpt:
+
+##| Unlike Principal Coordinate Analysis (PCoA) or Principal Component Analysis (PCA),
+##| where each axis has an explained variance, Non-Metric Multidimensional Scaling (NMDS)
+##| does not provide a direct percentage of variance explained per axis. 
+##| However, you can estimate how much each NMDS axis contributes to the representation of 
+##| the distances by using the correlation between the NMDS axes and the original distance matrix.
+##| You can calculate the squared correlation (R²) between the original distance matrix and each NMDS axis.
+##|  This gives you an approximation of how well each axis represents the distances.
+
+cor1 <- cor(distance_matrix_bc, dist(nmds_bc$points[,1]), method = "pearson") 
+cor2 <- cor(distance_matrix_bc, dist(nmds_bc$points[,2]), method = "pearson") 
+
+# Compute percentage explained by each axis
+explained_NMDS1 <- cor1^2 / (cor1^2 + cor2^2) * 100
+explained_NMDS2 <- cor2^2 / (cor1^2 + cor2^2) * 100
+
+# Print results
+cat("NMDS1 explains:", round(explained_NMDS1, 2), "%\n")
+cat("NMDS2 explains:", round(explained_NMDS2, 2), "%\n")
+
+
+
 
 ggplot(nmds_df, aes(x = date, y = NMDS1, color = treatment, fill = treatment)) +
   geom_point(show.legend = TRUE) + 
@@ -196,11 +223,13 @@ ggplot(nmds_df, aes(x = date, y = NMDS1, color = treatment, fill = treatment)) +
     method = "loess", span = 0.9, alpha = 0.1, show.legend = TRUE
   )+
   geom_path(aes(group = treatment), show.legend = FALSE) +
-  scale_color_manual(values = c("c" = "#48A597", "w" = "#D94E47", "p" = "#3A7CA5", "wp" = "#6D4C7D")) +
-  scale_fill_manual(values = c("c" = "#48A597", "w" = "#D94E47", "p" = "#3A7CA5", "wp" = "#6D4C7D"), guide = "none") +
+  scale_color_manual(values = palette2) +
+  scale_fill_manual(values = palette2, guide = "none") +
   labs(title = "NMDS1 Bray-Curtis: mean abundance at sampling level ",
        subtitle = paste0("Stress = ", round(nmds_bc$stress, 3)),
        x = "Date", y = "NMDS1", color = "Treatment")
+
+
 
 ggplot(nmds_df, aes(x = date, y = NMDS2, color = treatment, fill = treatment)) +
   geom_point(show.legend = TRUE) +  # Hide extra legend from points
@@ -209,8 +238,8 @@ ggplot(nmds_df, aes(x = date, y = NMDS2, color = treatment, fill = treatment)) +
     method = "loess", span = 0.9, alpha = 0.1, show.legend = TRUE # Keep one legend
   ) +
   geom_path(aes(group = treatment), show.legend = FALSE) + # Hide extra legend from paths
-  scale_color_manual(values = c("c" = "#48A597", "w" = "#D94E47", "p" = "#3A7CA5", "wp" = "#6D4C7D")) +
-  scale_fill_manual(values = c("c" = "#48A597", "w" = "#D94E47", "p" = "#3A7CA5", "wp" = "#6D4C7D"), guide = "none") +  # Hide fill legend
+  scale_color_manual(values = palette2) +
+  scale_fill_manual(values = palette2, guide = "none") +  # Hide fill legend
   labs(title = "NMDS1 Bray-Curtis: mean abundance at sampling level ",
        subtitle = paste0("Stress = ", round(nmds_bc$stress, 3)),
        x = "Date", y = "NMDS2", color = "Treatment")
@@ -271,16 +300,43 @@ nmds_df_plot <- nmds_df_plot %>%
 
 
 
+
+cor1 <- cor(distance_matrix_bc_plot, dist(nmds_bc_plot$points[,1]), method = "pearson")
+cor2 <- cor(distance_matrix_bc_plot, dist(nmds_bc_plot$points[,2]), method = "pearson")
+cor3 <- cor(distance_matrix_bc_plot, dist(nmds_bc_plot$points[,3]), method = "pearson")
+
+# Convert to R² values (proportion of variation explained)
+r2_1 <- cor1^2
+r2_2 <- cor2^2
+r2_3 <- cor3^2
+
+# Compute percentage explained by each axis
+total_r2 <- r2_1 + r2_2 + r2_3
+
+explained_NMDS1 <- (r2_1 / total_r2) * 100
+explained_NMDS2 <- (r2_2 / total_r2) * 100
+explained_NMDS3 <- (r2_3 / total_r2) * 100
+
+# Print results
+explained_NMDS1
+explained_NMDS2
+explained_NMDS3
+
+
+
+
+
+
 {ggnmds_allplots_12<- ggplot(nmds_df_plot, aes(x = NMDS1, y = NMDS2, color = treatment)) +
   stat_ellipse(geom = "polygon", aes(fill = treatment),
                alpha = 0.1, show.legend = FALSE, level = 0.9) + 
-  geom_point(size = 1.5) +
+  geom_point(size = 1.5, aes(shape= treatment)) +
   #geom_text_repel(aes(label = paste0(sampling, "," ,plot)), max.overlaps = 100, size = 3, show.legend = F) +
   geom_hline(yintercept = 0, color = "gray52", linetype = "dashed") +
   #geom_path(aes(group = treatment), linetype = "dotted", alpha = 0.8) +
   geom_vline(xintercept = 0, color = "gray52", linetype = "dashed") +
-  scale_colour_manual(values = c("c" = "#48A597", "w" = "#D94E47", "p" = "#3A7CA5", "wp" = "#6D4C7D")) +
-  scale_fill_manual(values = c("c" = "#48A597", "w" = "#D94E47", "p" = "#3A7CA5", "wp" = "#6D4C7D")) +
+  scale_colour_manual(values = palette2) +
+  scale_fill_manual(values = palette2) +
   labs(title = "NMDS Bray-Curtis: abundance of species at plot level",
        subtitle = paste0("Stress = ", round(nmds_bc_plot$stress, 3)),
        x = "NMDS1", y = "NMDS2", color = "Treatment")
@@ -295,8 +351,8 @@ print(ggnmds_allplots_12)}
   geom_hline(yintercept = 0, color = "gray52", linetype = "dashed") +
   #geom_path(aes(group = treatment), linetype = "dotted", alpha = 0.8) +
   geom_vline(xintercept = 0, color = "gray52", linetype = "dashed") +
-  scale_colour_manual(values = c("c" = "#48A597", "w" = "#D94E47", "p" = "#3A7CA5", "wp" = "#6D4C7D")) +
-  scale_fill_manual(values = c("c" = "#48A597", "w" = "#D94E47", "p" = "#3A7CA5", "wp" = "#6D4C7D")) +
+  scale_colour_manual(values = palette2) +
+  scale_fill_manual(values = palette2) +
   labs(title = "NMDS Bray-Curtis: abundance of species at plot level",
        subtitle = paste0("Stress = ", round(nmds_bc_plot$stress, 3)),
        x = "NMDS1", y = "NMDS3", color = "Treatment")
@@ -312,8 +368,8 @@ print(ggnmds_allplots_13)}
   geom_hline(yintercept = 0, color = "gray52", linetype = "dashed") +
   #geom_path(aes(group = treatment), linetype = "dotted", alpha = 0.8) +
   geom_vline(xintercept = 0, color = "gray52", linetype = "dashed") +
-  scale_colour_manual(values = c("c" = "#48A597", "w" = "#D94E47", "p" = "#3A7CA5", "wp" = "#6D4C7D")) +
-  scale_fill_manual(values = c("c" = "#48A597", "w" = "#D94E47", "p" = "#3A7CA5", "wp" = "#6D4C7D")) +
+  scale_colour_manual(values = palette2) +
+  scale_fill_manual(values = palette2) +
   labs(title = "NMDS Bray-Curtis: abundance of species at plot level",
        subtitle = paste0("Stress = ", round(nmds_bc_plot$stress, 3)),
        x = "NMDS2", y = "NMDS3", color = "Treatment")
@@ -341,9 +397,9 @@ ggplot(nmds_df_plot,
   geom_point(aes(x = date, y = mean_NMDS1, color = treatment), fill = "white", 
              shape = 21, size = 2, position = position_dodge(width = 8))+
   
-  scale_colour_manual(values = c("c" = "#48A597", "w" = "#D94E47", "p" = "#3A7CA5", "wp" = "#6D4C7D")) +
+  scale_colour_manual(values = palette2) +
   
-  scale_fill_manual(values = c("c" = "#48A597", "w" = "#D94E47", "p" = "#3A7CA5", "wp" = "#6D4C7D")) +
+  scale_fill_manual(values = palette2) +
   
   scale_x_date(
     date_breaks = "4 weeks", # Specify the interval (e.g., every 2 weeks)
@@ -357,9 +413,10 @@ ggplot(nmds_df_plot,
   
   labs(y = "NMDS1", x = NULL) #
 
+
 ggplot(nmds_df_plot, aes(y = NMDS1, x = treatment)) +
   geom_boxplot(aes(fill = treatment), color = "black", alpha = 0.5) + # Set the outline color to black
-  scale_fill_manual(values = c("c" = "#48A597", "w" = "#D94E47", "p" = "#3A7CA5", "wp" = "#6D4C7D")) +
+  scale_fill_manual(values = palette2) +
   theme(legend.position = "none",
         axis.text.x = element_blank(), axis.text.y = element_blank(),
         panel.background = element_rect(fill = NA, colour = NA), # Transparent background
@@ -386,9 +443,9 @@ ggplot(nmds_df_plot,
   geom_point(aes(x = date, y = mean_NMDS2, color = treatment), fill = "white", 
              shape = 21, size = 2, position = position_dodge(width = 8))+
   
-  scale_colour_manual(values = c("c" = "#48A597", "w" = "#D94E47", "p" = "#3A7CA5", "wp" = "#6D4C7D")) +
+  scale_colour_manual(values = palette2) +
   
-  scale_fill_manual(values = c("c" = "#48A597", "w" = "#D94E47", "p" = "#3A7CA5", "wp" = "#6D4C7D")) +
+  scale_fill_manual(values = palette2) +
   
   scale_x_date(
     date_breaks = "4 weeks", # Specify the interval (e.g., every 2 weeks)
@@ -396,7 +453,7 @@ ggplot(nmds_df_plot,
   ) +
   
   geom_vline(xintercept = as.Date("2023-05-11"), linetype = "dashed", color = "gray40") +
-  
+ji9  
   theme(axis.text.x = element_text(angle = 45, hjust = 1), legend.position = "none",
   ) +
   
@@ -405,7 +462,7 @@ ggplot(nmds_df_plot,
 
 ggplot(nmds_df_plot, aes(y = NMDS2, x = treatment)) +
   geom_boxplot(aes(fill = treatment), color = "black", alpha = 0.5) + # Set the outline color to black
-  scale_fill_manual(values = c("c" = "#48A597", "w" = "#D94E47", "p" = "#3A7CA5", "wp" = "#6D4C7D")) +
+  scale_fill_manual(values = palette2) +
   theme(legend.position = "none",
         axis.text.x = element_blank(), axis.text.y = element_blank(),
         panel.background = element_rect(fill = NA, colour = NA), # Transparent background
@@ -426,16 +483,16 @@ ggplot(nmds_df_plot,
   geom_point(aes(color = treatment),
              alpha = 0.5, position = position_dodge(width = 8)) +
   
-  geom_errorbar(aes(ymax = mean_NMDS2 + sd_NMDS2, ymin = mean_NMDS2 - sd_NMDS2, color = treatment),
+  geom_errorbar(aes(ymax = mean_NMDS3 + sd_NMDS3, ymin = mean_NMDS3 - sd_NMDS3, color = treatment),
                 , alpha = 0.2, position = position_dodge(width = 8)) + 
   #geom_line(aes(x = date, y = mean_NMDS2, color = treatment)) + 
   #
-  geom_point(aes(x = date, y = mean_NMDS2, color = treatment), fill = "white", 
+  geom_point(aes(x = date, y = mean_NMDS3, color = treatment), fill = "white", 
              shape = 21, size = 2, position = position_dodge(width = 8))+
   
-  scale_colour_manual(values = c("c" = "#48A597", "w" = "#D94E47", "p" = "#3A7CA5", "wp" = "#6D4C7D")) +
+  scale_colour_manual(values = palette2) +
   
-  scale_fill_manual(values = c("c" = "#48A597", "w" = "#D94E47", "p" = "#3A7CA5", "wp" = "#6D4C7D")) +
+  scale_fill_manual(values = palette2) +
   
   scale_x_date(
     date_breaks = "4 weeks", # Specify the interval (e.g., every 2 weeks)
@@ -453,7 +510,7 @@ ggplot(nmds_df_plot,
 
 ggplot(nmds_df_plot, aes(y = NMDS3, x = treatment)) +
   geom_boxplot(aes(fill = treatment), color = "black", alpha = 0.5) + # Set the outline color to black
-  scale_fill_manual(values = c("c" = "#48A597", "w" = "#D94E47", "p" = "#3A7CA5", "wp" = "#6D4C7D")) +
+  scale_fill_manual(values = palette2) +
   theme(legend.position = "none",
         axis.text.x = element_blank(), axis.text.y = element_blank(),
         panel.background = element_rect(fill = NA, colour = NA), # Transparent background
@@ -522,18 +579,19 @@ ggplot(nmds_df_plot, aes(x = NMDS1, y = NMDS2, color = treatment, fill = treatme
                alpha = 0.2, show.legend = FALSE, level = 0.68) +
   geom_hline(aes(yintercept = 0), color = "black", linetype = "dashed") +
   geom_vline(aes(xintercept = 0), color = "black", linetype = "dashed") +
-  scale_colour_manual(values = c("c" = "#48A597", "w" = "#D94E47", "p" = "#3A7CA5", "wp" = "#6D4C7D")) +
-  scale_fill_manual(values = c("c" = "#48A597", "w" = "#D94E47", "p" = "#3A7CA5", "wp" = "#6D4C7D")) +
+  scale_colour_manual(values = palette2) +
+  scale_fill_manual(values = palette2) +
   labs(
     x = "NMDS1",
     y = "NMDS2"
   ) +
   theme(
-    legend.position = "null",
+    legend.position = "bottom",
     strip.text = element_text(size = 10), # Adjust facet label size
     plot.title = element_text(size = 10),
     axis.title.x = element_text(size = 10),
     axis.title.y = element_text(size = 10)
-  )
+  ) + 
+  labs(color = "Treatment")
 
 
