@@ -18,9 +18,7 @@ source("code/palettes_labels.R")
 #  filter(code %in% species_biomass_lm)
 
 hist((ab_rich_dynamics$richness), breaks = 20)
-
 # Shapiro-Wilk test to check normality. If p-value <0.01 that means the distribution is not normal
-
 shapiro.test(ab_rich_dynamics$richness)
 #To check the homoscedasticity (this is, the homogeinity of the variance ((how the variance varies between treatment)))
 # We use the leveneTest
@@ -60,7 +58,7 @@ ggboxplot(ab_rich_dynamics, x = "treatment", y = "richness", fill = "treatment",
   scale_fill_manual(values = palette6) +
   scale_x_discrete(labels = labels1) +
   labs( x = NULL, y = "Richness", fill = "Treatment") +
-  theme(legend.position = "none")
+  theme(legend.position = "none", text = element_text(size = 10))
 
 
   ggplot(ab_rich_dynamics,
@@ -91,7 +89,7 @@ ggboxplot(ab_rich_dynamics, x = "treatment", y = "richness", fill = "treatment",
     date_labels = "%y-%b-%d" # Customize the date format (e.g., "23-May-04")
   ) +
   
-  #geom_vline(xintercept = as.Date("2023-05-11"), linetype = "dashed", color = "gray40") +
+  geom_vline(xintercept = as.Date("2023-05-11"), linetype = "dashed", color = "gray40") +
   
   theme(axis.text.x = element_text(angle = 45, hjust = 1), legend.position = "bottom",
   ) +
@@ -100,7 +98,38 @@ ggboxplot(ab_rich_dynamics, x = "treatment", y = "richness", fill = "treatment",
 
   
   
+  ggplot(ab_rich_dynamics, aes(x = sampling_date, y = richness)) + 
+    facet_wrap(~ treatment ,  nrow = 1, ncol = 4, labeller = labeller(treatment = labels1)) +
+    
+    geom_point(aes(color = treatment), alpha = 0.5) +
+    
+    geom_line(group = "treatment", aes(x = sampling_date, y = mean_richness, color = treatment)) +
+    
+    geom_errorbar(aes(ymax = mean_richness + sd_richness, ymin = mean_richness - sd_richness,
+                      color = treatment), alpha = 0.2) + 
+    
+    geom_point(aes(x = sampling_date, y = mean_richness, color = treatment), fill = "white", 
+               shape = 21, size = 2) +
+    
+    geom_vline(xintercept = 1.5, linetype = "dashed", color = "black", alpha = 0.5) + 
+    
+    scale_colour_manual(values = palette7) +
+    
+    scale_fill_manual(values = palette7) +
+    
+    scale_x_discrete(breaks = levels(ab_rich_dynamics$sampling_date)[c(3, 7, 11, 15, 19)]) +
+    
+    theme(axis.text.x = element_text(angle = 45, hjust = 1), legend.position = "none") +
+    
+    labs(y = "Richness", x = NULL)
+  
+  
 
+  # Coeficiente de variacion
+  
+  
+  # LRR
+  
   
   
   
