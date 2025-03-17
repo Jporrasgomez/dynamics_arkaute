@@ -549,15 +549,21 @@ dummy_rows <- right_join(dummy_rows, sampling_dates, by = join_by(sampling)) %>%
 
 biomass_imp <- bind_rows(biomass_imp, dummy_rows) %>% 
   select(year, date, sampling, treatment, plot, code, abundance,
-         richness, biomass_s, biomass_community, abundance_community)
+         richness, biomass_s, biomass_community, abundance_community) %>% 
+  mutate(sampling_date = as.factor(format(ymd(date), "%Y-%m-%d")))
+
 
 biomass_noimp <- bind_rows(biomass_noimp, dummy_rows) %>% 
   select(year, date, sampling, treatment, plot, code, abundance,
-         richness, biomass_s, biomass_community, abundance_community)
+         richness, biomass_s, biomass_community, abundance_community) %>% 
+  mutate(sampling_date = as.factor(format(ymd(date), "%Y-%m-%d")))
 
 flora_abrich <- bind_rows(flora_abrich, dummy_rows)%>% 
   select(year, date, sampling, treatment, plot, code, abundance,
-         richness, abundance_community)
+         richness, abundance_community) %>% 
+  mutate(sampling_date = as.factor(format(ymd(date), "%Y-%m-%d")))
+
+
 
 
 

@@ -5,72 +5,23 @@
 rm(list = ls(all.names = TRUE))  #Se limpia el environment
 pacman::p_unload(pacman::p_loaded(), character.only = TRUE) #se quitan todos los paquetes (limpiamos R)
 pacman::p_load(dplyr,reshape2,tidyverse, lubridate, ggplot2, ggpubr, gridExtra,
-               car, ggsignif, dunn.test) #Cargamos los paquetes que necesitamos
+               car, ggsignif, dunn.test, rstatix) #Cargamos los paquetes que necesitamos
 
 #Scripts 
 source("code/1.first_script.R")
-radcoeff_df <- read.csv("data/radcoeff_df.csv") %>% 
-  mutate(treatment = as.factor(treatment), 
-         sampling = as.factor(sampling), 
-         plot = as.factor(plot))
 
 
 
-{theme_set(theme_bw() +
-            theme(axis.title.x = element_blank(),
-                  legend.position = "right",
-                  panel.grid = element_blank(),
-                  strip.background = element_blank(),
-                  strip.text = element_text(face = "bold"),
-                  text = element_text(size = 11)))}
+source("code/palettes_labels.R")
+
 
 # Organizing database ####
 
 # Database for abundance and richness analysis
 
 
-ab_rich_dynamics <- full_join(flora_abrich, radcoeff_df)   
-
-ab_rich_dynamics <- ab_rich_dynamics %>% 
-  distinct(treatment, plot, sampling, date, .keep_all = TRUE) %>% 
-  group_by(treatment, sampling, date) %>% 
-  mutate(mean_richness = mean(richness, na.rm = T),
-         sd_richness = sd(richness, na.rm = T),
-         mean_abundance = mean(abundance_community, na.rm = T),
-         sd_abundance = sd(abundance_community, na.rm = T),
-         mean_Y_zipf = mean(Y_zipf, na.rm = T),
-         sd_Y_zipf = sd(Y_zipf, na.rm = T),
-         mean_mu_log = mean(mu_log, na.rm = T),
-         sd_mu_log = sd(mu_log, na.rm = T),
-         mean_sigma_log = mean(sigma_log, na.rm = T),
-         sd_sigma_log = sd(sigma_log, na.rm = T)) %>% 
-  ungroup() %>% 
-  select(plot, sampling, treatment, date, richness, mean_richness, sd_richness, 
-         abundance_community, mean_abundance, sd_abundance, Y_zipf, mean_Y_zipf, sd_Y_zipf,
-         mu_log, mean_mu_log, sd_mu_log, sigma_log, mean_sigma_log, sd_sigma_log)
-  
 
 
-# Database for biomass
-
-biomass_imp_dynamics <- biomass_imp %>%
-  distinct(treatment, plot, sampling, date, .keep_all = TRUE) %>% 
-  group_by(treatment, sampling, date) %>% 
-  mutate(mean_biomass = mean(biomass_community, na.rm = T),
-         sd_biomass = sd(biomass_community, na.rm = T)) %>% 
-  ungroup() %>% 
-  select(treatment, sampling, year, date, plot, biomass_community, mean_biomass, 
-         sd_biomass)
-
-
-biomass_noimp_dynamics <- biomass_noimp %>%
-  distinct(treatment, plot, sampling, date, .keep_all = TRUE) %>% 
-  group_by(treatment, sampling, date) %>% 
-  mutate(mean_biomass = mean(biomass_community, na.rm = T),
-         sd_biomass = sd(biomass_community, na.rm = T)) %>% 
-  ungroup() %>% 
-  select(treatment, sampling, year, date, plot, biomass_community, mean_biomass, 
-         sd_biomass)
 
 
 # General differences between treatments
@@ -86,14 +37,12 @@ biomass_noimp_dynamics <- biomass_noimp %>%
 # Shapiro-Wilk test to check normality. If p-value <0.01 that means the distribution is not normal
 hist((ab_rich_dynamics$richness), breaks = 20)
 shapiro.test(ab_rich_dynamics$richness)
-hist(log(ab_rich_dynamics$richness), breaks = 20)
-shapiro.test(log(ab_rich_dynamics$richness))
 
 
 #To check the homoscedasticity (this is, the homogeinity of the variance ((how the variance varies between treatment)))
 # We use the leveneTest
 car::leveneTest(richness ~ treatment, data = ab_rich_dynamics)
-#If p-value < 0.01 there is no homoscedasticity
+#If p-value < 0.01 there is no homoscedasticity aka there is heterodasticity
 
 # Kruskal-Wallis test for richness
 kruskal.test(richness ~ treatment, data = ab_rich_dynamics)
@@ -104,16 +53,73 @@ dunn_rich <- dunn.test::dunn.test(ab_rich_dynamics$richness, ab_rich_dynamics$tr
 #Visualization of richness
 
 ggplot(ab_rich_dynamics, aes(x = treatment, y = richness)) +
-  geom_boxplot(aes(fill = treatment), colour = "black", alpha = 0.5) + # Set the outline color to black
-  scale_fill_manual(values = c("c" = "#48A597", "w" = "#D94E47", "p" = "#3A7CA5", "wp" = "#6D4C7D")) 
-  #ggsignif::geom_signif(
-  # comparisons = list(c("c","w"), c("c", "p"), c("c", "wp"), c("wp", "w"), c("wp", "p")),  # Significant comparisons
-  # annotations = c("***", "***", "***", "***", "***"),,  # Asterisks for significance
-  # map_signif_level = TRUE,  # Automatically map significance levels if p-values provided
-  # y_position = c(24, 26, 28, 30, 32, 34),  # Adjust bracket positions
-  # tip_length = 0.01,  # Length of bracket tips
-  # textsize = 4) # Size of asterisks
+  geom_boxplot(aes(fill = treatment), colour = "black", alpha = 0.6) + # Set the outline color to black
+  scale_fill_manual(values = palette6) 
 
+library(rstatix)
+
+# Realizar la prueba de Dunn y agregar la columna y.position
+dunn_results <- dunn_test(ab_rich_dynamics, richness ~ treatment, p.adjust.method = "bonferroni")
+
+# Definir posiciones en el eje Y para las etiquetas
+dunn_results <- dunn_results %>%
+  mutate(y.position = max(ab_rich_dynamics$richness) + seq(1, by = 2, length.out = nrow(dunn_results)))
+
+# Crear el gráfico
+ggboxplot(ab_rich_dynamics, x = "treatment", y = "richness", fill = "treatment", alpha = 0.5) +
+  #stat_compare_means(method = "kruskal.test", label.y = max(ab_rich_dynamics$richness) + 2) +  # Test global
+  stat_pvalue_manual(dunn_results, label = "p.adj.signif", tip.length = 0.01) +  # Acortar las rayas verticales
+  scale_fill_manual(values = palette6) +
+  scale_x_discrete(labels = labels1) +
+  labs(x = NULL, y = "Richness", fill = "Treatment") +
+  theme(legend.position = "none", text = element_text(size = 10))
+
+
+
+ggboxplot(ab_rich_dynamics, x = "treatment", y = "richness", fill = "treatment", alpha = 0.5) +
+  stat_compare_means(comparisons = list(c("c", "w"), c("c", "p"), c("c", "wp"), c("w", "p"), c("w", "wp"), c("p", "wp")),
+                     method = "t.test",
+                     label = "p.signif",
+                     tip.length = 0.01) +  # Show significance stars (*, **, ***)
+  scale_fill_manual(values = palette6) +
+  scale_x_discrete(labels = labels1) +
+  labs( x = NULL, y = "Richness", fill = "Treatment") +
+  theme(legend.position = "none")
+
+
+a_richness <-
+  ggplot(ab_rich_dynamics,
+         aes(x = date, y = richness)) + 
+
+  geom_smooth(
+    se = TRUE, aes(color = treatment, fill = treatment),
+    method = "loess", span = 0.6, alpha = 0.2 
+  ) +
+  
+  geom_point(aes(color = treatment),
+             alpha = 0.5, position = position_dodge(width = 8)) +
+  
+  geom_errorbar(aes(ymax = mean_richness + sd_richness, ymin = mean_richness - sd_richness, color = treatment),
+                , alpha = 0.2, position = position_dodge(width = 8)) + 
+  
+  geom_point(aes(x = date, y = mean_richness, color = treatment), fill = "white", 
+             shape = 21, size = 2, position = position_dodge(width = 8))+
+  
+  scale_colour_manual(values = c("c" = "#48A597", "w" = "#D94E47", "p" = "#3A7CA5", "wp" = "#6D4C7D")) +
+  
+  scale_fill_manual(values = c("c" = "#48A597", "w" = "#D94E47", "p" = "#3A7CA5", "wp" = "#6D4C7D")) +
+  
+  scale_x_date(
+    date_breaks = "4 weeks", # Specify the interval (e.g., every 2 weeks)
+    date_labels = "%d-%b-%y" # Customize the date format (e.g., "04-May-23")
+  ) +
+  
+  #geom_vline(xintercept = as.Date("2023-05-11"), linetype = "dashed", color = "gray40") +
+  
+  theme(axis.text.x = element_text(angle = 45, hjust = 1), legend.position = "none",
+  ) +
+  
+  labs(y = "Richness", x = NULL)
 
 
 # ABUNDANCE

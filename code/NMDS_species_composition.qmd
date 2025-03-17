@@ -1,0 +1,32 @@
+---
+title: "Species composition"
+author: "Javier Porras Gómez"
+date: today
+execute:
+  echo: false
+  warning: false # Oculta advertencias
+  message: false # Oculta mensajes de la consola
+  error: false  
+  fig-width: 8
+  fig-height: 8
+format:
+  html:
+    toc: true
+    toc-depth: 3
+    code-fold: true
+    number-sections: true
+    embed-resources: true
+bibliography: "C:/Users/javier.porras/Documents/dynamics_arkaute/code/experiment_references.bib"
+---
+
+```{r}
+
+pacman::p_load(dplyr, tidyverse, DT, viridis, ggrepel, codyn, vegan, eulerr, ggplot2, ggthemes, ggpubr, ggforce )
+
+source("code/1.first_script.R"); rm(list = setdiff(ls(), c("flora_abrich", "biomass_imp", "biomass_noimp")))
+
+
+
+```
+
+The `echo: false` option disables the printing of code (only output is displayed).

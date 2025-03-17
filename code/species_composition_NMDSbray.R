@@ -1,4 +1,5 @@
 
+
 # probar con log(abundance) u otras transformaciones 
 
 
@@ -8,25 +9,7 @@ pacman::p_load(dplyr, tidyverse, DT, viridis, ggrepel, codyn, vegan, eulerr, ggp
 
 source("code/1.first_script.R"); rm(list = setdiff(ls(), c("flora_abrich", "biomass_imp", "biomass_noimp")))
 
-
-theme_set(theme_bw() +
-            theme(
-              legend.position = "right",
-              panel.grid = element_blank(),
-              strip.background = element_blank(),
-              strip.text = element_text(face = "bold"),
-              text = element_text(size = 11)))
-
-palette1 <- c("c" = "#5AC9A5", "w" = "#E56B57", "p" = "#4A92CF", "wp" = "#87528C")
-palette2 <- c("c" = "#48A597", "w" = "#D94E47", "p" = "#4A92CF", "wp" = "#87528C")
-palette3 <- c("c" = "#1F8A8C", "w" = "#D93232", "p" = "#F4A300", "wp" = "#3A3A3A")
-palette4 <- c("c" = "#1F8A8C", "w" = "#D93232", "p" = "#4A92CF", "wp" = "#3A3A3A")
-
-labels1 <- c("c" = "Control", "w" = "Warming", "p" = "Perturbation", "wp" = "Combined")
-labels2 <- c("c" = "C", "w" = "W", "p" = "P", "wp" = "W+P")
-
-point_shapes <- c("c" = 16, "w" = 17, "p" = 15, "wp" = 18)
-
+source("code/palettes_labels.R")
 
 
 
@@ -43,11 +26,7 @@ totals_df <- summarise(group_by(species_ab, sampling, treatment), #adding number
                        n_species = n_distinct(code),
                        total_abundance = sum(abundance))
 
-
 species_ab <- merge(species_ab, totals_df)
-
-
-
 
 
 species_ab <- species_ab %>% 
@@ -112,12 +91,12 @@ for(i in 1:length(treats)){
          x = "NMDS1",
          y = "NMDS2")
   
-
+  
   
 }
 
 
-  ggarrange(
+ggarrange(
   gglist1[[2]],
   gglist1[[1]],
   gglist1[[3]],
@@ -142,13 +121,12 @@ for(i in 1:length(treats)){
 #Less than 0.05 is excellent (this can be rare).
 
 
-
 sp_wide <- species_ab %>%
   pivot_wider(id_cols = c(sampling, date, treatment),
               names_from = code,
               values_from = abundance,
               values_fill = list(abundance = 0)) 
-  
+
 
 # create a distance matrix using Hellinger distances
 abundance_data <- sp_wide %>% select(-treatment, -sampling, -date)
@@ -174,21 +152,22 @@ nmds_df <- nmds_df %>% arrange(sampling)
 # Plot NMDS results using ggplot
 
 {ggnmds_alltreatments <- ggplot(nmds_df, aes(x = NMDS1, y = NMDS2, color = treatment)) +
-  stat_ellipse(geom = "polygon", aes(fill = treatment),
-               alpha = 0.1, show.legend = FALSE, level = 0.90) + 
-  geom_point(size = 1.5, aes(shape = treatment)) +
-  geom_text_repel(aes(label = sampling), max.overlaps = 100, size = 3, show.legend = F) +
-  geom_hline(yintercept = 0, color = "gray52", linetype = "dashed") +
-  geom_path(aes(group = treatment), linetype = "dotted", alpha = 0.8) +
-  geom_vline(xintercept = 0, color = "gray52", linetype = "dashed") +
-  scale_color_manual(values = palette2, labels = labels1, guide = "legend") +
-  scale_fill_manual(values = palette2, guide = "none" ) +
-  scale_shape_manual(values = point_shapes, guide = "none") +
-  labs(title = "NMDS Bray-Curtis: mean abundance of species at sampling level",
-       subtitle = paste0("Stress = ", round(nmds_bc$stress, 3)),
-       x = "NMDS1", y = "NMDS2", color = "Treatment")
-# Print the plot
-print(ggnmds_alltreatments)}
+    stat_ellipse(geom = "polygon", aes(fill = treatment),
+                 alpha = 0.1, show.legend = FALSE, level = 0.90) + 
+    geom_point(size = 1.5, aes(shape = treatment), show.legend =T) +
+    geom_text_repel(aes(label = sampling), max.overlaps = 100, size = 3, show.legend = F) +
+    geom_hline(yintercept = 0, color = "gray52", linetype = "dashed") +
+    geom_path(aes(group = treatment), linetype = "dotted", alpha = 0.8) +
+    geom_vline(xintercept = 0, color = "gray52", linetype = "dashed") +
+    scale_color_manual(values = palette6, labels = labels1, guide = "legend") +
+    scale_fill_manual(values = palette6, guide = "none" ) +
+    scale_shape_manual(values = point_shapes, guide = "none") +
+    labs(title = "NMDS Bray-Curtis: mean abundance of species at sampling level",
+         subtitle = paste0("Stress = ", round(nmds_bc$stress, 3)),
+         x = "NMDS1", y = "NMDS2", color = " ") +
+    theme(legend.position = "bottom")
+  # Print the plot
+  print(ggnmds_alltreatments)}
 
 
 
@@ -215,7 +194,7 @@ cat("NMDS2 explains:", round(explained_NMDS2, 2), "%\n")
 
 
 
-
+ggNMDS1_dynamics_sampling <- 
 ggplot(nmds_df, aes(x = date, y = NMDS1, color = treatment, fill = treatment)) +
   geom_point(show.legend = TRUE) + 
   geom_smooth(
@@ -230,7 +209,7 @@ ggplot(nmds_df, aes(x = date, y = NMDS1, color = treatment, fill = treatment)) +
        x = "Date", y = "NMDS1", color = "Treatment")
 
 
-
+ggNMDS2_dynamics_sampling <- 
 ggplot(nmds_df, aes(x = date, y = NMDS2, color = treatment, fill = treatment)) +
   geom_point(show.legend = TRUE) +  # Hide extra legend from points
   geom_smooth(
@@ -256,7 +235,7 @@ ggplot(nmds_df, aes(x = date, y = NMDS2, color = treatment, fill = treatment)) +
 
 species_ab_plot <- species_ab_plot %>% 
   filter(!(sampling == "1" & treatment %in% c("p", "wp")))
-  
+
 sp_wide_plot <- species_ab_plot %>%
   pivot_wider(id_cols = c(sampling, date, treatment, plot),
               names_from = code,
@@ -305,115 +284,106 @@ cor1 <- cor(distance_matrix_bc_plot, dist(nmds_bc_plot$points[,1]), method = "pe
 cor2 <- cor(distance_matrix_bc_plot, dist(nmds_bc_plot$points[,2]), method = "pearson")
 cor3 <- cor(distance_matrix_bc_plot, dist(nmds_bc_plot$points[,3]), method = "pearson")
 
-# Convert to R² values (proportion of variation explained)
-r2_1 <- cor1^2
-r2_2 <- cor2^2
-r2_3 <- cor3^2
 
-# Compute percentage explained by each axis
-total_r2 <- r2_1 + r2_2 + r2_3
-
-explained_NMDS1 <- (r2_1 / total_r2) * 100
-explained_NMDS2 <- (r2_2 / total_r2) * 100
-explained_NMDS3 <- (r2_3 / total_r2) * 100
-
-# Print results
-explained_NMDS1
-explained_NMDS2
-explained_NMDS3
+print(explained_NMDS1 <- (cor1^2 / (r2_1 + r2_2 + r2_3)) * 100)
+print(explained_NMDS2 <- (cor2^2 / (r2_1 + r2_2 + r2_3)) * 100)
+print(explained_NMDS3 <- (cor3^2 / (r2_1 + r2_2 + r2_3)) * 100)
 
 
 
+ggNMDS12_allplots <-
+  ggplot(nmds_df_plot, aes(x = NMDS1, y = NMDS2, color = treatment)) +
+    stat_ellipse(geom = "polygon", aes(fill = treatment),
+                 alpha = 0.1, show.legend = FALSE, level = 0.9) + 
+    geom_point(size = 1.5, aes(shape= treatment)) +
+    #geom_text_repel(aes(label = paste0(sampling, "," ,plot)), max.overlaps = 100, size = 3, show.legend = F) +
+    geom_hline(yintercept = 0, color = "gray52", linetype = "dashed") +
+    #geom_path(aes(group = treatment), linetype = "dotted", alpha = 0.8) +
+    geom_vline(xintercept = 0, color = "gray52", linetype = "dashed") +
+    scale_colour_manual(values = palette2) +
+    scale_fill_manual(values = palette2) +
+    labs(title = "NMDS Bray-Curtis: abundance of species at plot level",
+         subtitle = paste0("Stress = ", round(nmds_bc_plot$stress, 3)),
+         x = "NMDS1", y = "NMDS2", color = "Treatment")
+  # Print the plot
+
+ggNMDS13_allplots <-
+  ggplot(nmds_df_plot, aes(x = NMDS1, y = NMDS3, color = treatment)) +
+    stat_ellipse(geom = "polygon", aes(fill = treatment),
+                 alpha = 0.1, show.legend = FALSE, level = 0.68) + 
+    geom_point(size = 1.5) +
+    #geom_text_repel(aes(label = paste0(sampling, "," ,plot)), max.overlaps = 100, size = 3, show.legend = F) +
+    geom_hline(yintercept = 0, color = "gray52", linetype = "dashed") +
+    #geom_path(aes(group = treatment), linetype = "dotted", alpha = 0.8) +
+    geom_vline(xintercept = 0, color = "gray52", linetype = "dashed") +
+    scale_colour_manual(values = palette2) +
+    scale_fill_manual(values = palette2) +
+    labs(title = "NMDS Bray-Curtis: abundance of species at plot level",
+         subtitle = paste0("Stress = ", round(nmds_bc_plot$stress, 3)),
+         x = "NMDS1", y = "NMDS3", color = "Treatment")
+  # Print the plot
 
 
+ggNMDS23_allplots<-
+  ggplot(nmds_df_plot, aes(x = NMDS2, y = NMDS3, color = treatment)) +
+    stat_ellipse(geom = "polygon", aes(fill = treatment),
+                 alpha = 0.1, show.legend = FALSE, level = 0.68) + 
+    geom_point(size = 1.5) +
+    #geom_text_repel(aes(label = paste0(sampling, "," ,plot)), max.overlaps = 100, size = 3, show.legend = F) +
+    geom_hline(yintercept = 0, color = "gray52", linetype = "dashed") +
+    #geom_path(aes(group = treatment), linetype = "dotted", alpha = 0.8) +
+    geom_vline(xintercept = 0, color = "gray52", linetype = "dashed") +
+    scale_colour_manual(values = palette2) +
+    scale_fill_manual(values = palette2) +
+    labs(title = "NMDS Bray-Curtis: abundance of species at plot level",
+         subtitle = paste0("Stress = ", round(nmds_bc_plot$stress, 3)),
+         x = "NMDS2", y = "NMDS3", color = "Treatment")
+  # Print the plot
 
-{ggnmds_allplots_12<- ggplot(nmds_df_plot, aes(x = NMDS1, y = NMDS2, color = treatment)) +
-  stat_ellipse(geom = "polygon", aes(fill = treatment),
-               alpha = 0.1, show.legend = FALSE, level = 0.9) + 
-  geom_point(size = 1.5, aes(shape= treatment)) +
-  #geom_text_repel(aes(label = paste0(sampling, "," ,plot)), max.overlaps = 100, size = 3, show.legend = F) +
-  geom_hline(yintercept = 0, color = "gray52", linetype = "dashed") +
-  #geom_path(aes(group = treatment), linetype = "dotted", alpha = 0.8) +
-  geom_vline(xintercept = 0, color = "gray52", linetype = "dashed") +
-  scale_colour_manual(values = palette2) +
-  scale_fill_manual(values = palette2) +
-  labs(title = "NMDS Bray-Curtis: abundance of species at plot level",
-       subtitle = paste0("Stress = ", round(nmds_bc_plot$stress, 3)),
-       x = "NMDS1", y = "NMDS2", color = "Treatment")
-# Print the plot
-print(ggnmds_allplots_12)}
-
-{ggnmds_allplots_13<- ggplot(nmds_df_plot, aes(x = NMDS1, y = NMDS3, color = treatment)) +
-  stat_ellipse(geom = "polygon", aes(fill = treatment),
-               alpha = 0.1, show.legend = FALSE, level = 0.68) + 
-  geom_point(size = 1.5) +
-  #geom_text_repel(aes(label = paste0(sampling, "," ,plot)), max.overlaps = 100, size = 3, show.legend = F) +
-  geom_hline(yintercept = 0, color = "gray52", linetype = "dashed") +
-  #geom_path(aes(group = treatment), linetype = "dotted", alpha = 0.8) +
-  geom_vline(xintercept = 0, color = "gray52", linetype = "dashed") +
-  scale_colour_manual(values = palette2) +
-  scale_fill_manual(values = palette2) +
-  labs(title = "NMDS Bray-Curtis: abundance of species at plot level",
-       subtitle = paste0("Stress = ", round(nmds_bc_plot$stress, 3)),
-       x = "NMDS1", y = "NMDS3", color = "Treatment")
-# Print the plot
-print(ggnmds_allplots_13)}
-
-
-{ggnmds_allplots_23<- ggplot(nmds_df_plot, aes(x = NMDS2, y = NMDS3, color = treatment)) +
-  stat_ellipse(geom = "polygon", aes(fill = treatment),
-               alpha = 0.1, show.legend = FALSE, level = 0.68) + 
-  geom_point(size = 1.5) +
-  #geom_text_repel(aes(label = paste0(sampling, "," ,plot)), max.overlaps = 100, size = 3, show.legend = F) +
-  geom_hline(yintercept = 0, color = "gray52", linetype = "dashed") +
-  #geom_path(aes(group = treatment), linetype = "dotted", alpha = 0.8) +
-  geom_vline(xintercept = 0, color = "gray52", linetype = "dashed") +
-  scale_colour_manual(values = palette2) +
-  scale_fill_manual(values = palette2) +
-  labs(title = "NMDS Bray-Curtis: abundance of species at plot level",
-       subtitle = paste0("Stress = ", round(nmds_bc_plot$stress, 3)),
-       x = "NMDS2", y = "NMDS3", color = "Treatment")
-# Print the plot
-print(ggnmds_allplots_23)}
 
 
 hist(nmds_df_plot$NMDS1, breaks = 50)
 
+ggNMDS1_dynamics_plot <- 
 ggplot(nmds_df_plot,
-      aes(x = date, y =  NMDS1)) + 
-  
+       aes(x = date, y =  NMDS1)) +
   geom_smooth(
     se = TRUE, aes(color = treatment, fill = treatment),
     method = "loess", span = 0.6, alpha = 0.2 
   ) +
-  
   geom_point(aes(color = treatment),
              alpha = 0.5, position = position_dodge(width = 8)) +
-  
   geom_errorbar(aes(ymax = mean_NMDS1 + sd_NMDS1, ymin = mean_NMDS1 - sd_NMDS1, color = treatment),
                 , alpha = 0.2, position = position_dodge(width = 8)) + 
-  #geom_line(aes(x = date, y = mean_NMDS1, color = treatment)) + 
-  #
   geom_point(aes(x = date, y = mean_NMDS1, color = treatment), fill = "white", 
              shape = 21, size = 2, position = position_dodge(width = 8))+
-  
   scale_colour_manual(values = palette2) +
-  
   scale_fill_manual(values = palette2) +
-  
   scale_x_date(
     date_breaks = "4 weeks", # Specify the interval (e.g., every 2 weeks)
     date_labels = "%d-%b-%y" # Customize the date format (e.g., "04-May-23")
   ) +
-  
   geom_vline(xintercept = as.Date("2023-05-11"), linetype = "dashed", color = "gray40") +
-  
   theme(axis.text.x = element_text(angle = 45, hjust = 1), legend.position = "none",
   ) +
-  
   labs(y = "NMDS1", x = NULL) #
 
 
+
+
+
+
+ggboxplot(nmds_df_plot, x = "treatment", y = "NMDS1", fill = "treatment") +
+  stat_compare_means(comparisons = list(c("c", "w"), c("c", "p"), c("c", "wp"), c("w", "wp"), c("p", "wp")),
+                     method = "t.test",
+                     label = "p.signif") +  # Show significance stars (*, **, ***)
+  scale_fill_manual(values = palette2) +
+  scale_x_discrete(labels = labels1) +
+  labs( x = NULL, y = "NMDS1", fill = "Treatment") +
+  theme(legend.position = "none")
+
+
+ggNMDS1_boxplot_plot <- 
 ggplot(nmds_df_plot, aes(y = NMDS1, x = treatment)) +
   geom_boxplot(aes(fill = treatment), color = "black", alpha = 0.5) + # Set the outline color to black
   scale_fill_manual(values = palette2) +
@@ -425,98 +395,78 @@ ggplot(nmds_df_plot, aes(y = NMDS1, x = treatment)) +
 
 hist(nmds_df_plot$NMDS2, breaks = 50)
 
-ggplot(nmds_df_plot,
-       aes(x = date, y =  NMDS2)) + 
-  
+ggNMDS2_dynamics_plot <- 
+  ggplot(nmds_df_plot,
+         aes(x = date, y =  NMDS2)) +
   geom_smooth(
     se = TRUE, aes(color = treatment, fill = treatment),
     method = "loess", span = 0.6, alpha = 0.2 
   ) +
-  
   geom_point(aes(color = treatment),
              alpha = 0.5, position = position_dodge(width = 8)) +
-  
   geom_errorbar(aes(ymax = mean_NMDS2 + sd_NMDS2, ymin = mean_NMDS2 - sd_NMDS2, color = treatment),
                 , alpha = 0.2, position = position_dodge(width = 8)) + 
-  #geom_line(aes(x = date, y = mean_NMDS2, color = treatment)) + 
-  #
   geom_point(aes(x = date, y = mean_NMDS2, color = treatment), fill = "white", 
              shape = 21, size = 2, position = position_dodge(width = 8))+
-  
   scale_colour_manual(values = palette2) +
-  
   scale_fill_manual(values = palette2) +
-  
   scale_x_date(
     date_breaks = "4 weeks", # Specify the interval (e.g., every 2 weeks)
     date_labels = "%d-%b-%y" # Customize the date format (e.g., "04-May-23")
   ) +
-  
   geom_vline(xintercept = as.Date("2023-05-11"), linetype = "dashed", color = "gray40") +
-ji9  
   theme(axis.text.x = element_text(angle = 45, hjust = 1), legend.position = "none",
   ) +
-  
-  labs(y = "NMDS2", x = NULL, color = "Treatment")
+  labs(y = "NMDS2", x = NULL) #
 
 
-ggplot(nmds_df_plot, aes(y = NMDS2, x = treatment)) +
+ggNMDS2_boxplot_plot <- 
+  ggplot(nmds_df_plot, aes(y = NMDS2, x = treatment)) +
   geom_boxplot(aes(fill = treatment), color = "black", alpha = 0.5) + # Set the outline color to black
   scale_fill_manual(values = palette2) +
   theme(legend.position = "none",
         axis.text.x = element_blank(), axis.text.y = element_blank(),
         panel.background = element_rect(fill = NA, colour = NA), # Transparent background
         plot.background = element_rect(fill = NA, colour = NA))
+
 
 
 
 hist(nmds_df_plot$NMDS3, breaks = 50)
 
-ggplot(nmds_df_plot,
-       aes(x = date, y =  NMDS3)) + 
-  
+ggNMDS3_dynamics_plot <- 
+  ggplot(nmds_df_plot,
+         aes(x = date, y =  NMDS3)) +
   geom_smooth(
     se = TRUE, aes(color = treatment, fill = treatment),
     method = "loess", span = 0.6, alpha = 0.2 
   ) +
-  
   geom_point(aes(color = treatment),
              alpha = 0.5, position = position_dodge(width = 8)) +
-  
   geom_errorbar(aes(ymax = mean_NMDS3 + sd_NMDS3, ymin = mean_NMDS3 - sd_NMDS3, color = treatment),
                 , alpha = 0.2, position = position_dodge(width = 8)) + 
-  #geom_line(aes(x = date, y = mean_NMDS2, color = treatment)) + 
-  #
   geom_point(aes(x = date, y = mean_NMDS3, color = treatment), fill = "white", 
              shape = 21, size = 2, position = position_dodge(width = 8))+
-  
   scale_colour_manual(values = palette2) +
-  
   scale_fill_manual(values = palette2) +
-  
   scale_x_date(
     date_breaks = "4 weeks", # Specify the interval (e.g., every 2 weeks)
     date_labels = "%d-%b-%y" # Customize the date format (e.g., "04-May-23")
   ) +
-  
   geom_vline(xintercept = as.Date("2023-05-11"), linetype = "dashed", color = "gray40") +
-  
   theme(axis.text.x = element_text(angle = 45, hjust = 1), legend.position = "none",
   ) +
-  
-  labs(y = "NMDS3", x = NULL, color = "Treatment")
+  labs(y = "NMDS3", x = NULL) #
 
 
-
-ggplot(nmds_df_plot, aes(y = NMDS3, x = treatment)) +
+ggNMDS3_boxplot_plot <- 
+  ggplot(nmds_df_plot, aes(y = NMDS3, x = treatment)) +
   geom_boxplot(aes(fill = treatment), color = "black", alpha = 0.5) + # Set the outline color to black
   scale_fill_manual(values = palette2) +
   theme(legend.position = "none",
         axis.text.x = element_blank(), axis.text.y = element_blank(),
         panel.background = element_rect(fill = NA, colour = NA), # Transparent background
         plot.background = element_rect(fill = NA, colour = NA))
-
-
 
 # NMDS at sampling level
 
@@ -593,5 +543,4 @@ ggplot(nmds_df_plot, aes(x = NMDS1, y = NMDS2, color = treatment, fill = treatme
     axis.title.y = element_text(size = 10)
   ) + 
   labs(color = "Treatment")
-
 

@@ -105,7 +105,7 @@ results <-
                        color = posneg_slope))+
   geom_point()+ 
   geom_vline(xintercept = 0.3, linetype = "dashed", color = "gray40") +
-  geom_hline(yintercept = 0.05, linetype = "dashed", color = "gray40") +
+  geom_hline(yintercept = 0.01, linetype = "dashed", color = "gray40") +
   
   geom_text_repel(
     size = 3,                # Text size
@@ -118,5 +118,6 @@ results <-
 
 #print(results)
 
+
 lm_data_filtered <- lm_data %>% 
-  filter(p_value < 0.05)
+  filter(p_value < 0.01)
