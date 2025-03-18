@@ -1,0 +1,133 @@
+
+
+
+
+# function to plot recovery dynamics (output is a ggplot object)
+gg_dynamics <- function(data, variable) {
+  
+  # set theme for the plot
+  theme_set(theme_bw() +
+              theme(axis.title.x = element_blank(),
+                    legend.position = "NULL",
+                    panel.grid = element_blank(),
+                    strip.background = element_blank(),
+                    strip.text = element_text(face = "bold"),
+                    text = element_text(size = 11)))
+  
+  # define y axis title
+  if (variable %in% c("richness", "abundance")) {
+    ytitle <- str_to_title(variable)
+  } else {
+    if (variable == "sigma_log") {
+      ytitle <- "Sigma (Coefficient 2 in Log model for RADs)"
+    } else {
+      if (variable == "mu_log") {
+        ytitle <- "Mu (Coefficient 1 in Log model for RADs)"
+      } else {
+        if (variable == "Y_zipf") {
+          ytitle <- "Gamma (Coefficient in Zipf model for RADs)"
+        } else {
+          if (variable == "biomass") {
+            ytitle <- "Community biomass"
+          } else{
+            stop("variable must be one of the following: richness, abundance, sigma_log, mu_log, Y_zipf, biomass_total")
+          }
+        }
+      }
+    }
+  }
+  
+
+  
+  # plot
+
+    
+    gg_all1n <- 
+      
+      ggplot(data, aes(x = date),
+                            y = data[[paste0("mean_", variable)]]) +
+      
+        geom_smooth(
+          se = TRUE, aes(x = date, y = .data[[paste0("mean_", variable)]],
+                         color = treatment, fill = treatment),
+          method = "loess", span = 0.6, alpha = 0.2 
+        ) +
+      
+
+      geom_errorbar(aes(ymin = .data[[paste0("mean_", variable)]] - .data[[paste0("sd_", variable)]],
+                        ymax = .data[[paste0("mean_", variable)]] + .data[[paste0("sd_", variable)]],
+                        color = treatment), 
+                    alpha = 0.2, position = position_dodge(width = 8)) +
+      
+      geom_point(data = data, aes(x = date,
+                                       y = .data[[variable]],
+                                       color = treatment),
+                 alpha = 0.2, position = position_dodge(width = 8))+
+      
+      
+      geom_point(aes(x = date, y = .data[[paste0("mean_", variable)]],
+                     color = treatment), fill = "white", position = position_dodge(width = 0.5), size = 2.1, shape = 21) +
+        
+      
+      scale_colour_manual(values = palette)+
+      scale_fill_manual(values = palette)+
+      
+      scale_x_date(
+        date_breaks = "4 weeks", # Specify the interval (e.g., every 2 weeks)
+        date_labels = "%y-%b-%d" # Customize the date format (e.g., "23-May-04")
+      ) +
+      
+      geom_vline(xintercept = as.Date("2023-05-11"), linetype = "dashed", color = "gray40") +
+      
+      labs(y = ytitle) +
+      
+      theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1))
+    
+    gg_all1n <<- gg_all1n
+    
+    
+    
+    
+    
+    gg_facet <- 
+      
+    ggplot(data, aes(x = date),
+           y = data[[paste0("mean_", variable)]]) +
+      
+      facet_wrap(~ treatment ,  nrow = 1, ncol = 4, labeller = labeller(treatment = labels)) +
+      
+      geom_errorbar(aes(ymin = .data[[paste0("mean_", variable)]] - .data[[paste0("sd_", variable)]],
+                        ymax = .data[[paste0("mean_", variable)]] + .data[[paste0("sd_", variable)]],
+                        color = treatment), 
+                    alpha = 0.2, position = position_dodge(width = 8)) +
+      
+      geom_point(data = data, aes(x = date,
+                                  y = .data[[variable]],
+                                  color = treatment),
+                 alpha = 0.2, position = position_dodge(width = 8))+
+      
+      geom_line(group = "treatment", aes(x = date, y = .data[[paste0("mean_", variable)]], color = treatment)) +
+      
+      
+      geom_point(aes(x = date, y = .data[[paste0("mean_", variable)]],
+                     color = treatment), fill = "white", position = position_dodge(width = 0.5), size = 2.1, shape = 21) +
+      
+      scale_colour_manual(values = palette)+
+      scale_fill_manual(values = palette)+
+      
+      geom_vline(xintercept = as.Date("2023-05-11"), linetype = "dashed", color = "gray40") +
+      
+      labs(y = ytitle) +
+      
+      theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1))
+    
+    gg_facet <<- gg_facet
+ 
+}
+
+
+
+
+#end of plot_recovery
+
+# end of the script

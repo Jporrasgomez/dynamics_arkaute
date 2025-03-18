@@ -1,68 +1,37 @@
 
 
 
+effect_size <- function(data, variable){
 
-rm(list = ls(all.names = TRUE))  #Se limpia el environment
-pacman::p_unload(pacman::p_loaded(), character.only = TRUE) #se quitan todos los paquetes (limpiamos R)
-pacman::p_load(dplyr,reshape2,tidyverse, lubridate, ggplot2, ggpubr, gridExtra,
-               car, ggsignif, dunn.test, rstatix) #Cargamos los paquetes que necesitamos
+mean_variable <- data[[paste0("mean_", variable)]]
+sd_variable <- data[[paste0("sd_", variable)]]
 
-
-source("code/1.first_script.R")
-source("code/palettes_labels.R")
-
-palette <- palette3
-labels <- labels3
+mean_variable_name <- paste0("mean_", variable)
+sd_variable_name <- paste0("sd_", variable)
 
 
-# RICHNES 
-
-source("code/stats_function.R")
-
-stats(ab_rich_dynamics, "richness", "treatment")
-gg_dunn
-gg_ttest
-
-source("code/plots_functions_flora/gg_dynamics.R")
-gg_dynamics(ab_rich_dynamics, "richness")
-gg_all1n
-gg_facet
-
-
-# Coeficiente de variacion
-stats(ab_rich_dynamics, "cv_richness", "treatment")
-gg_dunn
-gg_ttest
-
-source("code/plots_functions_flora/gg_dynamics_cv.R")
-gg_dynamics_cv(ab_rich_dynamics, "cv_richness")
-gg_dynamics_cv
-
-# Log response ratio
-source("code/plots_functions_flora/effect_treatment.R")
-
-lrr <- ab_rich_dynamics %>% 
-  select(date, sampling, treatment, mean_richness, sd_richness, cv_richness) %>% 
+effect <- data %>% 
+  select(date, sampling, treatment, all_of(mean_variable_name), all_of(sd_variable_name)) %>% 
   distinct()
 
-lrr_c <- lrr %>% 
+effect_c <- effect %>% 
   filter(treatment == "c") %>% 
-  select(date, sampling, mean_richness, sd_richness) %>% 
-  rename(mean_richness_c = mean_richness, 
-         sd_richness_c = sd_richness)
+  select(date, sampling, all_of(mean_variable_name), all_of(sd_variable_name)) %>% 
+  rename(mean_variable_c = mean_variable, 
+         sd_variable_c = sd_variable)
 
 n = 4
 lrr_treatment <- lrr %>% 
   filter(!treatment == "c") %>% 
-  select(date, sampling, treatment, mean_richness, sd_richness) %>% 
+  select(date, sampling, treatment, mean_variable, sd_variable) %>% 
   left_join(lrr_c) %>% 
   mutate(
-    lrr = log(mean_richness/mean_richness_c),
+    lrr = log(mean_variable/mean_variable_c),
     se_lrr = sqrt(
       (1/n) + 
-      (1/n) +
-      ((sd_richness^2)/(n*mean_richness)) +
-      ((sd_richness_c^2)/(n*mean_richness_c)))
+        (1/n) +
+        ((sd_variable^2)/(n*mean_variable)) +
+        ((sd_variable_c^2)/(n*mean_variable_c)))
   )
 
 ggplot(lrr_treatment, aes(x = date, y = lrr)) + 
@@ -74,7 +43,7 @@ ggplot(lrr_treatment, aes(x = date, y = lrr)) +
   geom_line(aes(color = treatment)) +
   scale_color_manual(values = palette) +
   geom_hline( yintercept= 0, linetype = "dashed", color = "gray40") +
-  labs(x = NULL, y = "Lrr Richness") +
+  labs(x = NULL, y = "Lrr variable") +
   theme(legend.position = "none")
 
 
@@ -85,8 +54,8 @@ hedges_treatment <- lrr %>%
   filter(treatment != "c") %>% 
   left_join(lrr_c, by = "date") %>%
   mutate(
-    pooled_sd = sqrt((((n-1) * sd_richness^2) + ((n-1) * sd_richness_c^2)) / (n+n-2)), # n=4 por grupo → df = 3
-    hedges_g = (mean_richness - mean_richness_c) / pooled_sd
+    pooled_sd = sqrt((((n-1) * sd_variable^2) + ((n-1) * sd_variable_c^2)) / (n+n-2)), # n=4 por grupo → df = 3
+    hedges_g = (mean_variable - mean_variable_c) / pooled_sd
   )
 
 ggplot(hedges_treatment, aes(x = date, y = hedges_g)) + 
@@ -98,7 +67,7 @@ ggplot(hedges_treatment, aes(x = date, y = hedges_g)) +
   geom_line(aes(color = treatment)) +
   scale_color_manual(values = palette) +
   geom_hline( yintercept= 0, linetype = "dashed", color = "gray40") +
-  labs(x = NULL, y = "Hedges'g effect for Richness") +
+  labs(x = NULL, y = "Hedges'g effect for variable") +
   theme(legend.position = "none")
 
 
@@ -107,8 +76,8 @@ perchange_treatment <- lrr %>%
   filter(treatment != "c") %>% 
   left_join(lrr_c, by = c("date", "sampling")) %>%  # Unir con el control
   mutate(
-    percent_change = ((mean_richness - mean_richness_c) / mean_richness_c) * 100,
-    se_percent_change = (100 / mean_richness_c) * sqrt((sd_richness^2 / n) + (sd_richness_c^2 / n))
+    percent_change = ((mean_variable - mean_variable_c) / mean_variable_c) * 100,
+    se_percent_change = (100 / mean_variable_c) * sqrt((sd_variable^2 / n) + (sd_variable_c^2 / n))
   )
 
 ggplot(perchange_treatment, aes(x = date, y = percent_change)) + 
@@ -128,4 +97,6 @@ lrr_w <- lrr %>%
 
 lrr_p <- lrr %>% 
   filter(treatment == "p")
-  
+
+
+}
