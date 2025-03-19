@@ -17,6 +17,10 @@ palette3 <- c("c" = "#1F8A8C", "w" = "#D93232", "p" = "#F4A300", "wp" = "#3A3A3A
 palette8 <- c("c" = "#00C4A7", "w" = "#A238A2", "p" = "#F4A300", "wp" = "#3A3A3A")
 
 
+palette_wp <- c("w" = "#D08A00", "p" = "#3A3A3A")
+
+
+
 palette1 <- c("c" = "#5AC9A5", "w" = "#E56B57", "p" = "#4A92CF", "wp" = "#87528C")
 palette2 <- c("c" = "#48A597", "w" = "#D94E47", "p" = "#4A92CF", "wp" = "#87528C")
 
@@ -27,8 +31,11 @@ palette7 <- c("c" = "#008F5F", "w" = "#E0352F", "p" = "#0077FF", "wp" = "#A238A2
 
 
 
+
 labels1 <- c("c" = "Control", "w" = "Warming", "p" = "Perturbation", "wp" = "Combined")
 labels2 <- c("c" = "C", "w" = "W", "p" = "P", "wp" = "W+P")
 labels3 <- c("c" = "Control", "w" = "Warming", "p" = "Perturbation", "wp" = "Global change")
+
+labels_RR_wp <- c("w" = "Warming vs Global Change", "p" = "Perturbation vs Global Change")
 
 point_shapes <- c("c" = 16, "w" = 17, "p" = 15, "wp" = 18)

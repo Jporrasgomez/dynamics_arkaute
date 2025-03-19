@@ -12,9 +12,8 @@ stats(data, variable1, variable2)
 gg_dunn
 gg_ttest
   
-  
 
-stats(data, paste0("cv_", variable1), variable2)
+stats(data, paste0("CV_", variable1), variable2)
 gg_dunn_cv <<- gg_dunn
 gg_ttest_cv <<- gg_ttest
 
@@ -37,7 +36,14 @@ effect_size(data, variable1)
 gg_RR <<- gg_RR
 gg_delta_RR <<- gg_delta_RR
 gg_sigma_RR <<- gg_sigma_RR
-gg_hedges <<- gg_hedges
-gg_perc <<- gg_perc
+
+
+source("code/plots_functions_flora/effect_size_wp.R")
+
+effect_size_wp(data, variable1)
+gg_RR_wp <<- gg_RR_wp
+gg_delta_RR_wp <<- gg_delta_RR_wp
+gg_sigma_RR_wp <<- gg_sigma_RR_wp
+
 
 }
