@@ -14,22 +14,22 @@ gg_dynamics_cv <- function(data, variable) {
   
   # define y axis title
   
-  if (variable == "cv_abundance") {
+  if (variable == "abundance") {
     ytitle <- "CV of abundance"
   } else {
-    if (variable == "cv_richness") {
+    if (variable == "richness") {
       ytitle <- "CV of richness"
     } else {
-      if (variable == "cv_sigma_log") {
+      if (variable == "sigma_log") {
         ytitle <- "CV of Sigma for Log model RADs"
       } else {
-        if (variable == "cv_mu_log") {
+        if (variable == "mu_log") {
           ytitle <- "CV of Mu for Log model RADs"
         } else {
-          if (variable == "cv_Y_zipf") {
+          if (variable == "Y_zipf") {
             ytitle <- "CV of Gamma for Zipf model RADs"
           } else {
-            if (variable == "cv_biomass") {
+            if (variable == "biomass") {
               ytitle <- "CV of community biomass"
             } else{
               stop("variable must be one of the following: cv_richness, cv_abundance, cv_sigma_log, 
@@ -41,10 +41,11 @@ gg_dynamics_cv <- function(data, variable) {
     }
   }
   
+ 
   
   
   gg_dynamics_cv <- 
-  ggplot(data, aes(x = date, y = .data[[variable]])) + 
+  ggplot(data, aes(x = date, y = .data[[paste0("cv_", variable)]])) + 
     
     facet_wrap(~ treatment ,  nrow = 1, ncol = 4, labeller = labeller(treatment = labels)) +
     

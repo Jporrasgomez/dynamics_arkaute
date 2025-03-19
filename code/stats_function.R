@@ -1,9 +1,10 @@
 
 stats <- function(data, response_variable, explanatory_variable) {
   
+  par(mfrow = c(1, 2))
   # Histograma
   print("Histogram:")
-  hist(data[[response_variable]], breaks = 20)
+  hist(data[[response_variable]], breaks = 20, main = paste0(response_variable))
   
   # Q-Q plot
   print("Q-Q Plot:")
@@ -91,4 +92,5 @@ stats <- function(data, response_variable, explanatory_variable) {
   gg_ttest <<- gg_ttest
   
   
+  par(mfrow = c(1, 1))
 }

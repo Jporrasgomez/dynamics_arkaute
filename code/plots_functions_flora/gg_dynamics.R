@@ -15,9 +15,12 @@ gg_dynamics <- function(data, variable) {
                     text = element_text(size = 11)))
   
   # define y axis title
-  if (variable %in% c("richness", "abundance")) {
-    ytitle <- str_to_title(variable)
+  if (variable == "richness") {
+    ytitle <- "Richness"
   } else {
+    if (variable == "abundance") {
+      ytitle = "Community cover"
+    } else {
     if (variable == "sigma_log") {
       ytitle <- "Sigma (Coefficient 2 in Log model for RADs)"
     } else {
@@ -30,12 +33,13 @@ gg_dynamics <- function(data, variable) {
           if (variable == "biomass") {
             ytitle <- "Community biomass"
           } else{
-            stop("variable must be one of the following: richness, abundance, sigma_log, mu_log, Y_zipf, biomass_total")
+            stop("variable must be one of the following: richness, abundance, sigma_log, mu_log, Y_zipf, biomass")
           }
         }
       }
     }
   }
+}
   
 
   
