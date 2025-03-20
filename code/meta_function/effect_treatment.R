@@ -147,11 +147,6 @@ gg_sigma_RR <<- gg_sigma_RR
 
 
 
-lrr_w <- lrr %>% 
-  filter(treatment == "w")
-
-lrr_p <- lrr %>% 
-  filter(treatment == "p")
 
 
 }

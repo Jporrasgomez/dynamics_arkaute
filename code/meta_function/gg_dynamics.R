@@ -13,35 +13,25 @@ gg_dynamics <- function(data, variable) {
                     strip.background = element_blank(),
                     strip.text = element_text(face = "bold"),
                     text = element_text(size = 11)))
-  
-  # define y axis title
-  if (variable == "richness") {
-    ytitle <- "Richness"
-  } else {
-    if (variable == "abundance") {
-      ytitle = "Community cover"
-    } else {
-    if (variable == "sigma_log") {
-      ytitle <- "Sigma (Coefficient 2 in Log model for RADs)"
-    } else {
-      if (variable == "mu_log") {
-        ytitle <- "Mu (Coefficient 1 in Log model for RADs)"
-      } else {
-        if (variable == "Y_zipf") {
-          ytitle <- "Gamma (Coefficient in Zipf model for RADs)"
-        } else {
-          if (variable == "biomass") {
-            ytitle <- "Community biomass"
-          } else{
-            stop("variable must be one of the following: richness, abundance, sigma_log, mu_log, Y_zipf, biomass")
-          }
-        }
-      }
-    }
-  }
-}
-  
 
+  
+  # Definir un diccionario de variables y títulos
+  ytitle_dict <- list(
+    
+    "richness" = "Richness",
+    "abundance" = "Community cover",
+    "sigma_log" = "Sigma (Coefficient 2 in Log model for RADs)",
+    "mu_log" = "Mu (Coefficient 1 in Log model for RADs)",
+    "Y_zipf" = "Gamma (Coefficient in Zipf model for RADs)",
+    "biomass" = "Community biomass"
+  )
+  
+  ytitle <- ytitle_dict[[variable]]
+  
+  if (is.null(ytitle)) {
+    stop("Variable must be one of the following: ", paste(names(ytitle_dict), collapse = ", "))
+  }
+  
   
   # plot
 

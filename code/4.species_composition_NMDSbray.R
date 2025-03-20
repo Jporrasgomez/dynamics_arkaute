@@ -4,12 +4,13 @@
 
 
 
-rm(list = ls(all.names = TRUE))
+#rm(list = ls(all.names = TRUE))
 pacman::p_load(dplyr, tidyverse, DT, viridis, ggrepel, codyn, vegan, eulerr, ggplot2, ggthemes, ggpubr, ggforce )
+#
+#source("code/1.first_script.R"); rm(list = setdiff(ls(), c("flora_abrich", "biomass_imp", "biomass_noimp")))
+#
+#source("code/palettes_labels.R")
 
-source("code/1.first_script.R"); rm(list = setdiff(ls(), c("flora_abrich", "biomass_imp", "biomass_noimp")))
-
-source("code/palettes_labels.R")
 
 
 
@@ -96,12 +97,12 @@ for(i in 1:length(treats)){
 }
 
 
-ggarrange(
-  gglist1[[2]],
-  gglist1[[1]],
-  gglist1[[3]],
-  gglist1[[4]], 
-  ncol = 2, nrow = 2)
+##ggarrange(
+##  gglist1[[2]],
+##  gglist1[[1]],
+##  gglist1[[3]],
+##  gglist1[[4]], 
+##  ncol = 2, nrow = 2)
 
 
 #https://rpubs.com/CPEL/NMDS
@@ -138,7 +139,7 @@ distance_matrix_bc <- vegan::vegdist(abundance_data, method = "bray")
 nmds_bc <- metaMDS(distance_matrix_bc, k = 2, trymax = 250, maxit = 999)
 
 # Extract NMDS coordinates
-nmds_df <- data.frame(
+nmds_df_sampling <- data.frame(
   NMDS1 = nmds_bc$points[, 1],
   NMDS2 = nmds_bc$points[, 2],
   treatment = sp_wide$treatment,
@@ -147,11 +148,11 @@ nmds_df <- data.frame(
 )
 
 # Arrange by sampling order
-nmds_df <- nmds_df %>% arrange(sampling)
+nmds_df_sampling <- nmds_df_sampling %>% arrange(sampling)
 
 # Plot NMDS results using ggplot
 
-{ggnmds_alltreatments <- ggplot(nmds_df, aes(x = NMDS1, y = NMDS2, color = treatment)) +
+ggnmds_alltreatments <- ggplot(nmds_df_sampling, aes(x = NMDS1, y = NMDS2, color = treatment)) +
     stat_ellipse(geom = "polygon", aes(fill = treatment),
                  alpha = 0.1, show.legend = FALSE, level = 0.90) + 
     geom_point(size = 1.5, aes(shape = treatment), show.legend =T) +
@@ -159,15 +160,15 @@ nmds_df <- nmds_df %>% arrange(sampling)
     geom_hline(yintercept = 0, color = "gray52", linetype = "dashed") +
     geom_path(aes(group = treatment), linetype = "dotted", alpha = 0.8) +
     geom_vline(xintercept = 0, color = "gray52", linetype = "dashed") +
-    scale_color_manual(values = palette6, labels = labels1, guide = "legend") +
-    scale_fill_manual(values = palette6, guide = "none" ) +
+    scale_color_manual(values = palette, labels = labels1, guide = "legend") +
+    scale_fill_manual(values = palette, guide = "none" ) +
     scale_shape_manual(values = point_shapes, guide = "none") +
     labs(title = "NMDS Bray-Curtis: mean abundance of species at sampling level",
          subtitle = paste0("Stress = ", round(nmds_bc$stress, 3)),
          x = "NMDS1", y = "NMDS2", color = " ") +
     theme(legend.position = "bottom")
   # Print the plot
-  print(ggnmds_alltreatments)}
+
 
 
 
@@ -195,7 +196,7 @@ cat("NMDS2 explains:", round(explained_NMDS2, 2), "%\n")
 
 
 ggNMDS1_dynamics_sampling <- 
-ggplot(nmds_df, aes(x = date, y = NMDS1, color = treatment, fill = treatment)) +
+ggplot(nmds_df_sampling, aes(x = date, y = NMDS1, color = treatment, fill = treatment)) +
   geom_point(show.legend = TRUE) + 
   geom_smooth(
     se = TRUE, aes(color = treatment, fill = treatment),
@@ -210,7 +211,7 @@ ggplot(nmds_df, aes(x = date, y = NMDS1, color = treatment, fill = treatment)) +
 
 
 ggNMDS2_dynamics_sampling <- 
-ggplot(nmds_df, aes(x = date, y = NMDS2, color = treatment, fill = treatment)) +
+ggplot(nmds_df_sampling, aes(x = date, y = NMDS2, color = treatment, fill = treatment)) +
   geom_point(show.legend = TRUE) +  # Hide extra legend from points
   geom_smooth(
     se = TRUE, aes(color = treatment, fill = treatment),
@@ -285,9 +286,9 @@ cor2 <- cor(distance_matrix_bc_plot, dist(nmds_bc_plot$points[,2]), method = "pe
 cor3 <- cor(distance_matrix_bc_plot, dist(nmds_bc_plot$points[,3]), method = "pearson")
 
 
-print(explained_NMDS1 <- (cor1^2 / (r2_1 + r2_2 + r2_3)) * 100)
-print(explained_NMDS2 <- (cor2^2 / (r2_1 + r2_2 + r2_3)) * 100)
-print(explained_NMDS3 <- (cor3^2 / (r2_1 + r2_2 + r2_3)) * 100)
+print(explained_NMDS1 <- (cor1^2 / (cor1^2 + cor2^2 + cor3^2)) * 100)
+print(explained_NMDS2 <- (cor2^2 / (cor1^2 + cor2^2 + cor3^2)) * 100)
+print(explained_NMDS3 <- (cor3^2 / (cor1^2 + cor2^2 + cor3^2)) * 100)
 
 
 
@@ -310,33 +311,33 @@ ggNMDS12_allplots <-
 ggNMDS13_allplots <-
   ggplot(nmds_df_plot, aes(x = NMDS1, y = NMDS3, color = treatment)) +
     stat_ellipse(geom = "polygon", aes(fill = treatment),
-                 alpha = 0.1, show.legend = FALSE, level = 0.68) + 
-    geom_point(size = 1.5) +
-    #geom_text_repel(aes(label = paste0(sampling, "," ,plot)), max.overlaps = 100, size = 3, show.legend = F) +
-    geom_hline(yintercept = 0, color = "gray52", linetype = "dashed") +
-    #geom_path(aes(group = treatment), linetype = "dotted", alpha = 0.8) +
-    geom_vline(xintercept = 0, color = "gray52", linetype = "dashed") +
-    scale_colour_manual(values = palette2) +
-    scale_fill_manual(values = palette2) +
-    labs(title = "NMDS Bray-Curtis: abundance of species at plot level",
-         subtitle = paste0("Stress = ", round(nmds_bc_plot$stress, 3)),
+                  alpha = 0.1, show.legend = FALSE, level = 0.9) + 
+  geom_point(size = 1.5, aes(shape= treatment)) +
+  #geom_text_repel(aes(label = paste0(sampling, "," ,plot)), max.overlaps = 100, size = 3, show.legend = F) +
+  geom_hline(yintercept = 0, color = "gray52", linetype = "dashed") +
+  #geom_path(aes(group = treatment), linetype = "dotted", alpha = 0.8) +
+  geom_vline(xintercept = 0, color = "gray52", linetype = "dashed") +
+  scale_colour_manual(values = palette2) +
+  scale_fill_manual(values = palette2) +
+  labs(title = "NMDS Bray-Curtis: abundance of species at plot level",
+       subtitle = paste0("Stress = ", round(nmds_bc_plot$stress, 3)),
          x = "NMDS1", y = "NMDS3", color = "Treatment")
   # Print the plot
 
 
 ggNMDS23_allplots<-
   ggplot(nmds_df_plot, aes(x = NMDS2, y = NMDS3, color = treatment)) +
-    stat_ellipse(geom = "polygon", aes(fill = treatment),
-                 alpha = 0.1, show.legend = FALSE, level = 0.68) + 
-    geom_point(size = 1.5) +
-    #geom_text_repel(aes(label = paste0(sampling, "," ,plot)), max.overlaps = 100, size = 3, show.legend = F) +
-    geom_hline(yintercept = 0, color = "gray52", linetype = "dashed") +
-    #geom_path(aes(group = treatment), linetype = "dotted", alpha = 0.8) +
-    geom_vline(xintercept = 0, color = "gray52", linetype = "dashed") +
-    scale_colour_manual(values = palette2) +
-    scale_fill_manual(values = palette2) +
-    labs(title = "NMDS Bray-Curtis: abundance of species at plot level",
-         subtitle = paste0("Stress = ", round(nmds_bc_plot$stress, 3)),
+  stat_ellipse(geom = "polygon", aes(fill = treatment),
+               alpha = 0.1, show.legend = FALSE, level = 0.9) + 
+  geom_point(size = 1.5, aes(shape= treatment)) +
+  #geom_text_repel(aes(label = paste0(sampling, "," ,plot)), max.overlaps = 100, size = 3, show.legend = F) +
+  geom_hline(yintercept = 0, color = "gray52", linetype = "dashed") +
+  #geom_path(aes(group = treatment), linetype = "dotted", alpha = 0.8) +
+  geom_vline(xintercept = 0, color = "gray52", linetype = "dashed") +
+  scale_colour_manual(values = palette2) +
+  scale_fill_manual(values = palette2) +
+  labs(title = "NMDS Bray-Curtis: abundance of species at plot level",
+       subtitle = paste0("Stress = ", round(nmds_bc_plot$stress, 3)),
          x = "NMDS2", y = "NMDS3", color = "Treatment")
   # Print the plot
 
@@ -521,6 +522,8 @@ nmds_df_plot <- left_join(nmds_df_plot, stress_values, by = "sampling")
 
 
 # Create NMDS plot with stress values in facet labels
+
+gg_samplings <- 
 ggplot(nmds_df_plot, aes(x = NMDS1, y = NMDS2, color = treatment, fill = treatment)) +
   #facet_wrap(~ paste0(sampling, " (Stress = ", stress, ")"), ncol = 5, nrow = 5) +
   facet_wrap(~ sampling, ncol = 5, nrow = 5) + 
@@ -544,3 +547,8 @@ ggplot(nmds_df_plot, aes(x = NMDS1, y = NMDS2, color = treatment, fill = treatme
   ) + 
   labs(color = "Treatment")
 
+
+
+
+rm(list = setdiff(ls(), c("nmds_df_plot", "nmds_df_sampling", "ggnmds_alltreatments", "gg_samplings",
+                          "ggNMDS12_allplots", "ggNMDS13_allplots", "ggNMDS23_allplots" )))

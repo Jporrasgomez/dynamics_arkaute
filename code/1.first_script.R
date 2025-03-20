@@ -324,7 +324,7 @@ biomass_noimp <- bind_rows(biomass_noimp, dummy_rows) %>%
   rename(biomass = biomass_community)
 
 flora_abrich <- bind_rows(flora_abrich, dummy_rows)%>% 
-  select(year, date, sampling, treatment, plot, code, abundance,
+  select(year, date, sampling, treatment, plot, code, species_level, genus_level, family, abundance,
          richness, abundance_community) %>% 
   mutate(sampling_date = as.factor(format(ymd(date), "%Y-%m-%d"))) %>% 
   rename(abundance_s = abundance, 
