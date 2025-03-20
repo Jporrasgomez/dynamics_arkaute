@@ -23,7 +23,10 @@ gg_dynamics <- function(data, variable) {
     "sigma_log" = "Sigma (Coefficient 2 in Log model for RADs)",
     "mu_log" = "Mu (Coefficient 1 in Log model for RADs)",
     "Y_zipf" = "Gamma (Coefficient in Zipf model for RADs)",
-    "biomass" = "Community biomass"
+    "biomass" = "Community biomass",
+    "NMDS1" = "NMDS1",
+    "NMDS2" = "NMDS2",
+    "NMDS3" = "NMDS3"
   )
   
   ytitle <- ytitle_dict[[variable]]

@@ -6,7 +6,7 @@
 meta_function <- function(data, variable1, variable2){
   
   
-source("code/stats_function.R")
+source("code/meta_function/stats_function.R")
   
 stats(data, variable1, variable2)
 

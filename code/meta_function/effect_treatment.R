@@ -24,32 +24,24 @@ effect_c <- effect %>%
 
 
 
-# define y axis title
-if (variable == "richness") {
-  ytitle <- "richness"
-} else {
-  if (variable == "abundance") {
-    ytitle = "community cover"
-  } else {
-    if (variable == "sigma_log") {
-      ytitle <- "Sigma (Coefficient 2 in Log model for RADs)"
-    } else {
-      if (variable == "mu_log") {
-        ytitle <- "Mu (Coefficient 1 in Log model for RADs)"
-      } else {
-        if (variable == "Y_zipf") {
-          ytitle <- "Gamma (Coefficient in Zipf model for RADs)"
-        } else {
-          if (variable == "biomass") {
-            ytitle <- "community biomass"
-          } else{
-            stop("variable must be one of the following: richness, abundance, sigma_log, mu_log, Y_zipf, biomass")
-          }
-        }
-      }
-    }
-  }
+ytitle_dict <- list(
+  "richness"   = "Richness",
+  "abundance"  = "Community cover",
+  "sigma_log"  = "Sigma (Coefficient 2 in Log model for RADs)",
+  "mu_log"     = "Mu (Coefficient 1 in Log model for RADs)",
+  "Y_zipf"     = "Gamma (Coefficient in Zipf model for RADs)",
+  "biomass"    = "Community biomass",
+  "NMDS1" = "NMDS1",
+  "NMDS2" = "NMDS2",
+  "NMDS3" = "NMDS3"
+)
+
+ytitle <- ytitle_dict[[variable]]
+
+if (is.null(ytitle)) {
+  stop("Variable must be one of the following: ", paste(names(ytitle_dict), collapse = ", "))
 }
+
 
 
 n = 4

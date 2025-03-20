@@ -14,32 +14,27 @@ gg_dynamics_cv <- function(data, variable) {
   
   # define y axis title
   
-  if (variable == "abundance") {
-    ytitle <- "CV of abundance"
-  } else {
-    if (variable == "richness") {
-      ytitle <- "CV of richness"
-    } else {
-      if (variable == "sigma_log") {
-        ytitle <- "CV of Sigma for Log model RADs"
-      } else {
-        if (variable == "mu_log") {
-          ytitle <- "CV of Mu for Log model RADs"
-        } else {
-          if (variable == "Y_zipf") {
-            ytitle <- "CV of Gamma for Zipf model RADs"
-          } else {
-            if (variable == "biomass") {
-              ytitle <- "CV of community biomass"
-            } else{
-              stop("variable must be one of the following: cv_richness, cv_abundance, cv_sigma_log, 
-                   cv_mu_log, cv_Y_zipf, cv_biomass_total")
-            }
-          }
-        }
-      }
-    }
+
+  ytitle_dict <- list(
+    
+    "abundance" = "CV of abundance",
+    "richness" = "CV of richness",
+    "sigma_log" = "CV of Sigma for Log model RADs",
+    "mu_log" = "CV of Mu for Log model RADs",
+    "Y_zipf" = "CV of Gamma for Zipf model RADs",
+    "biomass" = "CV of community biomass",
+    "NMDS1" = "CV of NMDS1",
+    "NMDS2" = "CV of NMDS2",
+    "NMDS3" = "CV of NMDS3"
+  )
+  
+
+  ytitle <- ytitle_dict[[variable]]
+  
+  if (is.null(ytitle)) {
+    stop("Variable must be one of the following: ", paste(names(ytitle_dict), collapse = ", "))
   }
+  
   
  
   

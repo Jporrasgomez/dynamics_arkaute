@@ -160,7 +160,7 @@ ggnmds_alltreatments <- ggplot(nmds_df_sampling, aes(x = NMDS1, y = NMDS2, color
     geom_hline(yintercept = 0, color = "gray52", linetype = "dashed") +
     geom_path(aes(group = treatment), linetype = "dotted", alpha = 0.8) +
     geom_vline(xintercept = 0, color = "gray52", linetype = "dashed") +
-    scale_color_manual(values = palette, labels = labels1, guide = "legend") +
+    scale_color_manual(values = palette, labels = labels, guide = "legend") +
     scale_fill_manual(values = palette, guide = "none" ) +
     scale_shape_manual(values = point_shapes, guide = "none") +
     labs(title = "NMDS Bray-Curtis: mean abundance of species at sampling level",
@@ -203,8 +203,8 @@ ggplot(nmds_df_sampling, aes(x = date, y = NMDS1, color = treatment, fill = trea
     method = "loess", span = 0.9, alpha = 0.1, show.legend = TRUE
   )+
   geom_path(aes(group = treatment), show.legend = FALSE) +
-  scale_color_manual(values = palette2) +
-  scale_fill_manual(values = palette2, guide = "none") +
+  scale_color_manual(values = palette) +
+  scale_fill_manual(values = palette, guide = "none") +
   labs(title = "NMDS1 Bray-Curtis: mean abundance at sampling level ",
        subtitle = paste0("Stress = ", round(nmds_bc$stress, 3)),
        x = "Date", y = "NMDS1", color = "Treatment")
@@ -218,8 +218,8 @@ ggplot(nmds_df_sampling, aes(x = date, y = NMDS2, color = treatment, fill = trea
     method = "loess", span = 0.9, alpha = 0.1, show.legend = TRUE # Keep one legend
   ) +
   geom_path(aes(group = treatment), show.legend = FALSE) + # Hide extra legend from paths
-  scale_color_manual(values = palette2) +
-  scale_fill_manual(values = palette2, guide = "none") +  # Hide fill legend
+  scale_color_manual(values = palette) +
+  scale_fill_manual(values = palette, guide = "none") +  # Hide fill legend
   labs(title = "NMDS1 Bray-Curtis: mean abundance at sampling level ",
        subtitle = paste0("Stress = ", round(nmds_bc$stress, 3)),
        x = "Date", y = "NMDS2", color = "Treatment")
@@ -253,8 +253,6 @@ distance_matrix_bc_plot <- vegan::vegdist(abundance_data_plot, method = "bray")
 # With k = 3, stress = 0.16
 nmds_bc_plot <- metaMDS(distance_matrix_bc_plot, k = 3, trymax = 250, maxit = 999)
 
-print(nmds_bc_plot$stress)
-
 # Extract NMDS coordinates
 nmds_df_plot <- data.frame(
   NMDS1 = nmds_bc_plot$points[, 1],
@@ -276,6 +274,9 @@ nmds_df_plot <- nmds_df_plot %>%
          sd_NMDS1 = sd (NMDS1, na.rm = T), 
          sd_NMDS2 = sd (NMDS2, na.rm = T), 
          sd_NMDS3 = sd (NMDS3, na.rm = T)) %>% 
+  mutate(cv_NMDS1 = sd_NMDS1/mean_NMDS1,
+         cv_NMDS2 = sd_NMDS2/mean_NMDS2,
+         cv_NMDS3 = sd_NMDS1/mean_NMDS3) %>% 
   ungroup()
 
 
@@ -301,8 +302,8 @@ ggNMDS12_allplots <-
     geom_hline(yintercept = 0, color = "gray52", linetype = "dashed") +
     #geom_path(aes(group = treatment), linetype = "dotted", alpha = 0.8) +
     geom_vline(xintercept = 0, color = "gray52", linetype = "dashed") +
-    scale_colour_manual(values = palette2) +
-    scale_fill_manual(values = palette2) +
+    scale_colour_manual(values = palette) +
+    scale_fill_manual(values = palette) +
     labs(title = "NMDS Bray-Curtis: abundance of species at plot level",
          subtitle = paste0("Stress = ", round(nmds_bc_plot$stress, 3)),
          x = "NMDS1", y = "NMDS2", color = "Treatment")
@@ -317,8 +318,8 @@ ggNMDS13_allplots <-
   geom_hline(yintercept = 0, color = "gray52", linetype = "dashed") +
   #geom_path(aes(group = treatment), linetype = "dotted", alpha = 0.8) +
   geom_vline(xintercept = 0, color = "gray52", linetype = "dashed") +
-  scale_colour_manual(values = palette2) +
-  scale_fill_manual(values = palette2) +
+  scale_colour_manual(values = palette) +
+  scale_fill_manual(values = palette) +
   labs(title = "NMDS Bray-Curtis: abundance of species at plot level",
        subtitle = paste0("Stress = ", round(nmds_bc_plot$stress, 3)),
          x = "NMDS1", y = "NMDS3", color = "Treatment")
@@ -334,8 +335,8 @@ ggNMDS23_allplots<-
   geom_hline(yintercept = 0, color = "gray52", linetype = "dashed") +
   #geom_path(aes(group = treatment), linetype = "dotted", alpha = 0.8) +
   geom_vline(xintercept = 0, color = "gray52", linetype = "dashed") +
-  scale_colour_manual(values = palette2) +
-  scale_fill_manual(values = palette2) +
+  scale_colour_manual(values = palette) +
+  scale_fill_manual(values = palette) +
   labs(title = "NMDS Bray-Curtis: abundance of species at plot level",
        subtitle = paste0("Stress = ", round(nmds_bc_plot$stress, 3)),
          x = "NMDS2", y = "NMDS3", color = "Treatment")
@@ -358,8 +359,8 @@ ggplot(nmds_df_plot,
                 , alpha = 0.2, position = position_dodge(width = 8)) + 
   geom_point(aes(x = date, y = mean_NMDS1, color = treatment), fill = "white", 
              shape = 21, size = 2, position = position_dodge(width = 8))+
-  scale_colour_manual(values = palette2) +
-  scale_fill_manual(values = palette2) +
+  scale_colour_manual(values = palette) +
+  scale_fill_manual(values = palette) +
   scale_x_date(
     date_breaks = "4 weeks", # Specify the interval (e.g., every 2 weeks)
     date_labels = "%d-%b-%y" # Customize the date format (e.g., "04-May-23")
@@ -378,8 +379,8 @@ ggboxplot(nmds_df_plot, x = "treatment", y = "NMDS1", fill = "treatment") +
   stat_compare_means(comparisons = list(c("c", "w"), c("c", "p"), c("c", "wp"), c("w", "wp"), c("p", "wp")),
                      method = "t.test",
                      label = "p.signif") +  # Show significance stars (*, **, ***)
-  scale_fill_manual(values = palette2) +
-  scale_x_discrete(labels = labels1) +
+  scale_fill_manual(values = palette) +
+  scale_x_discrete(labels = labels) +
   labs( x = NULL, y = "NMDS1", fill = "Treatment") +
   theme(legend.position = "none")
 
@@ -387,7 +388,7 @@ ggboxplot(nmds_df_plot, x = "treatment", y = "NMDS1", fill = "treatment") +
 ggNMDS1_boxplot_plot <- 
 ggplot(nmds_df_plot, aes(y = NMDS1, x = treatment)) +
   geom_boxplot(aes(fill = treatment), color = "black", alpha = 0.5) + # Set the outline color to black
-  scale_fill_manual(values = palette2) +
+  scale_fill_manual(values = palette) +
   theme(legend.position = "none",
         axis.text.x = element_blank(), axis.text.y = element_blank(),
         panel.background = element_rect(fill = NA, colour = NA), # Transparent background
@@ -409,8 +410,8 @@ ggNMDS2_dynamics_plot <-
                 , alpha = 0.2, position = position_dodge(width = 8)) + 
   geom_point(aes(x = date, y = mean_NMDS2, color = treatment), fill = "white", 
              shape = 21, size = 2, position = position_dodge(width = 8))+
-  scale_colour_manual(values = palette2) +
-  scale_fill_manual(values = palette2) +
+  scale_colour_manual(values = palette) +
+  scale_fill_manual(values = palette) +
   scale_x_date(
     date_breaks = "4 weeks", # Specify the interval (e.g., every 2 weeks)
     date_labels = "%d-%b-%y" # Customize the date format (e.g., "04-May-23")
@@ -424,7 +425,7 @@ ggNMDS2_dynamics_plot <-
 ggNMDS2_boxplot_plot <- 
   ggplot(nmds_df_plot, aes(y = NMDS2, x = treatment)) +
   geom_boxplot(aes(fill = treatment), color = "black", alpha = 0.5) + # Set the outline color to black
-  scale_fill_manual(values = palette2) +
+  scale_fill_manual(values = palette) +
   theme(legend.position = "none",
         axis.text.x = element_blank(), axis.text.y = element_blank(),
         panel.background = element_rect(fill = NA, colour = NA), # Transparent background
@@ -448,8 +449,8 @@ ggNMDS3_dynamics_plot <-
                 , alpha = 0.2, position = position_dodge(width = 8)) + 
   geom_point(aes(x = date, y = mean_NMDS3, color = treatment), fill = "white", 
              shape = 21, size = 2, position = position_dodge(width = 8))+
-  scale_colour_manual(values = palette2) +
-  scale_fill_manual(values = palette2) +
+  scale_colour_manual(values = palette) +
+  scale_fill_manual(values = palette) +
   scale_x_date(
     date_breaks = "4 weeks", # Specify the interval (e.g., every 2 weeks)
     date_labels = "%d-%b-%y" # Customize the date format (e.g., "04-May-23")
@@ -463,7 +464,7 @@ ggNMDS3_dynamics_plot <-
 ggNMDS3_boxplot_plot <- 
   ggplot(nmds_df_plot, aes(y = NMDS3, x = treatment)) +
   geom_boxplot(aes(fill = treatment), color = "black", alpha = 0.5) + # Set the outline color to black
-  scale_fill_manual(values = palette2) +
+  scale_fill_manual(values = palette) +
   theme(legend.position = "none",
         axis.text.x = element_blank(), axis.text.y = element_blank(),
         panel.background = element_rect(fill = NA, colour = NA), # Transparent background
@@ -532,8 +533,8 @@ ggplot(nmds_df_plot, aes(x = NMDS1, y = NMDS2, color = treatment, fill = treatme
                alpha = 0.2, show.legend = FALSE, level = 0.68) +
   geom_hline(aes(yintercept = 0), color = "black", linetype = "dashed") +
   geom_vline(aes(xintercept = 0), color = "black", linetype = "dashed") +
-  scale_colour_manual(values = palette2) +
-  scale_fill_manual(values = palette2) +
+  scale_colour_manual(values = palette) +
+  scale_fill_manual(values = palette) +
   labs(
     x = "NMDS1",
     y = "NMDS2"
@@ -550,5 +551,4 @@ ggplot(nmds_df_plot, aes(x = NMDS1, y = NMDS2, color = treatment, fill = treatme
 
 
 
-rm(list = setdiff(ls(), c("nmds_df_plot", "nmds_df_sampling", "ggnmds_alltreatments", "gg_samplings",
-                          "ggNMDS12_allplots", "ggNMDS13_allplots", "ggNMDS23_allplots" )))
+
