@@ -124,5 +124,25 @@ stats <- function(data, response_variable, explanatory_variable) {
   gg_ttest <<- gg_ttest
   
   
+ # # Realizar el ANOVA
+ # anova_model <- aov(response_variable ~ explanatory_variable, data = data)
+ # 
+ # # Resumen del ANOVA
+ # summary(anova_model)
+ # 
+ # # Realizar la prueba post-hoc Tukey HSD
+ # tukey_results <- TukeyHSD(anova_model)
+ # 
+ # # Graficar el boxplot con los resultados de ANOVA y Tukey
+ # gg_ttest <- 
+ #   ggboxplot(data, x = explanatory_variable, y = response_variable,
+ #             fill = explanatory_variable, alpha = 0.5) +
+ #   stat_compare_means(method = "anova", label = "p.signif", tip.length = 0.01) +  # ANOVA test
+ #   scale_fill_manual(values = palette) +
+ #   scale_x_discrete(labels = labels) +
+ #   labs(x = NULL, y = tools::toTitleCase(response_variable), fill = explanatory_variable, 
+ #        title = "ANOVA with Tukey HSD Post-Hoc") +
+ #   theme(legend.position = "none", text = element_text(size = 10))
+  
   par(mfrow = c(1, 1))
 }

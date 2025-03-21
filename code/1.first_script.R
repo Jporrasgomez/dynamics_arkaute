@@ -341,6 +341,18 @@ radcoeff_df <- read.csv("data/radcoeff_df.csv") %>%
          sampling = as.factor(sampling), 
          plot = as.factor(plot))
 
+min(radcoeff_df$Y_zipf, na.rm = T)
+min(radcoeff_df$mu_log, na.rm = T)
+min(radcoeff_df$sigma_log, na.rm = T)
+
+### Corrección donde quito 0 y negativos para los análisis de logRR y CV. Al ser unidades adimensionales da igual. 
+
+radcoeff_df<- radcoeff_df %>% 
+  mutate(Y_zipf = Y_zipf + abs(min(radcoeff_df$Y_zipf, na.rm = T)) + 1,
+         mu_log = mu_log + abs(min(radcoeff_df$mu_log, na.rm = T)) + 1, 
+         sigma_log = sigma_log - min(radcoeff_df$sigma_log, na.rm = T) + 1)
+
+
 ab_rich_dynamics <- full_join(flora_abrich, radcoeff_df)   
 
 ab_rich_dynamics <- ab_rich_dynamics %>% 

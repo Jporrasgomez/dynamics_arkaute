@@ -5,12 +5,10 @@
 
 
 #rm(list = ls(all.names = TRUE))
-pacman::p_load(dplyr, tidyverse, DT, viridis, ggrepel, codyn, vegan, eulerr, ggplot2, ggthemes, ggpubr, ggforce )
-#
+pacman::p_load(dplyr, tidyverse, DT, viridis, ggrepel, codyn, vegan, eulerr, ggplot2, ggthemes, ggpubr, ggforce )#
 #source("code/1.first_script.R"); rm(list = setdiff(ls(), c("flora_abrich", "biomass_imp", "biomass_noimp")))
 #
 #source("code/palettes_labels.R")
-
 
 
 
@@ -265,6 +263,18 @@ nmds_df_plot <- data.frame(
 )
 
 # Arrange by sampling order
+
+min(nmds_df_plot$NMDS1)
+min(nmds_df_plot$NMDS2)
+min(nmds_df_plot$NMDS3)
+
+# Changes on NMDS values to avoid pressence of 0 and negative values since log(RR) do not work with those
+
+nmds_df_plot<- nmds_df_plot %>% 
+  mutate(NMDS1 = NMDS1 + abs(min(nmds_df_plot$NMDS1)) + 1,
+         NMDS2 = NMDS2 + abs(min(nmds_df_plot$NMDS2)) + 1,
+         NMDS3 = NMDS3 + abs(min(nmds_df_plot$NMDS3)) + 1)
+
 nmds_df_plot <- nmds_df_plot %>%
   arrange(sampling) %>% 
   group_by(treatment, sampling) %>% 
@@ -516,16 +526,16 @@ for (i in seq_along(samps)) {
 }
 
 # Combine NMDS results into one dataframe
-nmds_df_plot <- bind_rows(nmds_list)
+nmds_df_1x1sampling <- bind_rows(nmds_list)
 
 # Merge stress values into NMDS dataframe
-nmds_df_plot <- left_join(nmds_df_plot, stress_values, by = "sampling")
+nmds_df_1x1sampling <- left_join(nmds_df_1x1sampling, stress_values, by = "sampling")
 
 
 # Create NMDS plot with stress values in facet labels
 
 gg_samplings <- 
-ggplot(nmds_df_plot, aes(x = NMDS1, y = NMDS2, color = treatment, fill = treatment)) +
+ggplot(nmds_df_1x1sampling, aes(x = NMDS1, y = NMDS2, color = treatment, fill = treatment)) +
   #facet_wrap(~ paste0(sampling, " (Stress = ", stress, ")"), ncol = 5, nrow = 5) +
   facet_wrap(~ sampling, ncol = 5, nrow = 5) + 
   geom_point(size = 1.5) +

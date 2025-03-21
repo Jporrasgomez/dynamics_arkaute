@@ -94,6 +94,11 @@ effect_size_wp <- function(data, variable){
       se_sigma_RR = sqrt(var_sigma_RR)  # Error estándar de sigma_RR
     )
   
+  RR_treatment_wp <- RR_treatment_wp %>% 
+    filter(!RR == "Inf")
+  
+  RR_treatment_wp <<- RR_treatment_wp
+  
   
   gg_RR_wp <- 
     ggplot(RR_treatment_wp, aes(x = date, y = RR)) + 

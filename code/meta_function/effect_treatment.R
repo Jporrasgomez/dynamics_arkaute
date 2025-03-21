@@ -22,8 +22,6 @@ effect_c <- effect %>%
          !!sd_variable_c := !!sym(sd_variable))
 
 
-
-
 ytitle_dict <- list(
   "richness"   = "Richness",
   "abundance"  = "Community cover",
@@ -86,10 +84,14 @@ RR_treatment <- effect %>%
     se_sigma_RR = sqrt(var_sigma_RR)  # Error estándar de sigma_RR
   )
 
+RR_treatment <- RR_treatment %>% 
+filter(! RR == "-Inf")
+
+RR_treatment <<- RR_treatment
 
 gg_RR <- 
 ggplot(RR_treatment, aes(x = date, y = RR)) + 
-  facet_wrap(~ treatment, labeller = labeller(treatment = labels3)) +
+  facet_wrap(~ treatment, labeller = labeller(treatment = labels_RR)) +
   #geom_ribbon(aes(ymin = RR - se_RR, ymax = RR + se_RR, fill = treatment), alpha = 0.2) +
   geom_errorbar(aes(ymin = RR - se_RR,
                     ymax = RR + se_RR,
@@ -107,7 +109,7 @@ gg_RR <<- gg_RR
 
 gg_delta_RR <- 
 ggplot(RR_treatment, aes(x = date, y = delta_RR)) + 
-  facet_wrap(~ treatment, labeller = labeller(treatment = labels3)) +
+  facet_wrap(~ treatment, labeller = labeller(treatment = labels_RR)) +
   geom_errorbar(aes(ymin = delta_RR - se_delta_RR,
                     ymax = delta_RR + se_delta_RR,
                     color = treatment), alpha = 0.5) +
@@ -123,7 +125,7 @@ gg_delta_RR <<- gg_delta_RR
 
 gg_sigma_RR <- 
 ggplot(RR_treatment, aes(x = date, y = sigma_RR)) + 
-  facet_wrap(~ treatment, labeller = labeller(treatment = labels3)) +
+  facet_wrap(~ treatment, labeller = labeller(treatment = labels_RR)) +
   geom_errorbar(aes(ymin = sigma_RR - se_sigma_RR,
                     ymax = sigma_RR + se_sigma_RR,
                     color = treatment), alpha = 0.5) +

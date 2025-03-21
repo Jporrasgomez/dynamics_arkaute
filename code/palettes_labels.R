@@ -36,6 +36,8 @@ labels1 <- c("c" = "Control", "w" = "Warming", "p" = "Perturbation", "wp" = "Com
 labels2 <- c("c" = "C", "w" = "W", "p" = "P", "wp" = "W+P")
 labels3 <- c("c" = "Control", "w" = "Warming", "p" = "Perturbation", "wp" = "Global change")
 
+labels_RR <- c("w" = "Warming cs Control", "p" = "Perturbation vs Control", "wp" = "Global change vs Control")
 labels_RR_wp <- c("w" = "Warming vs Global Change", "p" = "Perturbation vs Global Change")
+
 
 point_shapes <- c("c" = 16, "w" = 17, "p" = 15, "wp" = 18)
