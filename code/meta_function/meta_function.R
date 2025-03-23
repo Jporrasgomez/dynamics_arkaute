@@ -39,7 +39,7 @@ gg_dynamics_cv <<- gg_dynamics_cv
 
 
 # Log response ratio
-source("code/meta_function/effect_treatment.R")
+source("code/meta_function/effect_size_c.R")
 
 effect_size(data, variable1)
 gg_RR_variable <<- gg_RR
