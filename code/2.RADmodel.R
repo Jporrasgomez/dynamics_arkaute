@@ -26,39 +26,38 @@ flora_no1 <- flora_rad[flora_rad$sampling != "1", ]
 
 ### Comprobación del AIC para cada valor ###########
 
-#rad_dfplot <- matrix(nrow = (length(unique(flora_no1$sampling))*length(unique(flora_no1$plot))), ncol = 6)
-#colnames(rad_dfplot) <- c("sampling", "plot", "AIC_pree", "AIC_log", "AIC_zipf", "AIC_man")
-#rad_dfplot <-  as.data.frame(rad_dfplot)
-#
-#count <- 0
-#for (i in 1:length(unique(flora_no1$sampling))){
-#  for (j in 1:length(unique(flora_no1$plot))){
-#    
-#    count <- count + 1
-#    subset_data <- subset(flora_no1, sampling == unique(flora_no1$sampling)[i] & plot == unique(flora_no1$plot)[j])
-#    subrad <- summarise(group_by(subset_data, species),
-#                        abundance = round(mean(abundance), 0))
-#    subrad <- pivot_wider(subrad, names_from = species, values_from = abundance, values_fill = 0)
-#    subrad <- as.data.frame(subrad)
-#    rad_sub <- radfit(subrad)
-#    
-#    rad_dfplot$sampling[count] <- unique(flora_no1$sampling)[i]
-#    rad_dfplot$plot[count] <- unique(flora_no1$plot)[j]
-#    rad_dfplot$AIC_pree[count] <- rad_sub$models$Preemption$aic
-#    rad_dfplot$AIC_log[count] <- rad_sub$models$Lognormal$aic
-#    rad_dfplot$AIC_zipf[count] <- rad_sub$models$Zipf$aic
-#    rad_dfplot$AIC_man[count] <- rad_sub$models$Mandelbrot$aic
-#    
-#  }
-#}
-#
-#rad_dfplot <- pivot_longer(rad_dfplot, cols = c("AIC_pree", "AIC_log","AIC_zipf","AIC_man"), 
-#                           names_to = "model", values_to = "AIC")
-#ggplot(rad_dfplot, aes(x = model, y = AIC))+
-#  geom_boxplot()
-#
-# No differences. We decide to use zipf because it only has one explanatory coefficient of the curve (gamma)
+rad_dfplot <- matrix(nrow = (length(unique(flora_no1$sampling))*length(unique(flora_no1$plot))), ncol = 6)
+colnames(rad_dfplot) <- c("sampling", "plot", "AIC_pree", "AIC_log", "AIC_zipf", "AIC_man")
+rad_dfplot <-  as.data.frame(rad_dfplot)
 
+count <- 0
+for (i in 1:length(unique(flora_no1$sampling))){
+  for (j in 1:length(unique(flora_no1$plot))){
+    
+    count <- count + 1
+    subset_data <- subset(flora_no1, sampling == unique(flora_no1$sampling)[i] & plot == unique(flora_no1$plot)[j])
+    subrad <- summarise(group_by(subset_data, code),
+                        abundance = round(mean(abundance), 0))
+    subrad <- pivot_wider(subrad, names_from = species, values_from = abundance, values_fill = 0)
+    subrad <- as.data.frame(subrad)
+    rad_sub <- radfit(subrad)
+    
+    rad_dfplot$sampling[count] <- unique(flora_no1$sampling)[i]
+    rad_dfplot$plot[count] <- unique(flora_no1$plot)[j]
+    rad_dfplot$AIC_pree[count] <- rad_sub$models$Preemption$aic
+    rad_dfplot$AIC_log[count] <- rad_sub$models$Lognormal$aic
+    rad_dfplot$AIC_zipf[count] <- rad_sub$models$Zipf$aic
+    rad_dfplot$AIC_man[count] <- rad_sub$models$Mandelbrot$aic
+    
+  }
+}
+
+rad_dfplot <- pivot_longer(rad_dfplot, cols = c("AIC_pree", "AIC_log","AIC_zipf","AIC_man"), 
+                           names_to = "model", values_to = "AIC")
+ggplot(rad_dfplot, aes(x = model, y = AIC))+
+  geom_boxplot()
+
+# No differences. We decide to use zipf because it only has one explanatory coefficient of the curve (gamma)
 
 # Applying Zipf and lognormal to the dataset: ############
 
@@ -76,7 +75,7 @@ for(i in 1:length(unique(flora_no1$sampling))){
                         abundance = round(mean(abundance), 0)) 
     subrad <- pivot_wider(subrad, names_from = code, values_from = abundance, values_fill = 0)
     subrad <- as.data.frame(subrad)
-    rad_sub <- radfit(subrad)
+    rad_sub <- vegan::radfit(subrad)
     
     radcoeff_df$plot[count] <- unique(flora_no1$plot)[j]
     radcoeff_df$sampling[count] <- unique(flora_no1$sampling)[i]

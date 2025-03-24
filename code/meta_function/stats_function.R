@@ -97,7 +97,7 @@ stats <- function(data, response_variable, explanatory_variable) {
   
   gg_dunn <- 
     ggboxplot(data, x = explanatory_variable, y = response_variable,
-              fill = explanatory_variable, alpha = 0.5) +
+              fill = explanatory_variable) +
     stat_pvalue_manual(dunn_results, label = "p.adj.signif", tip.length = 0.01) +  # Add p-value labels from Dunn's Test
     scale_fill_manual(values = palette) +
     scale_x_discrete(labels = labels) +
@@ -109,7 +109,7 @@ stats <- function(data, response_variable, explanatory_variable) {
   
   gg_ttest <- 
   ggboxplot(data,  x = explanatory_variable, y = response_variable,
-            fill = explanatory_variable, alpha = 0.5) +
+            fill = explanatory_variable) +
     stat_compare_means(comparisons = list(c("c", "w"), c("c", "p"), c("c", "wp"),
                                           c("w", "p"), c("w", "wp"), c("p", "wp")),
                        method = "t.test",

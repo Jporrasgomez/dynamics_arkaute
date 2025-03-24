@@ -13,9 +13,35 @@ theme_set(theme_bw() +
 
 #favs:
 palette5 <- c("c" = "#00C4A7", "w" = "#E0352F", "p" = "#0077FF", "wp" = "#A238A2")
+
 palette3 <- c("c" = "#1F8A8C", "w" = "#D93232", "p" = "#F4A300", "wp" = "#3A3A3A")
 palette8 <- c("c" = "#00C4A7", "w" = "#A238A2", "p" = "#F4A300", "wp" = "#3A3A3A")
 
+
+
+
+palette_recodyn <- c(
+  "c" = "#0F85A0", 
+  "p" = "#E6B800",  # Amarillo más oscuro y con mejor visibilidad en blanco  
+  "wp" = "#ED8B00", 
+  "w" = "#DD4124"
+)
+
+
+palette_recodyn2 <- c(
+  "c" = "#0F85A0", 
+  "p" = "#D4A300",  # Amarillo dorado, más oscuro pero aún vibrante  
+  "wp" = "#ED8B00", 
+  "w" = "#DD4124"
+)
+
+
+palette_recodyn3 <- c(
+  "c" = "#00496F", 
+  "p" = "#EDD746", 
+  "wp" = "#ED8B00", 
+  "w" = "#DD4124"
+)
 
 palette_wp <- c("w" = "#D08A00", "p" = "#3A3A3A")
 
@@ -37,6 +63,7 @@ labels2 <- c("c" = "C", "w" = "W", "p" = "P", "wp" = "W+P")
 labels3 <- c("c" = "Control", "w" = "Warming", "p" = "Perturbation", "wp" = "Global change")
 
 labels_RR <- c("w" = "Warming cs Control", "p" = "Perturbation vs Control", "wp" = "Global change vs Control")
+
 labels_RR_wp <- c("w" = "Warming vs Global Change", "p" = "Perturbation vs Global Change")
 
 

@@ -16,7 +16,7 @@ labels <- labels3
 
 source("code/meta_function/meta_function.R")
 
-meta_function(biomass_imp_dynamics, "biomass", "treatment")
+meta_function(biomass_imp_dynamics012, "biomass", "treatment")
 gg_stats_variable
 gg_dunn_variable 
 gg_ttest_variable

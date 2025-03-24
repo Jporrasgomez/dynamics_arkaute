@@ -7,11 +7,10 @@
 #rm(list = ls(all.names = TRUE))
 pacman::p_load(dplyr, tidyverse, DT, viridis, ggrepel, codyn, vegan, eulerr, ggplot2, ggthemes, ggpubr, ggforce )#
 #source("code/1.first_script.R"); rm(list = setdiff(ls(), c("flora_abrich", "biomass_imp", "biomass_noimp")))
-#
-#source("code/palettes_labels.R")
 
-
-
+source("code/palettes_labels.R")
+palette <- palette5
+labels <- labels3
 
 species_ab <-  summarise(group_by(flora_abrich, date, code, sampling, treatment, family,  genus_level, species_level),
                          abundance = mean(abundance, na.rm = T)) #mean abundance of species per treatment and sampling  
@@ -152,7 +151,7 @@ nmds_df_sampling <- nmds_df_sampling %>% arrange(sampling)
 
 ggnmds_alltreatments <- ggplot(nmds_df_sampling, aes(x = NMDS1, y = NMDS2, color = treatment)) +
     stat_ellipse(geom = "polygon", aes(fill = treatment),
-                 alpha = 0.1, show.legend = FALSE, level = 0.90) + 
+                 alpha = 0.1, show.legend = FALSE, level = 0.9) + 
     geom_point(size = 1.5, aes(shape = treatment), show.legend =T) +
     geom_text_repel(aes(label = sampling), max.overlaps = 100, size = 3, show.legend = F) +
     geom_hline(yintercept = 0, color = "gray52", linetype = "dashed") +
@@ -288,6 +287,45 @@ nmds_df_plot <- nmds_df_plot %>%
          cv_NMDS2 = sd_NMDS2/mean_NMDS2,
          cv_NMDS3 = sd_NMDS1/mean_NMDS3) %>% 
   ungroup()
+
+
+biomass_treatmeans <- biomass_imp %>% 
+  distinct(treatment, plot, sampling, date, .keep_all = TRUE) %>% 
+  group_by(treatment) %>% 
+  mutate(
+    mean_biomass = mean(biomass, na.rm = T),
+    sd_biomass = sd(biomass, na.rm = T),
+    n = n()
+  )%>% 
+  mutate(
+    cv_biomass = sd_biomass/mean_biomass
+  ) %>% 
+  select(treatment, n, mean_biomass, sd_biomass, cv_biomass) %>% 
+  distinct(treatment, n, mean_biomass, sd_biomass, cv_biomass)
+
+
+nmds_df_treatmeans <- nmds_df_plot %>%
+  distinct(treatment, plot, sampling, date, .keep_all = TRUE) %>% 
+  group_by(treatment) %>% 
+  mutate(mean_NMDS1 = mean (NMDS1, na.rm = T), 
+         mean_NMDS2 = mean (NMDS2, na.rm = T), 
+         mean_NMDS3 = mean (NMDS3, na.rm = T), 
+         sd_NMDS1 = sd (NMDS1, na.rm = T), 
+         sd_NMDS2 = sd (NMDS2, na.rm = T), 
+         sd_NMDS3 = sd (NMDS3, na.rm = T), 
+         n = n()
+         ) %>% 
+  mutate(cv_NMDS1 = sd_NMDS1/mean_NMDS1,
+         cv_NMDS2 = sd_NMDS2/mean_NMDS2,
+         cv_NMDS3 = sd_NMDS1/mean_NMDS3) %>% 
+  select(treatment, n,
+         mean_NMDS1, sd_NMDS1, cv_NMDS1,
+         mean_NMDS2, sd_NMDS2, cv_NMDS2,
+         mean_NMDS3, sd_NMDS3, cv_NMDS3) %>% 
+  distinct(treatment, n, 
+           mean_NMDS1, sd_NMDS1, cv_NMDS1,
+           mean_NMDS2, sd_NMDS2, cv_NMDS2,
+           mean_NMDS3, sd_NMDS3, cv_NMDS3)
 
 
 

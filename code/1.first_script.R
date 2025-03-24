@@ -243,7 +243,7 @@ source("code/0.2.MICE.R")
   IQR <- Q3 - Q1
   
   # Step 2: Remove outliers
-  biomass_noimp_clean<- biomass_noimp %>%
+  biomass_noimp_clean <- biomass_noimp %>%
     filter(log(biomass_s) >= Q1 - 1.5 * IQR & log(biomass_s) <= Q3 + 1.5 * IQR)
   
 }
@@ -265,12 +265,22 @@ biomass_noimp_clean_012 <- bind_rows(biomass_noimp_clean, flora_medium012)
 #Calculation of total biomasss (community biomass) by summing all biomass at species level per square meter
 # I will keep the flora_biomass not cleaned in order to compare results with and without outliers
 
-biomass_imp <- biomass_imp_clean_012 %>% 
+biomass_imp <- biomass_imp_clean %>% 
   group_by(plot, sampling, treatment) %>% 
   mutate(biomass_community =  sum(biomass_s, na.rm = TRUE)) %>%
   ungroup() 
 
-biomass_noimp <- biomass_noimp_clean_012 %>% 
+biomass_noimp <- biomass_noimp_clean %>% 
+  group_by(plot, sampling, treatment) %>% 
+  mutate(biomass_community =  sum(biomass_s, na.rm = TRUE)) %>%
+  ungroup() 
+
+biomass_imp012 <- biomass_imp_clean_012 %>% 
+  group_by(plot, sampling, treatment) %>% 
+  mutate(biomass_community =  sum(biomass_s, na.rm = TRUE)) %>%
+  ungroup() 
+
+biomass_noimp012 <- biomass_noimp_clean_012 %>% 
   group_by(plot, sampling, treatment) %>% 
   mutate(biomass_community =  sum(biomass_s, na.rm = TRUE)) %>%
   ungroup()
@@ -309,6 +319,9 @@ biomass_noimp <- biomass_noimp_clean_012 %>%
     filter(sampling == "1") }
 
 
+### Final databases: ##########
+
+
 
 biomass_imp <- bind_rows(biomass_imp, dummy_rows) %>% 
   select(year, date, sampling, treatment, plot, code, abundance,
@@ -322,6 +335,21 @@ biomass_noimp <- bind_rows(biomass_noimp, dummy_rows) %>%
          richness, biomass_s, biomass_community, abundance_community) %>% 
   mutate(sampling_date = as.factor(format(ymd(date), "%Y-%m-%d"))) %>% 
   rename(biomass = biomass_community)
+
+
+biomass_imp012 <- bind_rows(biomass_imp012, dummy_rows) %>% 
+  select(year, date, sampling, treatment, plot, code, abundance,
+         richness, biomass_s, biomass_community, abundance_community) %>% 
+  mutate(sampling_date = as.factor(format(ymd(date), "%Y-%m-%d"))) %>% 
+  rename(biomass = biomass_community)
+
+
+biomass_noimp012 <- bind_rows(biomass_noimp012, dummy_rows) %>% 
+  select(year, date, sampling, treatment, plot, code, abundance,
+         richness, biomass_s, biomass_community, abundance_community) %>% 
+  mutate(sampling_date = as.factor(format(ymd(date), "%Y-%m-%d"))) %>% 
+  rename(biomass = biomass_community)
+
 
 flora_abrich <- bind_rows(flora_abrich, dummy_rows)%>% 
   select(year, date, sampling, treatment, plot, code, species_level, genus_level, family, abundance,
@@ -367,14 +395,15 @@ ab_rich_dynamics <- ab_rich_dynamics %>%
          mean_mu_log = mean(mu_log, na.rm = T),
          sd_mu_log = sd(mu_log, na.rm = T),
          mean_sigma_log = mean(sigma_log, na.rm = T),
-         sd_sigma_log = sd(sigma_log, na.rm = T)) %>% 
+         sd_sigma_log = sd(sigma_log, na.rm = T),
+         n = n()) %>% 
   mutate(cv_richness = sd_richness/mean_richness,
          cv_abundance = sd_abundance/mean_abundance,
          cv_Y_zipf = sd_Y_zipf/mean_Y_zipf,
          cv_mu_log = sd_mu_log/mean_mu_log,
          cv_sigma_log = sd_sigma_log/mean_sigma_log) %>% 
   ungroup() %>% 
-  select(plot, sampling, treatment, date, sampling_date, richness, mean_richness, sd_richness, 
+  select(treatment, sampling, year, date, sampling_date, plot, n, richness, mean_richness, sd_richness, 
          abundance, mean_abundance, sd_abundance, Y_zipf, mean_Y_zipf, sd_Y_zipf,
          mu_log, mean_mu_log, sd_mu_log, sigma_log, mean_sigma_log, sd_sigma_log, cv_richness,
          cv_abundance, cv_Y_zipf, cv_mu_log, cv_sigma_log)
@@ -384,10 +413,11 @@ biomass_imp_dynamics <- biomass_imp %>%
   distinct(treatment, plot, sampling, date, .keep_all = TRUE) %>% 
   group_by(treatment, sampling, date) %>% 
   mutate(mean_biomass = mean(biomass, na.rm = T),
-         sd_biomass = sd(biomass, na.rm = T)) %>% 
+         sd_biomass = sd(biomass, na.rm = T),
+         n = n()) %>% 
   mutate(cv_biomass = sd_biomass/mean_biomass) %>% 
   ungroup() %>% 
-  select(treatment, sampling, year, date, sampling_date, plot, biomass, mean_biomass, 
+  select(treatment, sampling, year, date, sampling_date, plot, n, biomass, mean_biomass, 
          sd_biomass, cv_biomass)
 
 
@@ -395,14 +425,108 @@ biomass_noimp_dynamics <- biomass_noimp %>%
   distinct(treatment, plot, sampling, date, .keep_all = TRUE) %>% 
   group_by(treatment, sampling, date) %>% 
   mutate(mean_biomass = mean(biomass, na.rm = T),
-         sd_biomass = sd(biomass, na.rm = T)) %>% 
+         sd_biomass = sd(biomass, na.rm = T),
+         n = n()) %>% 
   mutate(cv_biomass = sd_biomass/mean_biomass) %>% 
   ungroup() %>% 
-  select(treatment, sampling, year, date, sampling_date, plot, biomass, mean_biomass, 
+  select(treatment, sampling, year, date, sampling_date, plot, n, biomass, mean_biomass, 
+         sd_biomass, cv_biomass)
+
+
+biomass_imp_dynamics012 <- biomass_imp012 %>%
+  distinct(treatment, plot, sampling, date, .keep_all = TRUE) %>% 
+  group_by(treatment, sampling, date) %>% 
+  mutate(mean_biomass = mean(biomass, na.rm = T),
+         sd_biomass = sd(biomass, na.rm = T),
+         n = n()) %>% 
+  mutate(cv_biomass = sd_biomass/mean_biomass) %>% 
+  ungroup() %>% 
+  select(treatment, sampling, year, date, sampling_date, plot, n, biomass, mean_biomass, 
+         sd_biomass, cv_biomass)
+
+
+biomass_noimp_dynamics012 <- biomass_noimp012 %>%
+  distinct(treatment, plot, sampling, date, .keep_all = TRUE) %>% 
+  group_by(treatment, sampling, date) %>% 
+  mutate(mean_biomass = mean(biomass, na.rm = T),
+         sd_biomass = sd(biomass, na.rm = T),
+         n = n()) %>% 
+  mutate(cv_biomass = sd_biomass/mean_biomass) %>% 
+  ungroup() %>% 
+  select(treatment, sampling, year, date, sampling_date, plot, n, biomass, mean_biomass, 
          sd_biomass, cv_biomass)
 
 
 
-rm(list = setdiff(ls(), c("flora_abrich", "biomass_imp", "biomass_noimp",
-                          "ab_rich_dynamics", "biomass_imp_dynamics", "biomass_noimp_dynamics")))
+# Overall differences: mean and sd values: 
+
+
+ab_rich_treatmeans <- full_join(flora_abrich, radcoeff_df)  %>% 
+  distinct(treatment, plot, sampling, date, .keep_all = TRUE) %>% 
+  group_by(treatment) %>% 
+  mutate(
+    mean_richness = mean(richness, na.rm = T),
+    sd_richness = sd(richness, na.rm = T),
+    mean_abundance = mean(abundance, na.rm = T),
+    sd_abundance = sd(abundance, na.rm = T),
+    mean_Y_zipf = mean(Y_zipf, na.rm = T),
+    sd_Y_zipf = sd(Y_zipf, na.rm = T),
+    mean_mu_log = mean(mu_log, na.rm = T),
+    sd_mu_log = sd(mu_log, na.rm = T),
+    mean_sigma_log = mean(sigma_log, na.rm = T),
+    sd_sigma_log = sd(sigma_log, na.rm = T), 
+    n = n()
+  )%>% 
+  mutate(
+    cv_richness = sd_richness/mean_richness,
+    cv_abundance = sd_abundance/mean_abundance,
+    cv_Y_zipf = sd_Y_zipf/mean_Y_zipf,
+    cv_mu_log = sd_mu_log/mean_mu_log,
+    cv_sigma_log = sd_sigma_log/mean_sigma_log
+  ) %>% 
+  select(treatment, n, mean_richness, sd_richness, mean_abundance, sd_abundance, mean_Y_zipf, 
+         sd_Y_zipf, mean_mu_log, sd_mu_log, mean_sigma_log, sd_sigma_log, cv_richness,
+         cv_abundance, cv_Y_zipf, cv_mu_log, cv_sigma_log) %>% 
+  distinct(treatment, n, mean_richness, sd_richness, mean_abundance, sd_abundance, mean_Y_zipf, 
+           sd_Y_zipf, mean_mu_log, sd_mu_log, mean_sigma_log, sd_sigma_log, cv_richness,
+           cv_abundance, cv_Y_zipf, cv_mu_log, cv_sigma_log)
+
+
+
+biomass_treatmeans <- biomass_imp %>% 
+  distinct(treatment, plot, sampling, date, .keep_all = TRUE) %>% 
+  group_by(treatment) %>% 
+  mutate(
+    mean_biomass = mean(biomass, na.rm = T),
+    sd_biomass = sd(biomass, na.rm = T),
+    n = n()
+  )%>% 
+  mutate(
+    cv_biomass = sd_biomass/mean_biomass
+  ) %>% 
+  select(treatment, n, mean_biomass, sd_biomass, cv_biomass) %>% 
+  distinct(treatment, n, mean_biomass, sd_biomass, cv_biomass)
+
+
+biomass_treatmeans012 <- biomass_imp012 %>% 
+  distinct(treatment, plot, sampling, date, .keep_all = TRUE) %>% 
+  group_by(treatment) %>% 
+  mutate(
+    mean_biomass = mean(biomass, na.rm = T),
+    sd_biomass = sd(biomass, na.rm = T),
+    n = n()
+  )%>% 
+  mutate(
+    cv_biomass = sd_biomass/mean_biomass
+  ) %>% 
+  select(treatment, n, mean_biomass, sd_biomass, cv_biomass) %>% 
+  distinct(treatment, n, mean_biomass, sd_biomass, cv_biomass)
+
+
+
+rm(list = setdiff(ls(), c("flora_abrich", "biomass_imp", "biomass_noimp", "biomass_imp012", 
+                          "biomass_noimp021", "ab_rich_dynamics", "biomass_imp_dynamics", "biomass_noimp_dynamics",
+                          "biomass_imp_dynamics012", "biomass_noimp_dynamics012", "ab_rich_treatmeans", 
+                          "biomass_treatmeans", "biomass_treatmeans012"
+                          )))
 

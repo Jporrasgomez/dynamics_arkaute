@@ -16,11 +16,12 @@ palette <- palette5
 labels <- labels3
 
 
+
 source("code/meta_function/meta_function.R")
 
 variables <- c("richness", "abundance", "Y_zipf", "mu_log", "sigma_log")
                  # 1          # 2         # 3       # 4       # 5     
-{i = 3
+{i = 1
 meta_function(ab_rich_dynamics, variables[i], "treatment")}
 
 gg_stats_variable
@@ -28,22 +29,14 @@ gg_dunn_variable
 gg_ttest_variable
 gg_dunn_0
 gg_all1n
+
 gg_facet
-
 gg_delta_RR
-gg_dunn_delta_RR ## Estos boxplots no valen en verdad
-
-
 gg_delta_RR_wp 
-gg_dunn_delta_RR_wp  ## Estos boxplots no valen en verdad
-
-
 gg_stats_cv
 gg_dunn_cv
 gg_ttest_cv  
 gg_dynamics_cv
-
-
 
 {
 # Storing results: 

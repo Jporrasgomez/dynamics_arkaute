@@ -3,9 +3,6 @@
 
 
 
-
-
-
 effect_size_wp <- function(data, variable){
   
   

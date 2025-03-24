@@ -47,50 +47,6 @@ gg_delta_RR_variable <<- gg_delta_RR
 gg_sigma_RR_variable <<- gg_sigma_RR
 RR_treatment <<- RR_treatment
 
-stats(RR_treatment, "RR", variable2)
-gg_stats_RR <<- gg_stats
-gg_dunn_RR <- gg_dunn +
-  labs(y = paste0("RR_", variable1)) +
-  geom_hline(yintercept= 0, linetype = "dashed", color = "gray40")
-gg_dunn_RR <<- gg_dunn_RR
-
-
-gg_ttest_RR <- gg_ttest +
-  labs(y = paste0("RR_", variable1)) + 
-  geom_hline(yintercept= 0, linetype = "dashed", color = "gray40")
-gg_ttest_RR <<- gg_ttest_RR
-
-stats(RR_treatment, "delta_RR", variable2)
-gg_stats_delta_RR <<- gg_stats
-
-
-gg_dunn_delta_RR <- gg_dunn +
-  labs(y = paste0("delta_RR_", variable1)) + 
-  geom_hline(yintercept= 0, linetype = "dashed", color = "gray40")
-gg_dunn_delta_RR <<- gg_dunn_delta_RR
-
-
-gg_ttest_delta_RR <- gg_ttest +
-  labs(y = paste0("delta_RR_", variable1)) + 
-  geom_hline(yintercept= 0, linetype = "dashed", color = "gray40")
-gg_ttest_delta_RR <<- gg_ttest_delta_RR
-
-stats(RR_treatment, "sigma_RR", variable2)
-gg_stats_sigma_RR <<- gg_stats
-
-
-gg_dunn_sigma_RR <- gg_dunn +
-  labs(y = paste0("sigma_RR_", variable1)) + 
-  geom_hline(yintercept= 0, linetype = "dashed", color = "gray40")
-gg_dunn_sigma_RR <<- gg_dunn_sigma_RR
-
-
-gg_ttest_sigma_RR <- gg_ttest  +
-  labs(y = paste0("sigma_RR_", variable1)) +
-  geom_hline(yintercept= 0, linetype = "dashed", color = "gray40")
-gg_ttest_sigma_RR <<- gg_ttest_sigma_RR
-
-
 
 source("code/meta_function/effect_size_wp.R")
 
@@ -100,52 +56,6 @@ gg_RR_wp <<- gg_RR_wp
 gg_delta_RR_wp <<- gg_delta_RR_wp
 gg_sigma_RR_wp <<- gg_sigma_RR_wp
 RR_treatment_wp <<- RR_treatment_wp
-
-
-
-source("code/meta_function/stats_wp.R")
-
-stats_wp(RR_treatment_wp, "RR", variable2)
-
-gg_dunn_RR_wp <- gg_dunn + 
-  labs(y = paste0("RR_", variable1)) +
-  geom_hline(yintercept= 0, linetype = "dashed", color = "gray40")
-gg_dunn_RR_wp <<- gg_dunn_RR_wp
-
-gg_ttest_RR_wp <- gg_ttest +
-  labs(y = paste0("RR_", variable1)) +
-  geom_hline(yintercept= 0, linetype = "dashed", color = "gray40")
-gg_ttest_RR_wp <<- gg_ttest_RR_wp
-
-
-
-stats_wp(RR_treatment_wp, "delta_RR", variable2)
-
-gg_dunn_delta_RR_wp <- gg_dunn +
-  labs(y = paste0("delta_RR_", variable1)) +
-  geom_hline(yintercept= 0, linetype = "dashed", color = "gray40")
-gg_dunn_delta_RR_wp <<- gg_dunn_delta_RR_wp
-
-gg_ttest_delta_RR_wp <- gg_ttest  +
-  labs(y = paste0("delta_RR_", variable1)) +
-  geom_hline(yintercept= 0, linetype = "dashed", color = "gray40")
-gg_ttest_delta_RR_wp <<- gg_ttest_delta_RR_wp
-
-
-
-stats_wp(RR_treatment_wp, "sigma_RR", variable2)
-
-gg_dunn_sigma_RR_wp <- gg_dunn + 
-  labs(y = paste0("sigma_RR_", variable1)) +
-  geom_hline(yintercept= 0, linetype = "dashed", color = "gray40")
-gg_dunn_sigma_RR_wp <<- gg_dunn_sigma_RR_wp
-
-
-gg_ttest_sigma_RR_wp <- gg_ttest  +
-  labs(y = paste0("sigma_RR_", variable1)) +
-  geom_hline(yintercept= 0, linetype = "dashed", color = "gray40")
-gg_ttest_sigma_RR_wp <<- gg_ttest_sigma_RR_wp
-
 
 
 
