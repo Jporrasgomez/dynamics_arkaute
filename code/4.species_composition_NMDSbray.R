@@ -4,15 +4,13 @@
 
 
 
-rm(list = ls(all.names = TRUE))
+#rm(list = ls(all.names = TRUE))
 pacman::p_load(dplyr, tidyverse, DT, viridis, ggrepel, codyn, vegan, eulerr, ggplot2, ggthemes, ggpubr, ggforce )#
-source("code/1.first_script.R"); rm(list = setdiff(ls(), c("flora_abrich", "biomass_imp", "biomass_noimp")))
+#source("code/1.first_script.R"); rm(list = setdiff(ls(), c("flora_abrich", "biomass_imp", "biomass_noimp")))
 
 source("code/palettes_labels.R")
 palette <- palette5
 labels <- labels3
-
-
 
 
 
@@ -23,16 +21,11 @@ species_ab_sampling <- flora_abrich %>%
 species_ab_sampling <- species_ab_sampling %>% 
   mutate(id = paste0(as.character(treatment), "/" , as.character(sampling)))
 
-
 species_ab_sampling <- species_ab_sampling %>% 
   filter(!(sampling == "1" & treatment %in% c("p", "wp")))
 
 
-species_ab_plot <- flora_abrich %>% 
-  select(date, code, sampling, plot, treatment, family, genus_level, species_level, abundance_s)
 
-species_ab_plots <- species_ab_plot %>% 
-  mutate(id = paste0(treatment, "/", sampling, "/", plot))
 
 
 
@@ -99,7 +92,6 @@ for(i in 1:length(treats)){
          y = "NMDS2")
   
   
-  
 }
 
 
@@ -128,16 +120,7 @@ ggarrange(
 #Less than 0.05 is excellent (this can be rare).
 
 
-sp_wide_sampling <- species_ab_sampling %>%
-  pivot_wider(id_cols = c(sampling, date, treatment, id),
-              names_from = code,
-              values_from = abundance,
-              values_fill = list(abundance = 0)) 
 
-
-# create a distance matrix 
-abundance_data_sampling <- sp_wide_sampling %>% 
-  select(-treatment, -sampling, -date, -id)
 
 
 list_sorensen <- list()
@@ -146,16 +129,19 @@ list_sorensen_df <- list()
 list_jaccard_df <- list()
 samps <- sort(unique(flora_abrich$sampling))
 
-for(i in i: length(samps)){
+for(i in 1:length(samps)){
   
   sp_wide <- species_ab_sampling %>% 
     filter(sampling == samps[i]) %>% 
     pivot_wider(id_cols = c(sampling, date, treatment, id),
                 names_from = code,
                 values_from = abundance,
-                values_fill = list(abundance = 0))
+                values_fill = list(abundance = 0)) %>% 
+    ungroup() %>% 
+    as_tibble()
   
-  abundance_data <- sp_wide %>% 
+  
+  abundance_data <- sp_wide %>%
     select(-treatment, -sampling, -date, -id)
   
     sorensen <- vegdist(abundance_data, method = "bray", binary = TRUE)
@@ -197,9 +183,7 @@ print(list_sorensen)
 print(list_jaccard)
 
 sorensen_df <- bind_rows(list_sorensen_df) %>% 
-  filter(!value == "0")
-
-sorensen_df <- sorensen_df %>%
+  filter(!value == "0") %>%
   separate(col_name, into = c("treatment_x", "sampling_x"), sep = "/") %>%
   separate(row_name, into = c("treatment_y", "sampling_y"), sep = "/") %>% 
   select(-sampling_x) %>% 
@@ -207,7 +191,10 @@ sorensen_df <- sorensen_df %>%
   mutate(sampling = factor(as.numeric(sampling), levels = sort(unique(as.numeric(sampling))))) %>% 
   arrange(sampling) %>% 
   mutate(comparison = paste0(treatment_x, "-", treatment_y)) %>% 
-  select(-treatment_x, -treatment_y)
+  select(-treatment_x, -treatment_y) %>% 
+  mutate(comparison = ifelse(comparison == "p-c", "c-p", comparison),
+         comparison = ifelse(comparison == "w-c", "c-w", comparison),
+         comparison = ifelse(comparison == "wp-c", "c-wp", comparison))
 
 
 sorensen_df %>% 
@@ -229,9 +216,7 @@ sorensen_df %>%
 
 
 jaccard_df <- bind_rows(list_jaccard_df) %>% 
-  filter(!value == "0")
-
-jaccard_df <- jaccard_df %>%
+  filter(!value == "0") %>%
   separate(col_name, into = c("treatment_x", "sampling_x"), sep = "/") %>%
   separate(row_name, into = c("treatment_y", "sampling_y"), sep = "/") %>% 
   select(-sampling_x) %>% 
@@ -239,7 +224,10 @@ jaccard_df <- jaccard_df %>%
   mutate(sampling = factor(as.numeric(sampling), levels = sort(unique(as.numeric(sampling))))) %>% 
   arrange(sampling) %>% 
   mutate(comparison = paste0(treatment_x, "-", treatment_y )) %>% 
-  select(-treatment_x, -treatment_y)
+  select(-treatment_x, -treatment_y) %>% 
+  mutate(comparison = ifelse(comparison == "p-c", "c-p", comparison),
+         comparison = ifelse(comparison == "w-c", "c-w", comparison),
+         comparison = ifelse(comparison == "wp-c", "c-wp", comparison))
 
 
 jaccard_df %>% 
@@ -261,62 +249,17 @@ jaccard_df %>%
 
 
 
-
-
-
-sp_wide_sampling <- species_ab_sampling %>% 
+sp_wide_sampling <- species_ab_sampling %>%
   pivot_wider(id_cols = c(sampling, date, treatment, id),
               names_from = code,
               values_from = abundance,
-              values_fill = list(abundance = 0))
+              values_fill = list(abundance = 0)) %>% 
+  ungroup() %>% 
+  as_tibble()
 
+# create a distance matrix 
 abundance_data_sampling <- sp_wide_sampling %>% 
   select(-treatment, -sampling, -date, -id)
-
-sorensen <- vegdist(abundance_data_sampling, method = "bray", binary = TRUE)
-sorensen <- as.matrix(sorensen)  
-rownames(sorensen) <- sp_wide$id
-colnames(sorensen) <- sp_wide$id
-sorensen[upper.tri(sorensen)] <- NA
-
-sorensen_df<- sorensen %>% 
-  as.data.frame() %>%
-  rownames_to_column(var = "row_name") %>%
-  pivot_longer(-row_name, names_to = "col_name", values_to = "value") %>% 
-  filter(!is.na(value))
-
-#sorensen_df <- sorensen_df %>%
-#  separate(col_name, into = c("treatment_x", "sampling_x"), sep = "/") %>%
-#  separate(row_name, into = c("treatment_y", "sampling_y"), sep = "/") %>% 
-#  select(-sampling_x) %>% 
-#  rename(sampling = sampling_y) %>% 
-#  mutate(sampling = factor(as.numeric(sampling), levels = sort(unique(as.numeric(sampling))))) %>% 
-#  arrange(sampling) %>% 
-#  mutate(comparison = paste0(treatment_x, "-", treatment_y)) %>% 
-#  select(-treatment_x, -treatment_y)
-
-
-sorensen_df <- sorensen_df %>%
-  separate(col_name, into = c("treatment_x", "sampling_x"), sep = "/") %>%
-  separate(row_name, into = c("treatment_y", "sampling_y"), sep = "/") %>% 
-  filter(sampling_x == sampling_y) %>% 
-  select(-sampling_x) %>% 
-  rename(sampling = sampling_y) %>% 
-  mutate(sampling = factor(as.numeric(sampling), levels = sort(unique(as.numeric(sampling))))) %>% 
-  arrange(sampling) %>% 
-  mutate(comparison = paste0(treatment_x, "-", treatment_y)) %>% 
-  select(-treatment_x, -treatment_y)
-
-sorensen_df %>% 
-  filter(comparison %in% c("c-p", "c-w", "c-wp")) %>% 
-  ggplot(aes(x = sampling, y = value, color = comparison, group = comparison)) + 
-  geom_point() + 
-  geom_line() +
-  scale_color_manual(values = c("c-p" = "#0077FF", "c-w" = "#E0352F", "c-wp" = "#A238A2")) +
-  labs( y = "Beta-diversity Sorensen")
-
-# NMDS
-
 
 # Compute Bray-Curtis distance matrix
 distance_matrix_sampling_bc <- vegan::vegdist(abundance_data_sampling, method = "bray")
@@ -368,8 +311,8 @@ ggnmds_alltreatments <- ggplot(nmds_df_sampling, aes(x = NMDS1, y = NMDS2, color
 ##| You can calculate the squared correlation (R²) between the original distance matrix and each NMDS axis.
 ##|  This gives you an approximation of how well each axis represents the distances.
 
-cor1 <- cor(distance_matrix_bc, dist(nmds_bc$points[,1]), method = "pearson") 
-cor2 <- cor(distance_matrix_bc, dist(nmds_bc$points[,2]), method = "pearson") 
+cor1 <- cor(distance_matrix_sampling_bc, dist(nmds_bc_sampling$points[,1]), method = "pearson") 
+cor2 <- cor(distance_matrix_sampling_bc, dist(nmds_bc_sampling$points[,2]), method = "pearson") 
 
 # Compute percentage explained by each axis
 explained_NMDS1 <- cor1^2 / (cor1^2 + cor2^2) * 100
@@ -392,7 +335,7 @@ ggplot(nmds_df_sampling, aes(x = date, y = NMDS1, color = treatment, fill = trea
   scale_color_manual(values = palette) +
   scale_fill_manual(values = palette, guide = "none") +
   labs(title = "NMDS1 Bray-Curtis: mean abundance at sampling level ",
-       subtitle = paste0("Stress = ", round(nmds_bc$stress, 3)),
+       subtitle = paste0("Stress = ", round(nmds_bc_sampling$stress, 3)),
        x = "Date", y = "NMDS1", color = "Treatment")
 
 
@@ -407,13 +350,8 @@ ggplot(nmds_df_sampling, aes(x = date, y = NMDS2, color = treatment, fill = trea
   scale_color_manual(values = palette) +
   scale_fill_manual(values = palette, guide = "none") +  # Hide fill legend
   labs(title = "NMDS1 Bray-Curtis: mean abundance at sampling level ",
-       subtitle = paste0("Stress = ", round(nmds_bc$stress, 3)),
+       subtitle = paste0("Stress = ", round(nmds_bc_sampling$stress, 3)),
        x = "Date", y = "NMDS2", color = "Treatment")
-
-
-
-
-
 
 
 
@@ -421,7 +359,11 @@ ggplot(nmds_df_sampling, aes(x = date, y = NMDS2, color = treatment, fill = trea
 
 
 # NMDS for abundance of species at plot level in the same matrix
+species_ab_plot <- flora_abrich %>% 
+  select(date, code, sampling, plot, treatment, family, genus_level, species_level, abundance_s)
 
+species_ab_plot <- species_ab_plot %>% 
+  mutate(id = paste0(treatment, "/", sampling, "/", plot))
 
 species_ab_plot <- species_ab_plot %>% 
   filter(!(sampling == "1" & treatment %in% c("p", "wp")))
@@ -429,8 +371,9 @@ species_ab_plot <- species_ab_plot %>%
 sp_wide_plot <- species_ab_plot %>%
   pivot_wider(id_cols = c(sampling, date, treatment, plot),
               names_from = code,
-              values_from = abundance,
-              values_fill = list(abundance = 0))
+              values_from = abundance_s,
+              values_fill = list(abundance = 0)) %>%
+  mutate(across(everything(), ~ replace_na(., 0)))
 
 abundance_data_plot <- sp_wide_plot %>% select(-treatment, -sampling, -date, -plot)
 
@@ -441,6 +384,8 @@ distance_matrix_bc_plot <- vegan::vegdist(abundance_data_plot, method = "bray")
 # here I expand the dimensions to 3 because stress = 0.23 if k = 2. We acn take a look to NMDS3
 # With k = 3, stress = 0.16
 nmds_bc_plot <- metaMDS(distance_matrix_bc_plot, k = 3, trymax = 250, maxit = 999)
+
+nmds_bc_plot$stress
 
 # Extract NMDS coordinates
 nmds_df_plot <- data.frame(
@@ -716,8 +661,9 @@ for (i in seq_along(samps)) {
     filter(sampling == samps[i]) %>%
     pivot_wider(id_cols = c(sampling, date, treatment, plot),
                 names_from = code,
-                values_from = abundance,
-                values_fill = list(abundance = 0))
+                values_from = abundance_s,
+                values_fill = list(abundance = 0))%>%
+    mutate(across(everything(), ~ replace_na(., 0)))
   
   # Prepare abundance data
   abundance_data_subset <- sp_wide_subset %>% select(-treatment, -sampling, -date, -plot)
