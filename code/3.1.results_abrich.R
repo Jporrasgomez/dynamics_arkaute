@@ -21,7 +21,7 @@ source("code/meta_function/meta_function.R")
 
 variables <- c("richness", "abundance", "Y_zipf", "mu_log", "sigma_log")
                  # 1          # 2         # 3       # 4       # 5     
-{i = 1
+{i = 3
 meta_function(ab_rich_dynamics, variables[i], "treatment")}
 
 gg_stats_variable

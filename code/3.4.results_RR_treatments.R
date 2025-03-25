@@ -1,6 +1,7 @@
 
 
 
+
 source("code/1.first_script.R")
 source("code/4.species_composition_NMDSbray.R")
 rm(list = setdiff(ls(), c("ab_rich_treatmeans", "biomass_treatmeans", "biomass_treatmeans012", "nmds_df_treatmeans")))

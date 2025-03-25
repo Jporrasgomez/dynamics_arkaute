@@ -1,0 +1,1560 @@
+---
+title: "soil analysis"
+author: "Alvaro"
+date: "2024-10-30"
+output: html_document
+---
+
+```{r Teoria}
+
+La diferencia entre un PCoa y un NMDS reside en las metricas a autilizar. En el caso del NMDS se usan matrices de disimilitud no euclideas. Pero en PCoa matrices eculideas o metricas convertibles a euclideas. Es por ello, que se usan transofmraciones como la de Hellinger.
+
+Con respecto a las distancias, algunas dan mas peso a especies dominantes y otras a las raras. La manera de quitar peso a las dominnates es con trasformaciones como logaritmo o raiz cuadratica. 
+
+Tecnicamente existen unos test para saber si tu matriz de disimilitudes cumple el supuesto de ser euclidea. Por lo que he estado viendo en PCoa tienes que trabajar si o si con distancia euclidea.
+
+Importante, a la hora de generar las elipses poner en el level 0.65 que suele ser la desviacion estandar.
+
+#PERMANOVA
+Es importante saber si se cumple el supuesto de homogeneidad de dispersion (requisito del PERMANOVA). Si no lo cumple los resultados son bastante menos fiables. Este test lo que hace es verificar si los grupos definidos por stage tienen dispersiones similares (si los puntos de muestreo se parecen dentro de cada satge o es super disperso. Por ejemplo, calamgrostis es el menos disperso y la refrencia el que mas). Si el test da un valor menor de 0.05 significa que los grupos no son homogeneos. Esto invalida el analisis ya que sugiere que las diferencias observadas pueden deberse a diferencias en las dispersiones, no solo a diferencias en las medias de los grupos.
+Al final lo que hace el PERMANOVA es ver si hay diefrencias entre la media de los grupos, pero al tener los grupos diferentes grados de dispersion pues hace que esto influya en los resultados. 
+
+Posible tratamiento de los datos: trasformacion de los datos como Hellinger, logaritmos o raices cuadraticas. 
+
+F: relacion entre la variacion explciada por el modelo y la variacion residual ajustada por sus grados de libertad. Si el valor es alto indica que hay una fuerte entre la avriable y las distancias.
+
+R2: proporcion de la variacion explciada por el modelo/variable
+
+Grados de libertad: tener cuidado con el numero. Un alto numero puede hacer que aumente la sensibilidad a efcetos pequeños.  Pocos grados reduce el poder esatdistico. 
+
+Comparacion de resultados: all data y data_clustered_settlement. R2 de 0.44 y 0.6. En el segundo caso es mas alto porque se elimino la variabilidad intra-grupo al calular el promedio de las replicas.
+
+Importante!! Estoy viendo que ninguna trasformacion consigue cumplir este supuesto  con el df data, pero si que lo cumple si trabajamos con la base de datos data_clustered_settlement (unificacion de replicas).
+
+Hellinger, log y raiz cuadrado si que cumplen el supuesto de homogenidad de dispersion de los stages. 
+
+
+#ANOSIM# 
+Se utiliza cuando la homogeneidad de las dispersiones entre grupos no se cumple. Un valor alto de R2 inidica que las diferencias entre grupos son mayores que ñas diferencias entre grupos.
+
+#TEST Post-Hoc
+Probar a hacer las pruebas con datos trasformados y sin trasformar. 
+Los resultados post-hoc te dice si hay diefrencias significativas entre los estados del ecosistema. La F es una manera de cuantificar el grado de sepracion entre grupos, cuanto mayor sea mayor será la sepracion. Y la R2 la variabilidad expolicada por este factor.
+
+#PCA
+Tecnica empleada para reducir dimensiones a la hora d etrabajar con datos multivariados. Los componentes principales son combinaciones de las varibales originales, siendo PC1 el comoponente que captura la maxima varianza de tius datos y el Pc2 el segundo que capta mayor varianza.
+Los autovectores son las idrecciones en las que se proyectan los datos para crear los componentes principales.
+Es recomendable hacer trasformaciones si las especies tienen grandes diefrencias de escalas.
+
+
+```
+
+
+```{r Cargamos las librerias}
+library(lattice)
+library(npmv)
+library(MASS)
+library(ggrepel)
+library(AER)
+library(rgl)
+library(ape)
+library(nlme)
+library(betapart)
+library(lme4)
+library(mgcv)
+library(MuMIn)
+library(visreg)
+library(grid)
+library(ggplot2)
+library(gridExtra)
+library(dplyr)
+library(lubridate)
+library(tidyverse)
+library(anytime)  
+library(stringr)
+library(readxl)
+library(dendRoAnalyst)
+library(ggplot2)
+library(ggthemes)
+library(modeest)
+library(psych)
+library(readxl)
+library(ggExtra)
+library(remotes)
+library(devtools)
+library(tidyr)
+library(ggthemes)
+library(scales)
+library(cowplot)
+library(lemon)
+library(suncalc)
+library(scales)
+library(ggpubr)
+library(suncalc)
+library(tidyverse)
+library(scales)
+library(heatmaply)
+library(nortest)
+library(ggplot2)
+library(ggpubr)
+library(PMCMRplus)
+library(Hmisc)
+library(corrplot)
+library(openxlsx)
+library(ggthemes)
+library(FSA)
+library(dunn.test)
+library(psych)
+library(ggdist)
+library(tidyquant)
+library(plotly)
+library(broom)
+library(skimr)
+library(dlookr) #util para EDA
+library(mice)
+library(ggcorrplot)
+library(zoo)
+library(car)
+library(vegan)
+library(multcompView)
+library(BiodiversityR)
+library(ecodist)
+library(ggforce)
+library(pairwiseAdonis)
+library(plotly)
+library(ggdendro)
+library(ggdendro)
+library(dendextend)
+library(forcats)
+
+```
+
+
+```{r Cargamos la base de datos}
+
+data <- read_excel("Plant_community.xlsx", sheet = "data")
+
+#Le concretamos los niveles y el orden para que leugo en futuros analisis dalgan en este orden
+data$stage <- factor(data$stage, levels = c("Cal", "Poa", "Tran", "Ref"))
+
+#Convertimos variables a factores
+data <- data %>% mutate(across(c(stage, settlement), as.factor))
+
+
+#Nos quedamos solo con las variables numericas, es decir, las especies
+data_species <- data %>% select(-settlement, -stage)
+
+#Agrupamos las cuatro replicas hechas por cada stage en cada asentamiento
+data_clustered_settlement <- data %>%
+  group_by(settlement, stage) %>%
+  summarise(across(where(is.numeric), \(x) mean(x, na.rm = TRUE)), .groups = 'drop')
+
+#AGRUPAMOS todos los asentamientos
+data_clustered_stage <- data_clustered_settlement %>%
+  group_by(stage) %>%
+  summarise(across(where(is.numeric), mean, na.rm = TRUE), .groups = 'drop')
+
+
+#Poner todas las especies en una misma columna
+
+community_long <- data_clustered_settlement %>%
+  select(-litter, -bare) %>%  # Primero selecciona las columnas que no deseas pivotar
+  pivot_longer(cols = -c(stage, settlement),  # Luego, especifica que columnas pivotar
+               names_to = "species", 
+               values_to = "value")
+```
+
+
+```{r Indices de alfa-diversidad: richness, shannon, simspon, inv-simpson}
+
+#Para estos indices vamos a usar el df donde hemos concentrado toda la informacion de los stages pero quitando la columna de los stage y el litter y el bare soil.
+
+richness <- specnumber(data_clustered_stage %>% select(-stage, -bare, -litter))
+shannon <- diversity(data_clustered_stage %>% select(-stage, -bare, -litter), index = "shannon")
+simpson <- (1-(diversity(data_clustered_stage %>% select(-stage, -bare, -litter), index = "simpson")))
+inv_simpson <- (diversity(data_clustered_stage %>% select(-stage, -bare, -litter), index = "invsimpson"))
+
+alfa_diversity <- data.frame(stage = data_clustered_stage$stage, richness, shannon, simpson, inv_simpson)
+print(alfa_diversity)
+```
+
+
+```{r Indices beta-diversidad}
+
+##TEORIA## El Empleo de una u otra distancia, así como el tipo d edatos (abundancia relativa, presecia-ausencia y abundanica absolita) va a depender de tus consideraciones, es decir, de a que le vas a querer dar mas peso. En mi caso, mis comunidades botanicas tienen 3o 4 especies muy dominantes que acaparan el 70-80% de la abundancia y entre 30 y 40 especies con la abundancia restante. Es obvio, que si solo comparao las esepcies mas dominantes voy a encontrar diferencias entre los 4 estados, pero yo lo que quiero es ver el rol y peso que tienen las especies menos dominantes, las "raras". Por ello, indices como bray-curtis o datos como presencia-ausencia me va a interesar usarlos.
+
+
+
+#Creamos matriz de presencia y ausencias
+data_presence_absence <- decostand(data_clustered_stage %>% select(-stage, -bare, -litter), method = "pa")
+
+#Numero de especies comunes para cada estado
+{rownames(data_presence_absence) <- c("Cal", "Poa", "Tran", "Ref")
+shared_counts <- data.frame(State1 = character(),
+                             State2 = character(),
+                             SharedSpeciesCount = integer(),
+                             stringsAsFactors = FALSE)
+for (i in 1:(nrow(data_presence_absence) - 1)) {
+  for (j in (i + 1):nrow(data_presence_absence)) {
+    state1 <- rownames(data_presence_absence)[i]
+    state2 <- rownames(data_presence_absence)[j]
+    shared_count <- sum(data_presence_absence[i, ] & data_presence_absence[j, ])
+  
+    shared_counts <- rbind(shared_counts, 
+                           data.frame(State1 = state1, 
+                                      State2 = state2, 
+                                      SharedSpeciesCount = shared_count))}}
+print(shared_counts)}
+
+
+
+###PRESENCIA-AUSENCIA### El argumento bynary=true convierte una matriz en 1 y 0.
+
+#INDICE DE JACCARD. Es un indice de disimilitud, es decir, cuanto mas proximo a 1 mas disimilitud (menos se parecen) y a 0 mas se parecen los estados. A la hora de calcular el indice todas las especies tinene el mismo peso, es decir, tamto aquellas presentes en los dos sitios como aquellas que solo estan presentes en uno solo.
+
+{dissimilarity_jaccard_binary <- vegdist(data_clustered_stage %>% select(-stage, -bare, -litter), method = "jaccard", binary=TRUE)
+  #Creamos la matriz para posteriormenete añadir una columna con los nombres de los stages
+dissimilarity_jaccard_binary <- as.matrix(dissimilarity_jaccard_binary)  
+rownames(dissimilarity_jaccard_binary) <- data_clustered_stage$stage
+colnames(dissimilarity_jaccard_binary) <- data_clustered_stage$stage
+#Quitamos los valores de la diagonal superior
+dissimilarity_jaccard_binary[upper.tri(dissimilarity_jaccard_binary)] <- NA
+print(dissimilarity_jaccard_binary)}
+
+
+#INDICE DE SORENSEN. Es un bray-curtis pero con presencias/ausencias. Es similar al de jaccard pero premia aquellas especies que estan presentes en los dos sitios, por lo que las especies compartidas tienen mas peso. 
+
+{dissimilarity_sorensen_binary <- vegdist(data_clustered_stage %>% select(-stage, -bare, -litter), method = "bray", binary=TRUE)
+dissimilarity_sorensen_binary <- as.matrix(dissimilarity_sorensen_binary)  
+rownames(dissimilarity_sorensen_binary) <- data_clustered_stage$stage
+colnames(dissimilarity_sorensen_binary) <- data_clustered_stage$stage
+dissimilarity_sorensen_binary[upper.tri(dissimilarity_sorensen_binary)] <- NA
+print(dissimilarity_sorensen_binary)}
+
+betadiver(data_presence_absence,"sor") #Esta funcion te hace el inverso
+
+
+###ABUNDANCIAS ABSOLUTAS###
+
+#Si queremos trasformar mediante logaritmo.Luego quitar el stage 
+absolut_abundance_transformed <- log1p(absolut_abundance %>% select(-stage))
+
+
+#Lo primero es crear la matriz de abundancia absoluta, para ello lo que voy a hacer es sumar todos los estados para cada asentamiento. 
+abundance <- data %>%
+  group_by(settlement, stage) %>%
+  summarise(across(where(is.numeric), sum, na.rm = TRUE), .groups = 'drop')
+
+absolut_abundance <- abundance %>%
+  group_by(stage) %>%
+  summarise(across(where(is.numeric), sum, na.rm = TRUE), .groups = 'drop')
+
+#INDICE DE BRAY-CURTIS pero basado en abundacias absolutas.Valores proximos a 1 indican una alta disimilitud. 
+
+
+{bray_dist <- vegdist((absolut_abundance) %>% select(-stage,-bare, -litter), method = "bray")
+bray_dist <- as.matrix(bray_dist)  
+rownames(bray_dist) <- data_clustered_stage$stage
+colnames(bray_dist) <- data_clustered_stage$stage
+bray_dist[upper.tri(bray_dist)] <- NA
+print(bray_dist)}
+
+
+#INDICE MORISITA-HORN. Usar "horn", no "moriista" ya que este ultimo esta diseñada para conteos enteros (indivudos, tallos, hojas etc). Para usar "Horn", se reocmienda hacer una trasformacion previa.
+
+{morisita_dist <- vegdist((absolut_abundance) %>% select(-stage,-bare, -litter), method = "horn")
+morisita_dist <- as.matrix(morisita_dist)  
+rownames(morisita_dist) <- data_clustered_stage$stage
+colnames(morisita_dist) <- data_clustered_stage$stage
+morisita_dist[upper.tri(morisita_dist)] <- NA
+print(morisita_dist)}
+
+
+
+#ABUNDANCIAS RELATIVAS##  (trabajar con bray-curtis o horn, la diferencia es que Bray-Curtis es mas sensible a especies raras, es decir, aquellas que estan presentes en muy pocas parcelas y por tanto su abundnacia es baja. Por el contrario, horn es mas sensible a las especies que son muy dominantes)
+
+
+#INDICE DE BRAY-CURTIS pero basado en abundacias relativas.Valores proximos a 1 indican una alta disimilitud. Es mas sensible a las rarezas.
+
+
+{bray_dist <- vegdist((data_clustered_stage) %>% select(-stage,-bare, -litter), method = "bray")
+bray_dist <- as.matrix(bray_dist)  
+rownames(bray_dist) <- data_clustered_stage$stage
+colnames(bray_dist) <- data_clustered_stage$stage
+bray_dist[upper.tri(bray_dist)] <- NA
+print(bray_dist)}
+
+
+#INDICE MORISITA-HORN. con abundnacias relativas. Mas sensible a las especies dominantes
+
+{horn_dist <- vegdist((data_clustered_stage) %>% select(-stage,-bare, -litter), method = "horn")
+horn_dist <- as.matrix(horn_dist)  
+rownames(horn_dist) <- data_clustered_stage$stage
+colnames(horn_dist) <- data_clustered_stage$stage
+horn_dist[upper.tri(horn_dist)] <- NA
+print(horn_dist)}
+
+
+#INDICE DE CANBERRA. Esta muy influenciado por las especies con baja abundancia, es decir, marca mas la diferencia 1 sobre 4 que 20 sobre 23. 1 indica mas disimilitud
+
+{canberra_dist <- vegdist(data_clustered_stage %>% select(-stage, -bare, -litter), method = "canberra")
+canberra_dist <- as.matrix(canberra_dist)  
+rownames(canberra_dist) <- data_clustered_stage$stage
+colnames(canberra_dist) <- data_clustered_stage$stage
+canberra_dist[upper.tri(canberra_dist)] <- NA
+print(canberra_dist)}
+
+#INDICE DE MANHATTAN. El indice no oscila entre 1 y 0. Cuanto mas proximo a 0 signfifica que son mas aprecidos. 
+
+{manhattan_dist <- vegdist(data_clustered_stage %>% select(-stage, -bare, -litter), method = "manhattan")
+manhattan_dist <- as.matrix(manhattan_dist)
+# esto es si queremos normalizar ENTRE 1 Y 0 manhattan_dist <- manhattan_dist / max(manhattan_dist)
+rownames(manhattan_dist) <- data_clustered_stage$stage
+colnames(manhattan_dist) <- data_clustered_stage$stage
+manhattan_dist[upper.tri(manhattan_dist)] <- NA
+print(manhattan_dist)}
+
+#INDICE EUCLIDEAN. 
+{euclidean_dist <- vegdist(data_clustered_stage %>% select(-stage, -bare, -litter), method = "euclidean")
+euclidean_dist <- as.matrix(euclidean_dist)  
+rownames(euclidean_dist) <- data_clustered_stage$stage
+colnames(euclidean_dist) <- data_clustered_stage$stage
+euclidean_dist[upper.tri(euclidean_dist)] <- NA
+print(euclidean_dist)}
+
+#INDICE DE HORN. Oscila entre 0 y 1. Da mas importancia a las especies comunes y quita peso a especies raras.
+{horn_dist <- vegdist(data_clustered_stage %>% select(-stage, -bare, -litter), method = "horn")
+horn_dist <- as.matrix(horn_dist)
+rownames(horn_dist) <- data_clustered_stage$stage
+colnames(horn_dist) <- data_clustered_stage$stage
+horn_dist[upper.tri(horn_dist)] <- NA
+print(horn_dist)}
+
+```
+
+
+```{r Analisis sobre especies dominantes y raras}
+
+#Para quedarse solo con una fila para cada especie
+data_clustered_clustered <- data_clustered_stage %>%
+  summarise(across(where(is.numeric), list(media = mean), .names = "{.col}_{.fn}"))
+
+
+data_long_clustered_clustered <- data_clustered_clustered %>%
+  pivot_longer(cols = everything(), names_to = "species", values_to = "abundance")
+
+print(data_long_clustered_clustered)
+
+#Todas las especies
+abundance_species <- data_long_clustered_clustered %>%
+  mutate(species = fct_reorder(species, -abundance))
+
+#Quitamos las 3 especies mas abundantes
+filtered_data <- abundance_species %>%
+  arrange(desc(abundance)) %>%  # Ordenar por abundancia descendente
+  slice(-1:-3) %>% mutate(species = fct_reorder(species, -abundance))
+
+ggplot(filtered_data, aes(x = abundance, y = species)) +
+  geom_bar(stat = "identity", fill = "steelblue") +
+  coord_flip() +  # Voltea el gráfico
+  labs(title = "Abundancia de Especies", x = "Abundancia", y = "Especies") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1, size = 5),  # Etiquetas del eje X en vertical
+    axis.text.y = element_text(size = 12),
+    axis.title = element_text(size = 14),
+    plot.title = element_text(hjust = 0.5, size = 16, face = "bold"))
+
+
+#Analisis de abundancias de especies por estado#
+
+data_long_stage <- data_clustered_stage %>%
+  pivot_longer(cols = -stage, names_to = "species", values_to = "abundance") #si queremos todos los stage a la vez, quitar el filtrado
+
+abundance_stage <- data_long_stage %>% group_by(species) %>% mutate(total_abundance = sum(abundance)) %>%
+  ungroup() %>% mutate(species = fct_reorder(species, -total_abundance))
+
+# Transformando los datos data_transformed2 <- abundance_stage %>% mutate(across(where(is.numeric), ~ .^(1/4)))
+
+#Transformacion de hellinger data_hellinger_long <- data_clustered_settlement %>% select(-stage, -settlement) %>% decostand(method = "hellinger") %>% as.data.frame() %>% mutate(stage = data_clustered_settlement$stage) %>% pivot_longer(cols = -stage, names_to = "species", values_to = "abundance") %>% arrange(desc(abundance)) %>% mutate(species = factor(species, levels = unique(species)))
+
+
+ggplot(data_hellinger_long, aes(x = species, y = abundance, fill = stage)) +
+  geom_bar(stat = "identity", position = "stack") +  # Columnas apiladas por stage
+  labs(title = "Abundancia por Especie y Stage", x = "Especies", y = "Abundancia", fill = "Stage") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 12),  # Etiquetas de especies inclinadas
+    axis.text.y = element_text(size = 12),
+    axis.title = element_text(size = 14),
+    plot.title = element_text(hjust = 0.5, size = 16, face = "bold")) +
+  scale_fill_brewer(palette = "Set1") 
+
+
+
+#Abundancias para cada estado por separado#
+
+per_stage<- ggplot(data_long_stage, aes(x = species, y = abundance, fill = stage)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  geom_vline(xintercept = seq(0.5, length(unique(data_long_stage$species)) - 0.5), 
+             linetype = "dashed", color = "grey") +
+  labs(title = "Species abundance per stage", x = "Species", y = "Abundance") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  scale_fill_manual(values = c("Poa" = "green", "Tran" = "blue", "Ref" = "purple", "Cal" = "red"))
+  
+ggsave("abundance_plot.svg", plot = per_stage, width = 12, height = 8)
+
+#Datos objetivos de las especies mas abundantes
+
+especies_dominantes <- data %>%
+  select(-stage, -settlement) %>% 
+  colSums() %>%
+  `/`(sum(.)) %>%
+  sort(decreasing = TRUE) %>%
+  as.data.frame() %>% # Convertir en data frame
+  tibble::rownames_to_column(var = "species") # Pasar los nombres de las columnas como una columna "species"
+
+# Renombrar la columna de valores de abundancia
+colnames(especies_dominantes) <- c("species", "abundance")
+
+
+view(especies_dominantes)
+
+barplot(especies_dominantes, las = 2, main = "Proporción de Abundancia por Especie") #Representacion de la abundancia relativa de las especies, de mayor a menor.
+
+#Distribución de la abundancia de las especies
+rank_abundance <- sort(colSums(data %>% select(-stage, -settlement)), decreasing = TRUE)
+
+plot(rank_abundance, type = "b", log = "y", 
+     xlab = "Rango de Especies", ylab = "Abundancia (log)", 
+     main = "Curva de Rango-Abundancia")
+
+
+data_abundancia <- data.frame(
+  especie = names(especies_dominantes),
+  abundancia_relativa = especies_dominantes)
+```
+
+
+```{r Analisis multivariado, NMDS  bray-curtis}
+
+#Hay diferenets posibles opciones de hacer este analisis. Ver si las replicas de los stage por asentamiento los agrupamos. Que distancia utilizar: bray, horn... Lo hacemos con matriz de abundancias relativas, absolutas o presencias y ausencias. Ver si la matriz se debe transformar con raiz cuadrada, logaritmo ....
+
+#Bray: ignora las dobles ausencias. Es decir, que no haya dos especies no va a hacer que dos estados se parezcan mas. 
+#Jaccard, trabaja con ausencias o presencias.
+#Euclidean. Muy sensible cuando los datos tienen muchas ausencias.De hecho, considera las dobles ausencia. lo cual aumenta la disimilitud entre muestras que carecen de especies compartidas.Ademas eleva al cuadrado las abundancias, por lo que da mas peso a aquellos mas abundantes.
+
+#En la matriz solo debe haber datos numericos
+
+#Para todos los datos en conjunto
+nmds_result_data <- metaMDS(data %>% select(-stage, -settlement), distance="bray", k = 2, trymax = 100)
+stress <- nmds_result_data$stress
+#extraemos las coordenadas de los puntos
+nmds_points <- as.data.frame(scores(nmds_result_data, display = "sites"))
+#añadimos la info del estado y del asentamiento a cada punto
+nmds_points <- cbind(nmds_points, 
+                     stage=data$stage,
+                     settlement=data$settlement)
+#calculamos los centroides
+centroids_community <- nmds_points %>%
+  group_by(stage) %>%
+  summarise(
+    NMDS1 = mean(NMDS1, na.rm = TRUE),
+    NMDS2 = mean(NMDS2, na.rm = TRUE),
+    sd_NMDS1 = sd(NMDS1, na.rm = TRUE),
+    sd_NMDS2 = sd(NMDS2, na.rm = TRUE))
+
+ggplot(nmds_points, aes(x = NMDS1, y = NMDS2, color = stage)) +
+  geom_point(size = 2.5, aes(shape = stage)) +  # Puntos de las muestras
+  # Para dibujar las líneas que conectan los puntos con el centroide de su grupo
+   scale_shape_manual(values = c(17, 15, 18,19)) +
+  geom_segment(data = nmds_points, aes(x = NMDS1, y = NMDS2, 
+                                       xend = centroids_community$NMDS1[match(stage, centroids_community$stage)], 
+                                       yend = centroids_community$NMDS2[match(stage, centroids_community$stage)]), 
+               color = "gray", size = 1, alpha = 0.3) +
+  # Añadir los centroides y sus etiquetas
+  geom_text(data = centroids_community, aes(x = NMDS1, y = NMDS2, label = stage), 
+            vjust = -1, hjust = 1, size = 6, color = "black") +  
+  # Elipses sombreadas de dispersión para cada 'stage', usando SD con stat_ellipse
+  stat_ellipse(type = "t") +  # Elipses al 50% de los puntos
+  # Título y etiquetas de los ejes +
+  labs(title = paste("NMDS de Composición de Especies por stage stress:", stress),
+       x = "NMDS1", y = "NMDS2") +
+  # Tema minimalista y posición de la leyenda
+  theme_minimal() +
+  theme(legend.position = "right")
+
+
+#####Este es el codigo para poner bonito el grafico##### Si quiero crear un mapa interactivo en R, lo hago con la funcion ggplotly() y dentro del parenntesis el objeto que seria el plot. 
+
+plot_base <- ggplot(nmds_points, aes(x = NMDS1, y = NMDS2, color = stage)) +
+  stat_ellipse(aes(group = stage), level = 0.5, alpha = 0.5, size = 1.2)
+# Extrae las coordenadas de las elipses
+ellipse_coords <- ggplot_build(plot_base)$data[[1]]
+# Añade la columna 'stage' a ellipse_coords
+ellipse_coords$stage <- nmds_points$stage[match(ellipse_coords$group, as.numeric(factor(nmds_points$stage)))]
+# Usamos estas coordenadas en geom_polygon para crear el gráfico final
+
+my_plot<- ggplot(nmds_points, aes(x = NMDS1, y = NMDS2, color = stage)) +
+  geom_point(size = 2.5, aes(shape = stage)) +
+  scale_shape_manual(values = c(17, 15, 18,19)) +
+  geom_segment(data = nmds_points, aes(x = NMDS1, y = NMDS2, 
+                                       xend = centroids_community$NMDS1[match(stage, centroids_community$stage)], 
+                                       yend = centroids_community$NMDS2[match(stage, centroids_community$stage)]), 
+               color = "gray", size = 1, alpha = 0.3) +
+  # Añadir los centroides y sus etiquetas
+  geom_text(data = centroids_community, aes(x = NMDS1, y = NMDS2, label = stage), 
+            vjust = -1, hjust = 1, size = 6, color = "black") +  
+  # Usar las coordenadas extraídas para dibujar elipses de cada stage con color de relleno
+  geom_polygon(data = ellipse_coords, aes(x = x, y = y, group = group, fill = stage), 
+               color = "black", alpha = 0.4) +
+  # Título y etiquetas de los ejes
+  labs(title = paste("bray, NMDS de Composición de Especies por stage stress:", stress),
+       x = "NMDS1", y = "NMDS2") +
+  # Tema minimalista y posición de la leyenda
+  theme_minimal() +
+  theme(legend.position = "right") +
+  scale_fill_manual(values = c("red", "green", "blue", "purple"))
+
+ggsave("my_plot.svg", plot = my_plot, width = 12, height = 8)
+
+#NMDS habiendo agrupado las 4 replicas de los stage por asentamiento
+
+{nmds_result_settlement <- metaMDS(data_clustered_settlement %>% select(-stage, -settlement), distance="bray", k = 2, trymax = 100)
+
+nmds_points <- as.data.frame(scores(nmds_result_settlement, display = "sites"))
+
+nmds_points <- cbind(nmds_points, 
+                     stage=data_clustered_settlement$stage,
+                     settlement=data_clustered_settlement$settlement)
+nmds_result_settlement$stress
+#calculamos los centroides
+centroids_community <- nmds_points %>%
+  group_by(stage) %>%
+  summarise(
+    NMDS1 = mean(NMDS1, na.rm = TRUE),
+    NMDS2 = mean(NMDS2, na.rm = TRUE),
+    sd_NMDS1 = sd(NMDS1, na.rm = TRUE),
+    sd_NMDS2 = sd(NMDS2, na.rm = TRUE))
+
+ggplot(nmds_points, aes(x = NMDS1, y = NMDS2, color = stage)) +
+  geom_point(size = 2.5, aes(shape = stage)) +  # Puntos de las muestras
+  # Para dibujar las líneas que conectan los puntos con el centroide de su grupo
+  geom_segment(data = nmds_points, aes(x = NMDS1, y = NMDS2, xend = centroids_community$NMDS1[match(stage, centroids_community$stage)], yend = centroids_community$NMDS2[match(stage, centroids_community$stage)]), 
+               color = "gray", size = 1, alpha = 0.3) +
+  # Añadir los centroides y sus etiquetas
+  geom_text(data = centroids_community, aes(x = NMDS1, y = NMDS2, label = stage), 
+            vjust = -1, hjust = 1, size = 7, color = "black") +  
+  # Elipses sombreadas de dispersión para cada 'stage', usando SD con stat_ellipse
+  stat_ellipse(aes(group = stage), level = 0.5, color = "black", alpha = 0.4, size = 1) +  # Elipses al 68% de los puntos
+  # Título y etiquetas de los ejes
+  labs(title = "NMDS de Composición de Especies por Estado (Stage)",
+       x = "NMDS1", y = "NMDS2") +
+  # Tema minimalista y posición de la leyenda
+  theme_minimal() +
+  theme(legend.position = "right")}
+
+
+#Graficos script David
+#Para todos los datos
+
+plot(nmds_result_data$points, type = "n")  # Crear el espacio para los puntos sin dibujar nada
+points(nmds_result_data$points, display = "stage", pch = 16, col = data$stage)  # Agregar los puntos
+ordiellipse(nmds_result_data$points, data$stage, col = 1:4, kind = "sd", lwd = 2)  # Elipses de SD
+ordiellipse(nmds_result_data$points, data$stage, col = 1:4, draw = "polygon")  # Dibujar elipses como polígonos
+ordispider(nmds_result_data$points, data$stage, col = 1:4, label = TRUE)
+
+#Por asentamiento
+plot(nmds_result_settlement$points, type = "n")  # Crear el espacio para los puntos sin dibujar nada
+points(nmds_result_settlement$points, display = "stage", pch = 16, col = data$stage)  # Agregar los puntos
+ordiellipse(nmds_result_settlement$points, data_clustered_settlement$stage, col = 1:4, kind = "sd", lwd = 2)  # Elipses de SD
+ordiellipse(nmds_result_settlement$points, data_clustered_settlement$stage, col = 1:4, draw = "polygon")  # Dibujar elipses como polígonos
+ordispider(nmds_result_settlement$points, data_clustered_settlement$stage, col = 1:4, label = TRUE)
+
+
+
+
+prueba <- vegdist(data %>% select(-stage, -settlement), method = "bray")
+Plant_betadisper <- betadisper(prueba, group = data$stage)
+
+anova(Plant_betadisper)
+plot(Plant_betadisper)
+boxplot(Plant_betadisper)#vemos la distancia de todos los puntos de cada habitat a su centroide
+TukeyHSD(Plant_betadisper)#salen los efectos de los habitats por parejas y te fijas en la pvalue
+
+```
+
+
+```{r Clsuter jerarquico aglomerativo (HCA)  bray-curtis}
+
+#Primero hay que introducir una matriz de disimilitudes de distancias: euclidian, bray-curtis, manhattan.... Luego, se debe concretar que metodo de enlace se aplica: Single: agrupa basandose en la menor distancia entre puntos.Complete: usa la mayor distancia entre puntos. Average: calcula promedios entre grupos. En ecologia tipicamente se usa la de average. 
+
+#No he metido la base de datos completa, si no, donde he hecho la media d ecada una de las replicas de cada stage
+
+{dist_cluster<- vegdist(data_clustered_settlement %>% select (-stage, -settlement), method="bray")
+hca2<- hclust(dist_cluster, method= "average")
+
+#Creamos el dendrograma en formato que sea reconocido por el ggplot
+dendrogram <- as.dendrogram(hca2)
+dendro_data <- dendro_data(dendrogram)
+
+#Añadimos los colores a los diferenets puntos y en el orden que tiene el df
+label_data <- data.frame(
+  x = seq_along(hca2$order),
+  y = 0,
+  label = data_clustered_settlement$stage[hca2$order],
+  cluster = factor(data_clustered_settlement$stage[hca2$order], 
+                   levels = c("Cal", "Poa", "Tran", "Ref")))  
+
+#Coordenadas del dendrograma en formato dataframe.
+segment_data <- segment(dendro_data)
+segment_data$cluster <- factor(label_data$cluster[match(segment_data$xend, label_data$x)],
+  levels = c("Cal", "Poa", "Tran", "Ref"))
+
+# rectangles <- data.frame( xmin = c(0.5, 12.5, 22.8, 34.8),xmax = c(10.5, 22.2, 34.2, 41.2), ymin = c(0.02, 0.02, 0.02, 0.02), ymax = c(0.7, 0.54, 0.57, 0.75)) Si quiero añadir cuadrados agrpando cada stage
+
+#Para crear los puntos del final del dendrograma
+bottom_points <- segment_data %>%
+  group_by(cluster) %>%
+  filter(yend == min(yend)) %>%
+  ungroup()  
+
+
+ggplot() + 
+  geom_segment(data = segment_data,
+    aes(x = x, y = y, xend = xend, yend = yend, color = cluster), size = 1) +
+  #Etquiteas de cada uno de los puntos del dendrograma
+  geom_text(data = label_data,
+    aes(x = x, y = y, label = label, color = cluster), # Desplaza etiquetas
+    hjust = 2, angle = 90, size = 6, show.legend = FALSE) +
+  #geom_rect(data = rectangles,aes(xmin = xmin, xmax = xmax, ymin = ymin, ymax = ymax),fill = "transparent", color = "black", linetype = "dashed", size = 1) + Si quiero añadir los rectangulos
+  #Para ajustar la escala de la grafica
+  scale_y_continuous(expand = expansion(mult = c(0.11, 0))) + # Ajusta escala del eje y
+  labs(title = "Hierarchical cluster analysis", subtitle = "Method: Average | Distance: Bray-Curtis", x = "Clusters", y = "Height", color = "Cluster") +
+  theme_classic() +
+  theme(axis.text.x = element_blank(),
+    axis.ticks.x = element_blank(),
+    panel.grid = element_blank(),
+    plot.title = element_text(hjust = 0.5, size = 20, face = "bold"), 
+    plot.subtitle = element_text(hjust = 0.5, size = 16, face = "italic"),
+    axis.title.x = element_text(size = 14),
+    axis.title.y = element_text(size = 14),
+    legend.title = element_text(size = 18), 
+    axis.text.y = element_text(size = 16),
+    legend.text = element_text(size = 14)) +
+geom_point(data = bottom_points, 
+             aes(x = xend, y = yend, shape = cluster, color = cluster), 
+             size = 3) +
+scale_color_manual(values = c("Cal" = "red", "Poa" = "green", "Tran" = "blue", "Ref" = "purple"), breaks = c("Cal", "Poa", "Tran", "Ref"), name = "Cluster") + # Nombre unificado para que solo haya una unica leyenda
+scale_shape_manual(values = c("Cal" = 16, "Poa" = 17, "Tran" = 18, "Ref" = 15),
+                     breaks = c("Cal", "Poa", "Tran", "Ref"),name = "Cluster")+
+  guides(color = guide_legend(override.aes = list(size = 4)), 
+    shape = guide_legend(override.aes = list(size = 4)))} 
+
+
+anosim_result <- anosim(dist_cluster, data_clustered_settlement$stage)
+print(anosim_result)
+
+grafica<-hclust(dist(data_clustered_stage), method="average")
+grafica<-hclust(dist(data_clustered_stage), method="single")
+
+plot(grafica)
+plot(grafica, hang=-1)
+
+hc <- hclust(dist(data_clustered_stage,"manhattan"),"average")
+plot(hc,hang=-1)
+
+#Para guardar el grafico en formato .svg
+{my_plot<- ggplot() + 
+  geom_segment(data = segment_data,
+    aes(x = x, y = y, xend = xend, yend = yend, color = cluster), size = 1) +
+  #Etquiteas de cada uno de los puntos del dendrograma
+  geom_text(data = label_data,
+    aes(x = x, y = y, label = label, color = cluster), # Desplaza etiquetas
+    hjust = 1.3, angle = 90, size = 6, show.legend = FALSE) +
+  #geom_rect(data = rectangles,aes(xmin = xmin, xmax = xmax, ymin = ymin, ymax = ymax),fill = "transparent", color = "black", linetype = "dashed", size = 1) + Si quiero añadir los rectangulos
+  #Para ajustar la escala de la grafica
+  scale_y_continuous(expand = expansion(mult = c(0.11, 0))) + # Ajusta escala del eje y
+  labs(title = "Hierarchical cluster analysis", subtitle = "Method: Average | Distance: Bray-Curtis", x = "Clusters", y = "Height", color = "Cluster") +
+  theme_classic() +
+  theme(axis.text.x = element_blank(),
+    axis.ticks.x = element_blank(),
+    panel.grid = element_blank(),
+    plot.title = element_text(hjust = 0.5, size = 20, face = "bold"), 
+    plot.subtitle = element_text(hjust = 0.5, size = 16, face = "italic"),
+    axis.title.x = element_text(size = 14),
+    axis.title.y = element_text(size = 14),
+    legend.title = element_text(size = 18), 
+    axis.text.y = element_text(size = 16),
+    legend.text = element_text(size = 14)) +
+geom_point(data = bottom_points, 
+             aes(x = xend, y = yend, shape = cluster, color = cluster), 
+             size = 3) +
+scale_color_manual(values = c("Cal" = "red", "Poa" = "green", "Tran" = "blue", "Ref" = "purple"), breaks = c("Cal", "Poa", "Tran", "Ref"), name = "Cluster") + # Nombre unificado para que solo haya una unica leyenda
+scale_shape_manual(values = c("Cal" = 16, "Poa" = 17, "Tran" = 18, "Ref" = 15),
+                     breaks = c("Cal", "Poa", "Tran", "Ref"),name = "Cluster")+
+  guides(color = guide_legend(override.aes = list(size = 4)), 
+    shape = guide_legend(override.aes = list(size = 4))) 
+ggsave("my_plot.svg", plot = my_plot, width = 12, height = 8)}
+
+```
+
+
+```{r PERMANOVA, ANOSIM, POST-HOC y PCA para ver si hay diferencias entre los stages}
+
+#Para ver la dispersion de cada uno de los niveles del stage. Importante fijarse en la posiicion de cada uno de los stage en el primer eje. Te permite visualziar si las diefrencias observadas estadisticamente son consistentes con el plot. Debemos fijarnos en la altura de la mediana d elso diferentes grupos.Si el tamaño de las cajas es diferente signficia que la dispersion dentro de caad grupo es diferente.Una mayor caja indica mayor heterogeneidad en la compsicion de especies.Los outliers indican que esos punots de muestreo estan muy alejados del stage.Si las cajas se solapaan signfica que no hay tantas diefrencias entre esos grupos.
+data_hellinger <- decostand(data %>% select(-stage, -settlement), method = "hellinger")
+nmds_result_data <- metaMDS(data_hellinger, distance="bray", k = 2, trymax = 100)
+
+nmds_eje1 <- scores(nmds_result_data, display = "sites")[, 1]
+
+boxplot(nmds_eje1 ~ stage, data = data, main = "Primer eje del NMDS por stage",
+        xlab = "Stage", ylab = "NMDS eje 1", col = rainbow(length(unique(data$stage))))
+
+
+
+##PERMANOVA##
+
+data_hellinger <- decostand(data %>% select(-stage, -settlement), method = "hellinger")
+data_rootcuadratic <- data_clustered_settlement %>% mutate(across(where(is.numeric), ~ .^(1/4)))%>% select(-stage, -settlement) 
+data_permanova <- data %>% select(-stage, -settlement)
+
+# Test de homogeneidad de dispersión
+dist_matrix <- vegdist(data_permanova, method = "bray")
+
+betadisper_test <- betadisper(dist_matrix, group = data_clustered_settlement$stage)
+print(betadisper_test)
+#Ver si hay diferencias entre estados en la dispersion
+anova_betadisper <- anova(betadisper_test)
+print(anova_betadisper)
+#Alternativa a la anova
+perm_test <- permutest(betadisper_test, permutations = 999)
+print(perm_test)
+#PCoa de los grupos para ver sus dispersiones
+plot(betadisper_test)
+
+
+
+permanova_plant <- adonis2(data_rootcuadratic ~ settlement+stage, data = data_clustered_settlement, method="bray", permutations=999)
+print(permanova_plant)
+
+
+##ANOSIM(analisis de similitudes)##
+dist_matrix <- vegdist(data %>% select(-stage, -settlement), method = "bray")
+
+anosim_result <- anosim(dist_matrix, grouping = data$stage, permutations = 999)
+print(anosim_result)
+
+
+##COMPARACIONES POST-HOC##
+
+pairwise_results <- pairwise.adonis2(data_hellinger ~ stage, data = data_clustered_settlement, method = "bray", permutations = 999)
+print(pairwise_results)
+
+
+#PCA
+data_hellinger <- decostand(data %>% select(-stage, -settlement), method = "hellinger")
+pca_result <- rda(data_hellinger)
+summary(pca_result)
+
+# Calcular el porcentaje de varianza explicada ppor cada eje
+eigenvalues <- eigenvals(pca_result)
+var_explained <- eigenvalues / sum(eigenvalues) * 100
+print(var_explained)
+
+# Extraemos los scores de los sitios (muestras) y añadimos la información de los stages
+site_scores <- as.data.frame(scores(pca_result, display = "sites"))
+site_scores$stage <- data$stage  # Añadimos la variable stage
+
+ggplot(site_scores, aes(x = PC1, y = PC2, color = stage)) +
+  geom_point(size = 3, alpha = 0.8) +
+  stat_ellipse(type = "norm", level = 0.68, size = 0.7) +
+  labs(title = "PCA: Agrupación de puntos por stage",
+       x = "PC1", y = "PC2", color = "Stage") +
+  theme_minimal() +
+  theme(plot.title = element_text(hjust = 0.5, size = 16, face = "bold"),
+        axis.title = element_text(size = 14),
+        axis.text = element_text(size = 12))
+
+
+#ALTERNATIVA. Coger el eje 1 del NMDS (que es el representa la mayor variacion de las comunidades). De manaera que cada eje funcionaria como una variable univariada. Tiene el limitante de que pierdes informacion contenida en otros ejes. 
+data_hellinger <- decostand(data %>% select(-stage, -settlement), method = "hellinger")
+nmds_result_data <- metaMDS(data_hellinger, distance="bray", k = 2, trymax = 100)
+
+# Extraer las coordenadas del primer eje
+nmds_eje1 <- scores(nmds_result_data, display = "sites")[, 1] 
+data_hellinger$nmds_eje1 <- nmds_eje1
+
+#Vemos si hay diferencias significativas netre los estados
+anova_result <- aov(nmds_eje1 ~ stage, data = data)
+summary(anova_result)
+
+#Para ver que niveles son diferentes entre si. En este caso hay que ver que valor de diff es mayor.
+tukey_result <- TukeyHSD(anova_result)
+print(tukey_result)
+
+#En este grafico importa si las lineas estan a la derecha o izquierda del 0, es decir, que no lo crucen. Ademas, su cercania con el eje 0 tambien indica menos diferencias significativas. Digamos que sería complementaria a ver el nivel de significacion.Por tanto, aquellas lineas mas alejadas dle 0 indican diferencia mas marcadas. En mi caso tiene sentido que todos los estados compaardos con la poa sean los mas alejados del cero. 
+#Como aclaracion: Una línea completamente a la izquierda del 0 indica que el primer nivel tiene una media menor que el segundo nivel. Por ejemplo, en la comparación Poa-Cal, si el intervalo de confianza y el valor central (diff) están a la izquierda del 0, significa que las posiciones promedio de las muestras del nivel Poa en el primer eje del NMDS son menores que las del nivel Cal.
+plot(tukey_result)
+```
+
+
+```{r Hellinger NMDS y  HCA. Hacer transormacion con raiz cuadrada y luego distancia euclidiana}
+
+###NMDS###
+
+{data_hellinger <- decostand(data %>% select (-stage, -settlement), method = "hellinger")
+
+nmds_result_data2 <- metaMDS(data_hellinger, distance="euclidean", k = 2, trymax = 100)
+stress <- nmds_result_data2$stress
+#extraemos las coordenadas de los puntos
+nmds_points2 <- as.data.frame(scores(nmds_result_data2, display = "sites"))
+#añadimos la info del estado y del asentamiento a cada punto
+nmds_points2 <- cbind(nmds_points2, 
+                     stage=data$stage,
+                     settlement=data$settlement)
+#calculamos los centroides
+centroids_community <- nmds_points2 %>%
+  group_by(stage) %>%
+  summarise(
+    NMDS1 = mean(NMDS1, na.rm = TRUE),
+    NMDS2 = mean(NMDS2, na.rm = TRUE),
+    sd_NMDS1 = sd(NMDS1, na.rm = TRUE),
+    sd_NMDS2 = sd(NMDS2, na.rm = TRUE))
+
+plot_base <- ggplot(nmds_points2, aes(x = NMDS1, y = NMDS2, color = stage)) +
+  stat_ellipse(aes(group = stage), level = 0.5, alpha = 0.5, size = 1.2)
+# Extrae las coordenadas de las elipses
+ellipse_coords <- ggplot_build(plot_base)$data[[1]]
+# Añade la columna 'stage' a ellipse_coords
+ellipse_coords$stage <- nmds_points2$stage[match(ellipse_coords$group, as.numeric(factor(nmds_points2$stage)))]
+# Usamos estas coordenadas en geom_polygon para crear el gráfico final
+my_plot <- ggplot(nmds_points2, aes(x = NMDS1, y = NMDS2, color = stage)) +
+  geom_point(size = 2.5, aes(shape = stage)) +
+  scale_shape_manual(values = c(17, 15, 18,19)) +
+  geom_segment(data = nmds_points2, aes(x = NMDS1, y = NMDS2, 
+                                       xend = centroids_community$NMDS1[match(stage, centroids_community$stage)], 
+                                       yend = centroids_community$NMDS2[match(stage, centroids_community$stage)]), 
+               color = "gray", size = 1, alpha = 0.3) +
+  # Añadir los centroides y sus etiquetas
+  geom_text(data = centroids_community, aes(x = NMDS1, y = NMDS2, label = stage), 
+            vjust = -1, hjust = 1, size = 6, color = "black") +  
+  # Usar las coordenadas extraídas para dibujar elipses de cada stage con color de relleno
+  geom_polygon(data = ellipse_coords, aes(x = x, y = y, group = group, fill = stage), 
+               color = "black", alpha = 0.4) +
+  # Título y etiquetas de los ejes
+  labs(title = paste("Hellinger, NMDS de Composición de Especies por stage stress:", stress),
+       x = "NMDS1", y = "NMDS2") +
+  # Tema minimalista y posición de la leyenda
+  theme_minimal() +
+  theme(legend.position = "right") +
+  scale_fill_manual(values = c("red", "green", "blue", "purple"))
+
+ggsave("my_plot.svg", plot = my_plot, width = 12, height = 8)}
+
+
+
+###HCA###
+{data_hellinger2 <- decostand(data_clustered_settlement %>% select (-stage, -settlement), method = "hellinger")
+
+dist_cluster<- vegdist(data_hellinger2, method="euclidean")
+hca2<- hclust(dist_cluster, method= "average")
+
+#Creamos el dendrograma en formato que sea reconocido por el ggplot
+dendrogram <- as.dendrogram(hca2)
+dendro_data <- dendro_data(dendrogram)
+
+#Añadimos los colores a los diferenets puntos y en el orden que tiene el df
+label_data <- data.frame(
+  x = seq_along(hca2$order),
+  y = 0,
+  label = data_clustered_settlement$stage[hca2$order],
+  cluster = factor(data_clustered_settlement$stage[hca2$order], 
+                   levels = c("Cal", "Poa", "Tran", "Ref")))  
+
+#Coordenadas del dendrograma en formato dataframe.
+segment_data <- segment(dendro_data)
+segment_data$cluster <- factor(label_data$cluster[match(segment_data$xend, label_data$x)],
+  levels = c("Cal", "Poa", "Tran", "Ref"))
+
+# rectangles <- data.frame( xmin = c(0.5, 12.5, 22.8, 34.8),xmax = c(10.5, 22.2, 34.2, 41.2), ymin = c(0.02, 0.02, 0.02, 0.02), ymax = c(0.7, 0.54, 0.57, 0.75)) Si quiero añadir cuadrados agrpando cada stage
+
+#Para crear los puntos del final del dendrograma
+bottom_points <- segment_data %>%
+  group_by(cluster) %>%
+  filter(yend == min(yend)) %>%
+  ungroup()  
+
+
+my_plot<- ggplot() + 
+  geom_segment(data = segment_data,
+    aes(x = x, y = y, xend = xend, yend = yend, color = cluster), size = 1) +
+  #Etquiteas de cada uno de los puntos del dendrograma
+  geom_text(data = label_data,
+    aes(x = x, y = y, label = label, color = cluster), # Desplaza etiquetas
+    hjust = 1.3, angle = 90, size = 6, show.legend = FALSE) +
+  #geom_rect(data = rectangles,aes(xmin = xmin, xmax = xmax, ymin = ymin, ymax = ymax),fill = "transparent", color = "black", linetype = "dashed", size = 1) + Si quiero añadir los rectangulos
+  #Para ajustar la escala de la grafica
+  scale_y_continuous(expand = expansion(mult = c(0.11, 0))) + # Ajusta escala del eje y
+  labs(title = "Hierarchical cluster analysis", subtitle = "Method: Average | Distance: Hellinger", x = "Clusters", y = "Height", color = "Cluster") +
+  theme_classic() +
+  theme(axis.text.x = element_blank(),
+    axis.ticks.x = element_blank(),
+    panel.grid = element_blank(),
+    plot.title = element_text(hjust = 0.5, size = 20, face = "bold"), 
+    plot.subtitle = element_text(hjust = 0.5, size = 16, face = "italic"),
+    axis.title.x = element_text(size = 14),
+    axis.title.y = element_text(size = 14),
+    legend.title = element_text(size = 18), 
+    axis.text.y = element_text(size = 16),
+    legend.text = element_text(size = 14)) +
+geom_point(data = bottom_points, 
+             aes(x = xend, y = yend, shape = cluster, color = cluster), 
+             size = 3) +
+scale_color_manual(values = c("Cal" = "red", "Poa" = "green", "Tran" = "blue", "Ref" = "purple"), breaks = c("Cal", "Poa", "Tran", "Ref"), name = "Cluster") + # Nombre unificado para que solo haya una unica leyenda
+scale_shape_manual(values = c("Cal" = 16, "Poa" = 17, "Tran" = 18, "Ref" = 15),
+                     breaks = c("Cal", "Poa", "Tran", "Ref"),name = "Cluster")+
+  guides(color = guide_legend(override.aes = list(size = 4)), 
+    shape = guide_legend(override.aes = list(size = 4))) 
+ggsave("my_plot.svg", plot = my_plot, width = 12, height = 8)}
+```
+
+
+```{r Morisita-Horn NMDS y  HCA. Horn da mas peso a las especies dominantes, es decir, especies con alta abundancia relativa. Tienen menos peso las especies raras}
+###NMDS###
+{nmds_result_data2 <- metaMDS(data %>% select(-stage, -settlement), distance="horn", k = 2, trymax = 100)
+stress <- nmds_result_data2$stress
+#extraemos las coordenadas de los puntos
+nmds_points2 <- as.data.frame(scores(nmds_result_data2, display = "sites"))
+#añadimos la info del estado y del asentamiento a cada punto
+nmds_points2 <- cbind(nmds_points2, 
+                     stage=data$stage,
+                     settlement=data$settlement)
+#calculamos los centroides
+centroids_community <- nmds_points2 %>%
+  group_by(stage) %>%
+  summarise(
+    NMDS1 = mean(NMDS1, na.rm = TRUE),
+    NMDS2 = mean(NMDS2, na.rm = TRUE),
+    sd_NMDS1 = sd(NMDS1, na.rm = TRUE),
+    sd_NMDS2 = sd(NMDS2, na.rm = TRUE))
+
+plot_base <- ggplot(nmds_points2, aes(x = NMDS1, y = NMDS2, color = stage)) +
+  stat_ellipse(aes(group = stage), level = 0.5, alpha = 0.5, size = 1.2)
+# Extrae las coordenadas de las elipses
+ellipse_coords <- ggplot_build(plot_base)$data[[1]]
+# Añade la columna 'stage' a ellipse_coords
+ellipse_coords$stage <- nmds_points2$stage[match(ellipse_coords$group, as.numeric(factor(nmds_points2$stage)))]
+# Usamos estas coordenadas en geom_polygon para crear el gráfico final
+
+my_plot<- ggplot(nmds_points2, aes(x = NMDS1, y = NMDS2, color = stage)) +
+  geom_point(size = 2.5, aes(shape = stage)) +
+  scale_shape_manual(values = c(17, 15, 18,19)) +
+  geom_segment(data = nmds_points2, aes(x = NMDS1, y = NMDS2, 
+                                       xend = centroids_community$NMDS1[match(stage, centroids_community$stage)], 
+                                       yend = centroids_community$NMDS2[match(stage, centroids_community$stage)]), 
+               color = "gray", size = 1, alpha = 0.3) +
+  # Añadir los centroides y sus etiquetas
+  geom_text(data = centroids_community, aes(x = NMDS1, y = NMDS2, label = stage), 
+            vjust = -1, hjust = 1, size = 6, color = "black") +  
+  # Usar las coordenadas extraídas para dibujar elipses de cada stage con color de relleno
+  geom_polygon(data = ellipse_coords, aes(x = x, y = y, group = group, fill = stage), 
+               color = "black", alpha = 0.4) +
+  # Título y etiquetas de los ejes
+  labs(title = paste("Horn, NMDS de Composición de Especies por stage stress:", stress),
+       x = "NMDS1", y = "NMDS2") +
+  # Tema minimalista y posición de la leyenda
+  theme_minimal() +
+  theme(legend.position = "right") +
+  scale_fill_manual(values = c("red", "green", "blue", "purple")) 
+
+ggsave("my_plot.svg", plot = my_plot, width = 12, height = 8)}
+
+
+
+###HCA###
+{dist_cluster<- vegdist(data_clustered_settlement %>% select (-stage, -settlement), method="horn")
+hca2<- hclust(dist_cluster, method= "average")
+
+#Creamos el dendrograma en formato que sea reconocido por el ggplot
+dendrogram <- as.dendrogram(hca2)
+dendro_data <- dendro_data(dendrogram)
+
+#Añadimos los colores a los diferenets puntos y en el orden que tiene el df
+label_data <- data.frame(
+  x = seq_along(hca2$order),
+  y = 0,
+  label = data_clustered_settlement$stage[hca2$order],
+  cluster = factor(data_clustered_settlement$stage[hca2$order], 
+                   levels = c("Cal", "Poa", "Tran", "Ref")))  
+
+#Coordenadas del dendrograma en formato dataframe.
+segment_data <- segment(dendro_data)
+segment_data$cluster <- factor(label_data$cluster[match(segment_data$xend, label_data$x)],
+  levels = c("Cal", "Poa", "Tran", "Ref"))
+
+# rectangles <- data.frame( xmin = c(0.5, 12.5, 22.8, 34.8),xmax = c(10.5, 22.2, 34.2, 41.2), ymin = c(0.02, 0.02, 0.02, 0.02), ymax = c(0.7, 0.54, 0.57, 0.75)) Si quiero añadir cuadrados agrpando cada stage
+
+#Para crear los puntos del final del dendrograma
+bottom_points <- segment_data %>%
+  group_by(cluster) %>%
+  filter(yend == min(yend)) %>%
+  ungroup()  
+
+
+my_plot<- ggplot() + 
+  geom_segment(data = segment_data,
+    aes(x = x, y = y, xend = xend, yend = yend, color = cluster), size = 1) +
+  #Etquiteas de cada uno de los puntos del dendrograma
+  geom_text(data = label_data,
+    aes(x = x, y = y, label = label, color = cluster), # Desplaza etiquetas
+    hjust = 1.3, angle = 90, size = 6, show.legend = FALSE) +
+  #geom_rect(data = rectangles,aes(xmin = xmin, xmax = xmax, ymin = ymin, ymax = ymax),fill = "transparent", color = "black", linetype = "dashed", size = 1) + Si quiero añadir los rectangulos
+  #Para ajustar la escala de la grafica
+  scale_y_continuous(expand = expansion(mult = c(0.11, 0))) + # Ajusta escala del eje y
+  labs(title = "Hierarchical cluster analysis", subtitle = "Method: Average | Distance: Horn", x = "Clusters", y = "Height", color = "Cluster") +
+  theme_classic() +
+  theme(axis.text.x = element_blank(),
+    axis.ticks.x = element_blank(),
+    panel.grid = element_blank(),
+    plot.title = element_text(hjust = 0.5, size = 20, face = "bold"), 
+    plot.subtitle = element_text(hjust = 0.5, size = 16, face = "italic"),
+    axis.title.x = element_text(size = 14),
+    axis.title.y = element_text(size = 14),
+    legend.title = element_text(size = 18), 
+    axis.text.y = element_text(size = 16),
+    legend.text = element_text(size = 14)) +
+geom_point(data = bottom_points, 
+             aes(x = xend, y = yend, shape = cluster, color = cluster), 
+             size = 3) +
+scale_color_manual(values = c("Cal" = "red", "Poa" = "green", "Tran" = "blue", "Ref" = "purple"), breaks = c("Cal", "Poa", "Tran", "Ref"), name = "Cluster") + # Nombre unificado para que solo haya una unica leyenda
+scale_shape_manual(values = c("Cal" = 16, "Poa" = 17, "Tran" = 18, "Ref" = 15),
+                     breaks = c("Cal", "Poa", "Tran", "Ref"),name = "Cluster")+
+  guides(color = guide_legend(override.aes = list(size = 4)), 
+    shape = guide_legend(override.aes = list(size = 4))) 
+ggsave("my_plot.svg", plot = my_plot, width = 12, height = 8)}
+```
+
+
+```{r Bray con logaritmo}
+
+#Aplicamos transformacion logartismica solo a las columnas numericas
+data_transformed <- data %>% mutate(across(where(is.numeric), ~ log1p(.)))
+
+{nmds_result_data2 <- metaMDS(data_transformed %>% select(-stage, -settlement), distance="bray", k = 2, trymax = 100)
+stress <- nmds_result_data2$stress
+#extraemos las coordenadas de los puntos
+nmds_points2 <- as.data.frame(scores(nmds_result_data2, display = "sites"))
+#añadimos la info del estado y del asentamiento a cada punto
+nmds_points2 <- cbind(nmds_points2, 
+                     stage=data$stage,
+                     settlement=data$settlement)
+#calculamos los centroides
+centroids_community <- nmds_points2 %>%
+  group_by(stage) %>%
+  summarise(
+    NMDS1 = mean(NMDS1, na.rm = TRUE),
+    NMDS2 = mean(NMDS2, na.rm = TRUE),
+    sd_NMDS1 = sd(NMDS1, na.rm = TRUE),
+    sd_NMDS2 = sd(NMDS2, na.rm = TRUE))
+
+plot_base <- ggplot(nmds_points2, aes(x = NMDS1, y = NMDS2, color = stage)) +
+  stat_ellipse(aes(group = stage), level = 0.5, alpha = 0.5, size = 1.2)
+# Extrae las coordenadas de las elipses
+ellipse_coords <- ggplot_build(plot_base)$data[[1]]
+# Añade la columna 'stage' a ellipse_coords
+ellipse_coords$stage <- nmds_points2$stage[match(ellipse_coords$group, as.numeric(factor(nmds_points2$stage)))]
+# Usamos estas coordenadas en geom_polygon para crear el gráfico final
+
+my_plot<- ggplot(nmds_points2, aes(x = NMDS1, y = NMDS2, color = stage)) +
+  geom_point(size = 2.5, aes(shape = stage)) +
+  scale_shape_manual(values = c(17, 15, 18,19)) +
+  geom_segment(data = nmds_points2, aes(x = NMDS1, y = NMDS2, 
+                                       xend = centroids_community$NMDS1[match(stage, centroids_community$stage)], 
+                                       yend = centroids_community$NMDS2[match(stage, centroids_community$stage)]), 
+               color = "gray", size = 1, alpha = 0.3) +
+  # Añadir los centroides y sus etiquetas
+  geom_text(data = centroids_community, aes(x = NMDS1, y = NMDS2, label = stage), 
+            vjust = -1, hjust = 1, size = 6, color = "black") +  
+  # Usar las coordenadas extraídas para dibujar elipses de cada stage con color de relleno
+  geom_polygon(data = ellipse_coords, aes(x = x, y = y, group = group, fill = stage), 
+               color = "black", alpha = 0.4) +
+  # Título y etiquetas de los ejes
+  labs(title = paste("brays_log, NMDS de Composición de Especies por stage stress:", stress),
+       x = "NMDS1", y = "NMDS2") +
+  # Tema minimalista y posición de la leyenda
+  theme_minimal() +
+  theme(legend.position = "right") +
+  scale_fill_manual(values = c("red", "green", "blue", "purple")) 
+
+ggsave("my_plot.svg", plot = my_plot, width = 12, height = 8)}
+
+
+
+###HCA###
+data_transformed2 <- data_clustered_settlement %>% mutate(across(where(is.numeric), ~ log1p(.)))
+
+{dist_cluster<- vegdist(data_transformed2 %>% select (-stage, -settlement), method="bray")
+hca2<- hclust(dist_cluster, method= "average")
+
+#Creamos el dendrograma en formato que sea reconocido por el ggplot
+dendrogram <- as.dendrogram(hca2)
+dendro_data <- dendro_data(dendrogram)
+
+#Añadimos los colores a los diferenets puntos y en el orden que tiene el df
+label_data <- data.frame(
+  x = seq_along(hca2$order),
+  y = 0,
+  label = data_transformed2$stage[hca2$order],
+  cluster = factor(data_transformed2$stage[hca2$order], 
+                   levels = c("Cal", "Poa", "Tran", "Ref")))  
+
+#Coordenadas del dendrograma en formato dataframe.
+segment_data <- segment(dendro_data)
+segment_data$cluster <- factor(label_data$cluster[match(segment_data$xend, label_data$x)],
+  levels = c("Cal", "Poa", "Tran", "Ref"))
+
+# rectangles <- data.frame( xmin = c(0.5, 12.5, 22.8, 34.8),xmax = c(10.5, 22.2, 34.2, 41.2), ymin = c(0.02, 0.02, 0.02, 0.02), ymax = c(0.7, 0.54, 0.57, 0.75)) Si quiero añadir cuadrados agrpando cada stage
+
+#Para crear los puntos del final del dendrograma
+bottom_points <- segment_data %>%
+  group_by(cluster) %>%
+  filter(yend == min(yend)) %>%
+  ungroup()  
+
+
+my_plot<- ggplot() + 
+  geom_segment(data = segment_data,
+    aes(x = x, y = y, xend = xend, yend = yend, color = cluster), size = 1) +
+  #Etquiteas de cada uno de los puntos del dendrograma
+  geom_text(data = label_data,
+    aes(x = x, y = y, label = label, color = cluster), # Desplaza etiquetas
+    hjust = 1.3, angle = 90, size = 6, show.legend = FALSE) +
+  #geom_rect(data = rectangles,aes(xmin = xmin, xmax = xmax, ymin = ymin, ymax = ymax),fill = "transparent", color = "black", linetype = "dashed", size = 1) + Si quiero añadir los rectangulos
+  #Para ajustar la escala de la grafica
+  scale_y_continuous(expand = expansion(mult = c(0.11, 0))) + # Ajusta escala del eje y
+  labs(title = "Hierarchical cluster analysis", subtitle = "Method: Average | Distance: Log_brays", x = "Clusters", y = "Height", color = "Cluster") +
+  theme_classic() +
+  theme(axis.text.x = element_blank(),
+    axis.ticks.x = element_blank(),
+    panel.grid = element_blank(),
+    plot.title = element_text(hjust = 0.5, size = 20, face = "bold"), 
+    plot.subtitle = element_text(hjust = 0.5, size = 16, face = "italic"),
+    axis.title.x = element_text(size = 14),
+    axis.title.y = element_text(size = 14),
+    legend.title = element_text(size = 18), 
+    axis.text.y = element_text(size = 16),
+    legend.text = element_text(size = 14)) +
+geom_point(data = bottom_points, 
+             aes(x = xend, y = yend, shape = cluster, color = cluster), 
+             size = 3) +
+scale_color_manual(values = c("Cal" = "red", "Poa" = "green", "Tran" = "blue", "Ref" = "purple"), breaks = c("Cal", "Poa", "Tran", "Ref"), name = "Cluster") + # Nombre unificado para que solo haya una unica leyenda
+scale_shape_manual(values = c("Cal" = 16, "Poa" = 17, "Tran" = 18, "Ref" = 15),
+                     breaks = c("Cal", "Poa", "Tran", "Ref"),name = "Cluster")+
+  guides(color = guide_legend(override.aes = list(size = 4)), 
+    shape = guide_legend(override.aes = list(size = 4))) 
+ggsave("my_plot.svg", plot = my_plot, width = 12, height = 8)}
+```
+
+
+```{r NMDS y HCA Quitando las especies mas dominantes}
+#Lo que voy a hacer es quitar las especies mas dominnates para ver como se ve en el nmds
+
+data_filtered3 <- data %>%
+  select(-"Poa glauca", -"Calamagrostis canadensis", -"Salix glauca", -"Betula nana")
+
+data_filtered_no_zeros %>% mutate(across(where(is.numeric), ~ .^(1/4)))
+
+# Para chequear que no hay filas vacias empty_rows <- data_filtered_no_zeros %>% select(-stage, -settlement) %>% filter(rowSums(. == 0) == ncol(.))
+View(empty_rows)
+
+data_filtered_no_zeros <- data_filtered3 %>%
+  filter(rowSums(select(., -stage, -settlement) != 0) > 0)
+
+nmds_result_data <- metaMDS(data_filtered_no_zeros %>% select(-stage, -settlement), distance="bray", k = 2, trymax = 100)
+stress <- nmds_result_data$stress
+#extraemos las coordenadas de los puntos
+nmds_points <- as.data.frame(scores(nmds_result_data, display = "sites"))
+#añadimos la info del estado y del asentamiento a cada punto
+nmds_points <- cbind(nmds_points, 
+                     stage=data_filtered_no_zeros$stage,
+                     settlement=data_filtered_no_zeros$settlement)
+#calculamos los centroides
+centroids_community <- nmds_points %>%
+  group_by(stage) %>%
+  summarise(
+    NMDS1 = mean(NMDS1, na.rm = TRUE),
+    NMDS2 = mean(NMDS2, na.rm = TRUE),
+    sd_NMDS1 = sd(NMDS1, na.rm = TRUE),
+    sd_NMDS2 = sd(NMDS2, na.rm = TRUE))
+
+ggplot(nmds_points, aes(x = NMDS1, y = NMDS2, color = stage)) +
+  geom_point(size = 2.5, aes(shape = stage)) +  # Puntos de las muestras
+  # Para dibujar las líneas que conectan los puntos con el centroide de su grupo
+   scale_shape_manual(values = c(17, 15, 18,19)) +
+  geom_segment(data = nmds_points, aes(x = NMDS1, y = NMDS2, 
+                                       xend = centroids_community$NMDS1[match(stage, centroids_community$stage)], 
+                                       yend = centroids_community$NMDS2[match(stage, centroids_community$stage)]), 
+               color = "gray", size = 1, alpha = 0.3) +
+  # Añadir los centroides y sus etiquetas
+  geom_text(data = centroids_community, aes(x = NMDS1, y = NMDS2, label = stage), 
+            vjust = -1, hjust = 1, size = 6, color = "black") +  
+  # Elipses sombreadas de dispersión para cada 'stage', usando SD con stat_ellipse
+  stat_ellipse(aes(group = stage), level = 0.7, alpha = 0.7, size = 1.2) +  # Elipses al 50% de los puntos
+  # Título y etiquetas de los ejes +
+  labs(title = paste("NMDS de Composición de Especies por stage stress:", stress),
+       x = "NMDS1", y = "NMDS2") +
+  # Tema minimalista y posición de la leyenda
+  theme_minimal() +
+  theme(legend.position = "right")
+
+
+#HCA
+
+data_filtered4 <- data_clustered_settlement %>%
+  select(-"Poa glauca", -"Calamagrostis canadensis", -"Salix glauca", -"Betula nana")
+
+data_filtered_no <- data_filtered4 %>%
+  filter(rowSums(select(., -stage, -settlement) != 0) > 0)
+
+{dist_cluster<- vegdist(data_filtered_no %>% select (-stage, -settlement), method="bray")
+hca2<- hclust(dist_cluster, method= "average")
+
+#Creamos el dendrograma en formato que sea reconocido por el ggplot
+dendrogram <- as.dendrogram(hca2)
+dendro_data <- dendro_data(dendrogram)
+
+#Añadimos los colores a los diferenets puntos y en el orden que tiene el df
+label_data <- data.frame(
+  x = seq_along(hca2$order),
+  y = 0,
+  label = data_filtered_no$stage[hca2$order],
+  cluster = factor(data_filtered_no$stage[hca2$order], 
+                   levels = c("Cal", "Poa", "Tran", "Ref")))  
+
+#Coordenadas del dendrograma en formato dataframe.
+segment_data <- segment(dendro_data)
+segment_data$cluster <- factor(label_data$cluster[match(segment_data$xend, label_data$x)],
+  levels = c("Cal", "Poa", "Tran", "Ref"))
+
+# rectangles <- data.frame( xmin = c(0.5, 12.5, 22.8, 34.8),xmax = c(10.5, 22.2, 34.2, 41.2), ymin = c(0.02, 0.02, 0.02, 0.02), ymax = c(0.7, 0.54, 0.57, 0.75)) Si quiero añadir cuadrados agrpando cada stage
+
+#Para crear los puntos del final del dendrograma
+bottom_points <- segment_data %>%
+  group_by(cluster) %>%
+  filter(yend == min(yend)) %>%
+  ungroup()  
+
+
+my_plot<- ggplot() + 
+  geom_segment(data = segment_data,
+    aes(x = x, y = y, xend = xend, yend = yend, color = cluster), size = 1) +
+  #Etquiteas de cada uno de los puntos del dendrograma
+  geom_text(data = label_data,
+    aes(x = x, y = y, label = label, color = cluster), # Desplaza etiquetas
+    hjust = 1.3, angle = 90, size = 6, show.legend = FALSE) +
+  #geom_rect(data = rectangles,aes(xmin = xmin, xmax = xmax, ymin = ymin, ymax = ymax),fill = "transparent", color = "black", linetype = "dashed", size = 1) + Si quiero añadir los rectangulos
+  #Para ajustar la escala de la grafica
+  scale_y_continuous(expand = expansion(mult = c(0.11, 0))) + # Ajusta escala del eje y
+  labs(title = "Hierarchical cluster analysis", subtitle = "Method: Average | Distance: no abudant species fourth root brays", x = "Clusters", y = "Height", color = "Cluster") +
+  theme_classic() +
+  theme(axis.text.x = element_blank(),
+    axis.ticks.x = element_blank(),
+    panel.grid = element_blank(),
+    plot.title = element_text(hjust = 0.5, size = 20, face = "bold"), 
+    plot.subtitle = element_text(hjust = 0.5, size = 16, face = "italic"),
+    axis.title.x = element_text(size = 14),
+    axis.title.y = element_text(size = 14),
+    legend.title = element_text(size = 18), 
+    axis.text.y = element_text(size = 16),
+    legend.text = element_text(size = 14)) +
+geom_point(data = bottom_points, 
+             aes(x = xend, y = yend, shape = cluster, color = cluster), 
+             size = 3) +
+scale_color_manual(values = c("Cal" = "red", "Poa" = "green", "Tran" = "blue", "Ref" = "purple"), breaks = c("Cal", "Poa", "Tran", "Ref"), name = "Cluster") + # Nombre unificado para que solo haya una unica leyenda
+scale_shape_manual(values = c("Cal" = 16, "Poa" = 17, "Tran" = 18, "Ref" = 15),
+                     breaks = c("Cal", "Poa", "Tran", "Ref"),name = "Cluster")+
+  guides(color = guide_legend(override.aes = list(size = 4)), 
+    shape = guide_legend(override.aes = list(size = 4))) 
+ggsave("my_plot.svg", plot = my_plot, width = 12, height = 8)}
+```
+
+
+```{r NMDS con presencia sy ausencias}
+
+data_p <- data %>% mutate(across(where(is.numeric), ~ ifelse(. > 0, 1, 0))) 
+
+nmds_result_data2 <- metaMDS(data_p %>% select(-stage, -settlement), distance="jaccard", k = 2, trymax = 100)
+stress <- nmds_result_data2$stress
+#extraemos las coordenadas de los puntos
+nmds_points2 <- as.data.frame(scores(nmds_result_data2, display = "sites"))
+#añadimos la info del estado y del asentamiento a cada punto
+nmds_points2 <- cbind(nmds_points2, 
+                     stage=data$stage,
+                     settlement=data$settlement)
+#calculamos los centroides
+centroids_community <- nmds_points2 %>%
+  group_by(stage) %>%
+  summarise(
+    NMDS1 = mean(NMDS1, na.rm = TRUE),
+    NMDS2 = mean(NMDS2, na.rm = TRUE),
+    sd_NMDS1 = sd(NMDS1, na.rm = TRUE),
+    sd_NMDS2 = sd(NMDS2, na.rm = TRUE))
+
+plot_base <- ggplot(nmds_points2, aes(x = NMDS1, y = NMDS2, color = stage)) +
+  stat_ellipse(aes(group = stage), level = 0.65, alpha = 0.5, size = 1.2)
+# Extrae las coordenadas de las elipses
+ellipse_coords <- ggplot_build(plot_base)$data[[1]]
+# Añade la columna 'stage' a ellipse_coords
+ellipse_coords$stage <- nmds_points2$stage[match(ellipse_coords$group, as.numeric(factor(nmds_points2$stage)))]
+# Usamos estas coordenadas en geom_polygon para crear el gráfico final
+
+ggplot(nmds_points2, aes(x = NMDS1, y = NMDS2, color = stage)) +
+  geom_point(size = 2.5, aes(shape = stage)) +
+  scale_shape_manual(values = c(17, 15, 18,19)) +
+  geom_segment(data = nmds_points2, aes(x = NMDS1, y = NMDS2, 
+                                       xend = centroids_community$NMDS1[match(stage, centroids_community$stage)], 
+                                       yend = centroids_community$NMDS2[match(stage, centroids_community$stage)]), 
+               color = "gray", size = 1, alpha = 0.3) +
+  # Añadir los centroides y sus etiquetas
+  geom_text(data = centroids_community, aes(x = NMDS1, y = NMDS2, label = stage), 
+            vjust = -1, hjust = 1, size = 6, color = "black") +  
+  # Usar las coordenadas extraídas para dibujar elipses de cada stage con color de relleno
+  geom_polygon(data = ellipse_coords, aes(x = x, y = y, group = group, fill = stage), 
+               color = "black", alpha = 0.4) +
+  # Título y etiquetas de los ejes
+  labs(title = paste("jaccard, presence_absence, NMDS de Composición de Especies por stage stress:", stress),
+       x = "NMDS1", y = "NMDS2") +
+  # Tema minimalista y posición de la leyenda
+  theme_minimal() +
+  theme(legend.position = "right") +
+  scale_fill_manual(values = c("red", "green", "blue", "purple")) 
+
+
+
+
+data_p2 <- data_clustered_settlement %>% mutate(across(where(is.numeric), ~ ifelse(. > 0, 1, 0)))
+
+###HCA###
+
+
+{dist_cluster<- vegdist(data_p2 %>% select (-stage, -settlement), method="jaccard")
+hca2<- hclust(dist_cluster, method= "average")
+
+#Creamos el dendrograma en formato que sea reconocido por el ggplot
+dendrogram <- as.dendrogram(hca2)
+dendro_data <- dendro_data(dendrogram)
+
+#Añadimos los colores a los diferenets puntos y en el orden que tiene el df
+label_data <- data.frame(
+  x = seq_along(hca2$order),
+  y = 0,
+  label = data_clustered_settlement$stage[hca2$order],
+  cluster = factor(data_clustered_settlement$stage[hca2$order], 
+                   levels = c("Cal", "Poa", "Tran", "Ref")))  
+
+#Coordenadas del dendrograma en formato dataframe.
+segment_data <- segment(dendro_data)
+segment_data$cluster <- factor(label_data$cluster[match(segment_data$xend, label_data$x)],
+  levels = c("Cal", "Poa", "Tran", "Ref"))
+
+# rectangles <- data.frame( xmin = c(0.5, 12.5, 22.8, 34.8),xmax = c(10.5, 22.2, 34.2, 41.2), ymin = c(0.02, 0.02, 0.02, 0.02), ymax = c(0.7, 0.54, 0.57, 0.75)) Si quiero añadir cuadrados agrpando cada stage
+
+#Para crear los puntos del final del dendrograma
+bottom_points <- segment_data %>%
+  group_by(cluster) %>%
+  filter(yend == min(yend)) %>%
+  ungroup()  
+
+
+my_plot<- ggplot() + 
+  geom_segment(data = segment_data,
+    aes(x = x, y = y, xend = xend, yend = yend, color = cluster), size = 1) +
+  #Etquiteas de cada uno de los puntos del dendrograma
+  geom_text(data = label_data,
+    aes(x = x, y = y, label = label, color = cluster), # Desplaza etiquetas
+    hjust = 1.3, angle = 90, size = 6, show.legend = FALSE) +
+  #geom_rect(data = rectangles,aes(xmin = xmin, xmax = xmax, ymin = ymin, ymax = ymax),fill = "transparent", color = "black", linetype = "dashed", size = 1) + Si quiero añadir los rectangulos
+  #Para ajustar la escala de la grafica
+  scale_y_continuous(expand = expansion(mult = c(0.11, 0))) + # Ajusta escala del eje y
+  labs(title = "Hierarchical cluster analysis", subtitle = "Method: Average | Distance: Jaccard", x = "Clusters", y = "Height", color = "Cluster") +
+  theme_classic() +
+  theme(axis.text.x = element_blank(),
+    axis.ticks.x = element_blank(),
+    panel.grid = element_blank(),
+    plot.title = element_text(hjust = 0.5, size = 20, face = "bold"), 
+    plot.subtitle = element_text(hjust = 0.5, size = 16, face = "italic"),
+    axis.title.x = element_text(size = 14),
+    axis.title.y = element_text(size = 14),
+    legend.title = element_text(size = 18), 
+    axis.text.y = element_text(size = 16),
+    legend.text = element_text(size = 14)) +
+geom_point(data = bottom_points, 
+             aes(x = xend, y = yend, shape = cluster, color = cluster), 
+             size = 3) +
+scale_color_manual(values = c("Cal" = "red", "Poa" = "green", "Tran" = "blue", "Ref" = "purple"), breaks = c("Cal", "Poa", "Tran", "Ref"), name = "Cluster") + # Nombre unificado para que solo haya una unica leyenda
+scale_shape_manual(values = c("Cal" = 16, "Poa" = 17, "Tran" = 18, "Ref" = 15),
+                     breaks = c("Cal", "Poa", "Tran", "Ref"),name = "Cluster")+
+  guides(color = guide_legend(override.aes = list(size = 4)), 
+    shape = guide_legend(override.aes = list(size = 4))) 
+ggsave("my_plot.svg", plot = my_plot, width = 12, height = 8)}
+
+
+
+
+
+
+
+```
+
+
+```{r PCoa}
+
+#Transformacion de los datos
+hellinger_pcoa <- decostand(data %>% select (-stage, -settlement), method = "hellinger")
+
+#Calcular matriz de distancias euclideas
+distance_matrix <- vegdist(hellinger_pcoa, method = "euclidean")
+
+#Realziar el Pcoa
+pcoa_result <- cmdscale(distance_matrix, k = 2, eig = TRUE)
+
+#Extraer las coordenadas
+pcoa_coords <- as.data.frame(pcoa_result$points)
+colnames(pcoa_coords) <- c("PC1", "PC2")
+
+#Añadimos la informacion de los stages
+pcoa_coords$stage <- data$stage
+
+# Calcular vectores de especies (biplot)
+species_scores <- as.data.frame(species_fit$vectors$arrows)
+colnames(species_scores) <- c("PC1", "PC2") # Asegurar nombres correctos
+species_scores <- species_scores * 5        # Escalar para mejor visualización
+species_scores$species <- rownames(species_scores)
+
+#Para limitar la distribucion de las especies en los ejes del grafico
+species_scores <- species_scores %>% 
+  mutate(PC1 = pmin(pmax(PC1, -1.2), 1.2),
+         PC2 = pmin(pmax(PC2, -1.2), 1.2))
+
+#Añadir la varianza explicada en cada eje
+explained_variance <- round((pcoa_result$eig / sum(pcoa_result$eig))[1:2] * 100, 2)
+var_labels <- paste0(c("PC1", "PC2"), " (", explained_variance, "% varianza)")
+
+ggplot(data = pcoa_coords, aes(x = PC1, y = PC2, color = stage)) +
+  geom_point(size = 5) +
+  geom_text_repel(data = species_scores, aes(x = PC1, y = PC2, label = species),
+                  color = "blue", max.overlaps = 60, size = 2, 
+                  box.padding = 0.1, point.padding = 50, 
+                  segment.size = 0, # Evita las líneas conectando los puntos
+                  force = 5) +  # Aumenta la repulsión entre las etiquetas
+  stat_ellipse(level = 0.65, linetype = "solid", size = 1, 
+               geom = "polygon", alpha = 0.2) +  # Elipses con relleno
+  theme_minimal() +
+  coord_cartesian(xlim = c(-0.8, 0.8), ylim = c(-1, 1)) +
+  geom_hline(yintercept = 0, linetype = "dashed", color = "gray50") +
+  geom_vline(xintercept = 0, linetype = "dashed", color = "gray50") +
+  labs(title = "PCoA con Transformación Hellinger",
+       x = var_labels[1],
+       y = var_labels[2],
+       color = "Stage", fill = "Stage")
+
+ggsave("my_plot.svg", plot = my, width = 12, height = 8)
+```
+
+```{r representacion 3ds del NMDS}
+nmds_result_data <- metaMDS(data %>% select(-stage, -settlement), distance="bray", k = 3, trymax = 100)
+
+coords <- scores(nmds_result_data)
+coords <- scores(nmds_result_data)$sites
+
+stage <- data$stage
+stage_colors <- as.factor(stage)  # Convertir a factor para manejar categorías
+palette_colors <- rainbow(length(levels(stage_colors)))  # Generar colores
+point_colors <- palette_colors[stage_colors]
+
+open3d()
+plot3d(coords[,1], coords[,2], coords[,3], 
+       xlab = "NMDS1", ylab = "NMDS2", zlab = "NMDS3",
+       col = point_colors, size = 5)
+
+legend3d("topright", legend = levels(stage), 
+         col = palette_colors, pch = 16, cex = 1.2)
+```
+
+
+```{r NMDS con los especies filtradas o las 20 especies mas dominantes}
+nmds_result_data <- metaMDS(data %>% select(-stage, -settlement), distance="bray", k = 2, trymax = 100)
+stress <- nmds_result_data$stress
+#extraemos las coordenadas de los puntos
+nmds_points <- as.data.frame(scores(nmds_result_data, display = "sites"))
+#añadimos la info del estado y del asentamiento a cada punto
+nmds_points <- cbind(nmds_points, 
+                     stage=data$stage,
+                     settlement=data$settlement)
+#calculamos los centroides
+centroids_community <- nmds_points %>%
+  group_by(stage) %>%
+  summarise(
+    NMDS1 = mean(NMDS1, na.rm = TRUE),
+    NMDS2 = mean(NMDS2, na.rm = TRUE),
+    sd_NMDS1 = sd(NMDS1, na.rm = TRUE),
+    sd_NMDS2 = sd(NMDS2, na.rm = TRUE))
+
+
+nmds_species_scores <- as.data.frame(scores(nmds_result_data, display = "species"))
+nmds_species_scores$species <- rownames(nmds_species_scores)
+nmds_species_scores <- nmds_species_scores %>%
+  filter(!species %in% c("Musgo 1x", "Musgo 2x", "Musgo 3x", "Musgo 4x", "Musgo 5x", "litter", "bare", "Sphagnum", "Polytrichum", "Festuca sp", "Carex sp", "Poa sp"))
+
+
+#Para poner solo las 20 especies mas dominantes 
+#especies_dominantes <- data %>% select(-stage, -settlement) %>% colSums() %>% `/`(sum(.)) %>% sort(decreasing = TRUE) %>% as.data.frame() %>% tibble::rownames_to_column(var = "species") %>% `colnames<-`(c("species", "abundance"))
+#top_20_species <- especies_dominantes %>% arrange(desc(abundance)) %>% slice_head(n = 20) %>% pull(species) 
+#nmds_species_scores <- nmds_species_scores %>% filter(species %in% top_20_species)
+
+
+plot_base <- ggplot(nmds_points, aes(x = NMDS1, y = NMDS2, color = stage)) +
+  stat_ellipse(aes(group = stage), level = 0.5, alpha = 0.5, size = 1.2)
+# Extrae las coordenadas de las elipses
+ellipse_coords <- ggplot_build(plot_base)$data[[1]]
+# Añade la columna 'stage' a ellipse_coords
+ellipse_coords$stage <- nmds_points$stage[match(ellipse_coords$group, as.numeric(factor(nmds_points$stage)))]
+# Usamos estas coordenadas en geom_polygon para crear el gráfico final
+
+ggplot(nmds_points, aes(x = NMDS1, y = NMDS2, color = stage)) +
+  geom_point(size = 2.5, aes(shape = stage)) +  # Puntos de las muestras
+  scale_shape_manual(values = c(17, 15, 18, 19)) +  # Personalización de la forma de los puntos
+  
+  # Conexión de los puntos con los centroides
+  geom_segment(data = nmds_points, aes(x = NMDS1, y = NMDS2, 
+                                       xend = centroids_community$NMDS1[match(stage, centroids_community$stage)], 
+                                       yend = centroids_community$NMDS2[match(stage, centroids_community$stage)]), 
+               color = "gray", size = 1, alpha = 0.3) +
+  
+  # Etiquetas de los centroides
+  geom_text(data = centroids_community, aes(x = NMDS1, y = NMDS2, label = stage), 
+            vjust = -1, hjust = 1, size = 6, color = "black") +  
+  
+  # Elipses de dispersión con relleno por 'stage'
+  geom_polygon(data = ellipse_coords, aes(x = x, y = y, group = group, fill = stage), 
+               color = "black", alpha = 0.4) +  # El relleno de la elipse es el color 'fill', con transparencia alpha = 0.4
+  
+  # Añadir las etiquetas de las especies
+  geom_text_repel(data = nmds_species_scores, aes(x = NMDS1, y = NMDS2, label = species),
+                  color = "blue", alpha=3, size = 2.5, box.padding = 0.3, point.padding = 0.5, 
+                  segment.size = 0, force = 5) +
+  
+  # Título y etiquetas de los ejes
+  labs(title = paste("Bray, NMDS de Composición de Especies por stage stress:", round(stress, 3)),
+       x = "NMDS1", y = "NMDS2") +
+  
+  # Tema minimalista y posicionamiento de la leyenda
+  theme_minimal() +
+  theme(legend.position = "right") +
+  
+  # Colores personalizados para el relleno de las elipses
+  scale_fill_manual(values = c("red", "green", "blue", "purple"))
+
+
+ggsave("my_plot.svg", plot = my, width = 12, height = 8)
+```
+

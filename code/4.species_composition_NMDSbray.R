@@ -4,33 +4,42 @@
 
 
 
-#rm(list = ls(all.names = TRUE))
+rm(list = ls(all.names = TRUE))
 pacman::p_load(dplyr, tidyverse, DT, viridis, ggrepel, codyn, vegan, eulerr, ggplot2, ggthemes, ggpubr, ggforce )#
-#source("code/1.first_script.R"); rm(list = setdiff(ls(), c("flora_abrich", "biomass_imp", "biomass_noimp")))
+source("code/1.first_script.R"); rm(list = setdiff(ls(), c("flora_abrich", "biomass_imp", "biomass_noimp")))
 
 source("code/palettes_labels.R")
 palette <- palette5
 labels <- labels3
 
-species_ab <-  summarise(group_by(flora_abrich, date, code, sampling, treatment, family,  genus_level, species_level),
-                         abundance = mean(abundance, na.rm = T)) #mean abundance of species per treatment and sampling  
-
-species_ab_plot <- flora_abrich %>% 
-  select(date, code, sampling, plot, treatment, family, genus_level, species_level, abundance)
 
 
-# Here there is a problem: the total abundance per sampling and treatment is sometimes higher than 200%
-totals_df <- summarise(group_by(species_ab, sampling, treatment), #adding number of species per treatment and sampling to species_ab
-                       n_species = n_distinct(code),
-                       total_abundance = sum(abundance))
-
-species_ab <- merge(species_ab, totals_df)
 
 
-species_ab <- species_ab %>% 
+species_ab_sampling <- flora_abrich %>% 
+  group_by(code, date, sampling, treatment) %>% 
+  summarise(abundance = mean(abundance_s, na.rm = T))
+
+species_ab_sampling <- species_ab_sampling %>% 
+  mutate(id = paste0(as.character(treatment), "/" , as.character(sampling)))
+
+
+species_ab_sampling <- species_ab_sampling %>% 
   filter(!(sampling == "1" & treatment %in% c("p", "wp")))
 
 
+species_ab_plot <- flora_abrich %>% 
+  select(date, code, sampling, plot, treatment, family, genus_level, species_level, abundance_s)
+
+species_ab_plots <- species_ab_plot %>% 
+  mutate(id = paste0(treatment, "/", sampling, "/", plot))
+
+
+
+
+
+
+####### DIFFERENCES AT SAMPLING x TREATMENT LEVEL #############
 
 treats <- unique(flora_abrich$treatment)
 
@@ -43,7 +52,7 @@ for(i in 1:length(treats)){
   
   count = count + 1
   
-  list1[[count]] <- subset(species_ab, treatment == treats[i])
+  list1[[count]] <- subset(species_ab_sampling, treatment == treats[i])
   
   sp_wide <- list1[[count]] %>%
     pivot_wider(id_cols = sampling,
@@ -94,12 +103,12 @@ for(i in 1:length(treats)){
 }
 
 
-##ggarrange(
-##  gglist1[[2]],
-##  gglist1[[1]],
-##  gglist1[[3]],
-##  gglist1[[4]], 
-##  ncol = 2, nrow = 2)
+ggarrange(
+  gglist1[[2]],
+  gglist1[[1]],
+  gglist1[[3]],
+  gglist1[[4]], 
+  ncol = 2, nrow = 2)
 
 
 #https://rpubs.com/CPEL/NMDS
@@ -119,29 +128,209 @@ for(i in 1:length(treats)){
 #Less than 0.05 is excellent (this can be rare).
 
 
-sp_wide <- species_ab %>%
-  pivot_wider(id_cols = c(sampling, date, treatment),
+sp_wide_sampling <- species_ab_sampling %>%
+  pivot_wider(id_cols = c(sampling, date, treatment, id),
               names_from = code,
               values_from = abundance,
               values_fill = list(abundance = 0)) 
 
 
-# create a distance matrix using Hellinger distances
-abundance_data <- sp_wide %>% select(-treatment, -sampling, -date)
+# create a distance matrix 
+abundance_data_sampling <- sp_wide_sampling %>% 
+  select(-treatment, -sampling, -date, -id)
+
+
+list_sorensen <- list()
+list_jaccard <- list()
+list_sorensen_df <- list()
+list_jaccard_df <- list()
+samps <- sort(unique(flora_abrich$sampling))
+
+for(i in i: length(samps)){
+  
+  sp_wide <- species_ab_sampling %>% 
+    filter(sampling == samps[i]) %>% 
+    pivot_wider(id_cols = c(sampling, date, treatment, id),
+                names_from = code,
+                values_from = abundance,
+                values_fill = list(abundance = 0))
+  
+  abundance_data <- sp_wide %>% 
+    select(-treatment, -sampling, -date, -id)
+  
+    sorensen <- vegdist(abundance_data, method = "bray", binary = TRUE)
+    sorensen <- as.matrix(sorensen)  
+    rownames(sorensen) <- sp_wide$id
+    colnames(sorensen) <- sp_wide$id
+    sorensen[upper.tri(sorensen)] <- NA
+    
+    sorensen_df <- sorensen %>% 
+      as.data.frame() %>%
+      rownames_to_column(var = "row_name") %>%
+      pivot_longer(-row_name, names_to = "col_name", values_to = "value") %>% 
+      filter(!is.na(value))
+  
+  list_sorensen[[i]] <- sorensen
+  list_sorensen_df[[i]] <- sorensen_df
+  
+  
+  jaccard <- vegdist(abundance_data, method = "jaccard", binary = TRUE)
+  jaccard <- as.matrix(jaccard)  
+  rownames(jaccard) <- sp_wide$id
+  colnames(jaccard) <- sp_wide$id
+  jaccard[upper.tri(jaccard)] <- NA
+  
+  jaccard_df <- jaccard %>% 
+    as.data.frame() %>%
+    rownames_to_column(var = "row_name") %>%
+    pivot_longer(-row_name, names_to = "col_name", values_to = "value") %>% 
+    filter(!is.na(value))
+  
+  list_jaccard[[i]] <- jaccard
+  list_jaccard_df[[i]] <- jaccard_df
+
+  
+}
+
+
+print(list_sorensen)
+print(list_jaccard)
+
+sorensen_df <- bind_rows(list_sorensen_df) %>% 
+  filter(!value == "0")
+
+sorensen_df <- sorensen_df %>%
+  separate(col_name, into = c("treatment_x", "sampling_x"), sep = "/") %>%
+  separate(row_name, into = c("treatment_y", "sampling_y"), sep = "/") %>% 
+  select(-sampling_x) %>% 
+  rename(sampling = sampling_y) %>% 
+  mutate(sampling = factor(as.numeric(sampling), levels = sort(unique(as.numeric(sampling))))) %>% 
+  arrange(sampling) %>% 
+  mutate(comparison = paste0(treatment_x, "-", treatment_y)) %>% 
+  select(-treatment_x, -treatment_y)
+
+
+sorensen_df %>% 
+  filter(comparison %in% c("c-p", "c-w", "c-wp")) %>% 
+ggplot(aes(x = sampling, y = value, color = comparison, group = comparison)) + 
+  geom_point() + 
+  geom_line() +
+  scale_color_manual(values = c("c-p" = "#0077FF", "c-w" = "#E0352F", "c-wp" = "#A238A2")) +
+  labs( y = "Beta-diversity Sorensen")
+
+sorensen_df %>% 
+  filter(comparison %in% c("p-wp", "w-wp")) %>% 
+  ggplot(aes(x = sampling, y = value, color = comparison, group = comparison)) + 
+  geom_point() + 
+  geom_line() +
+  scale_color_manual(values = c("w-wp" = "#D08A00", "p-wp" = "#3A3A3A")) +
+  labs( y = "Beta-diversity Sorensen")
+
+
+
+jaccard_df <- bind_rows(list_jaccard_df) %>% 
+  filter(!value == "0")
+
+jaccard_df <- jaccard_df %>%
+  separate(col_name, into = c("treatment_x", "sampling_x"), sep = "/") %>%
+  separate(row_name, into = c("treatment_y", "sampling_y"), sep = "/") %>% 
+  select(-sampling_x) %>% 
+  rename(sampling = sampling_y) %>% 
+  mutate(sampling = factor(as.numeric(sampling), levels = sort(unique(as.numeric(sampling))))) %>% 
+  arrange(sampling) %>% 
+  mutate(comparison = paste0(treatment_x, "-", treatment_y )) %>% 
+  select(-treatment_x, -treatment_y)
+
+
+jaccard_df %>% 
+  filter(comparison %in% c("c-p", "c-w", "c-wp")) %>% 
+  ggplot(aes(x = sampling, y = value, color = comparison, group = comparison)) + 
+  geom_point() + 
+  geom_line() +
+  scale_color_manual(values = c("c-p" = "#0077FF", "c-w" = "#E0352F", "c-wp" = "#A238A2")) +
+  labs( y = "Beta diviersity - Jaccard")
+
+jaccard_df %>% 
+  filter(comparison %in% c("p-wp", "w-wp")) %>% 
+  ggplot(aes(x = sampling, y = value, color = comparison, group = comparison)) + 
+  geom_point() + 
+  geom_line() +
+  scale_color_manual(values = c("w-wp" = "#D08A00", "p-wp" = "#3A3A3A")) +
+  labs( y = "Beta-diversity Jaccard")
+
+
+
+
+
+
+
+sp_wide_sampling <- species_ab_sampling %>% 
+  pivot_wider(id_cols = c(sampling, date, treatment, id),
+              names_from = code,
+              values_from = abundance,
+              values_fill = list(abundance = 0))
+
+abundance_data_sampling <- sp_wide_sampling %>% 
+  select(-treatment, -sampling, -date, -id)
+
+sorensen <- vegdist(abundance_data_sampling, method = "bray", binary = TRUE)
+sorensen <- as.matrix(sorensen)  
+rownames(sorensen) <- sp_wide$id
+colnames(sorensen) <- sp_wide$id
+sorensen[upper.tri(sorensen)] <- NA
+
+sorensen_df<- sorensen %>% 
+  as.data.frame() %>%
+  rownames_to_column(var = "row_name") %>%
+  pivot_longer(-row_name, names_to = "col_name", values_to = "value") %>% 
+  filter(!is.na(value))
+
+#sorensen_df <- sorensen_df %>%
+#  separate(col_name, into = c("treatment_x", "sampling_x"), sep = "/") %>%
+#  separate(row_name, into = c("treatment_y", "sampling_y"), sep = "/") %>% 
+#  select(-sampling_x) %>% 
+#  rename(sampling = sampling_y) %>% 
+#  mutate(sampling = factor(as.numeric(sampling), levels = sort(unique(as.numeric(sampling))))) %>% 
+#  arrange(sampling) %>% 
+#  mutate(comparison = paste0(treatment_x, "-", treatment_y)) %>% 
+#  select(-treatment_x, -treatment_y)
+
+
+sorensen_df <- sorensen_df %>%
+  separate(col_name, into = c("treatment_x", "sampling_x"), sep = "/") %>%
+  separate(row_name, into = c("treatment_y", "sampling_y"), sep = "/") %>% 
+  filter(sampling_x == sampling_y) %>% 
+  select(-sampling_x) %>% 
+  rename(sampling = sampling_y) %>% 
+  mutate(sampling = factor(as.numeric(sampling), levels = sort(unique(as.numeric(sampling))))) %>% 
+  arrange(sampling) %>% 
+  mutate(comparison = paste0(treatment_x, "-", treatment_y)) %>% 
+  select(-treatment_x, -treatment_y)
+
+sorensen_df %>% 
+  filter(comparison %in% c("c-p", "c-w", "c-wp")) %>% 
+  ggplot(aes(x = sampling, y = value, color = comparison, group = comparison)) + 
+  geom_point() + 
+  geom_line() +
+  scale_color_manual(values = c("c-p" = "#0077FF", "c-w" = "#E0352F", "c-wp" = "#A238A2")) +
+  labs( y = "Beta-diversity Sorensen")
+
+# NMDS
+
 
 # Compute Bray-Curtis distance matrix
-distance_matrix_bc <- vegan::vegdist(abundance_data, method = "bray")
+distance_matrix_sampling_bc <- vegan::vegdist(abundance_data_sampling, method = "bray")
 
 # Run NMDS (2 dimensions, 100 tries)
-nmds_bc <- metaMDS(distance_matrix_bc, k = 2, trymax = 250, maxit = 999)
+nmds_bc_sampling <- metaMDS(distance_matrix_sampling_bc, k = 2, trymax = 250, maxit = 999)
 
 # Extract NMDS coordinates
 nmds_df_sampling <- data.frame(
-  NMDS1 = nmds_bc$points[, 1],
-  NMDS2 = nmds_bc$points[, 2],
-  treatment = sp_wide$treatment,
-  sampling = sp_wide$sampling,
-  date = sp_wide$date
+  NMDS1 = nmds_bc_sampling$points[, 1],
+  NMDS2 = nmds_bc_sampling$points[, 2],
+  treatment = sp_wide_sampling$treatment,
+  sampling = sp_wide_sampling$sampling,
+  date = sp_wide_sampling$date
 )
 
 # Arrange by sampling order
@@ -161,7 +350,7 @@ ggnmds_alltreatments <- ggplot(nmds_df_sampling, aes(x = NMDS1, y = NMDS2, color
     scale_fill_manual(values = palette, guide = "none" ) +
     scale_shape_manual(values = point_shapes, guide = "none") +
     labs(title = "NMDS Bray-Curtis: mean abundance of species at sampling level",
-         subtitle = paste0("Stress = ", round(nmds_bc$stress, 3)),
+         subtitle = paste0("Stress = ", round(nmds_bc_sampling$stress, 3)),
          x = "NMDS1", y = "NMDS2", color = " ") +
     theme(legend.position = "bottom")
   # Print the plot
@@ -228,6 +417,9 @@ ggplot(nmds_df_sampling, aes(x = date, y = NMDS2, color = treatment, fill = trea
 
 
 
+########## DIFFERENCES AT TREATMENT x SAMPLING x PLOT level ##
+
+
 # NMDS for abundance of species at plot level in the same matrix
 
 
@@ -288,20 +480,6 @@ nmds_df_plot <- nmds_df_plot %>%
          cv_NMDS3 = sd_NMDS1/mean_NMDS3) %>% 
   ungroup()
 
-
-biomass_treatmeans <- biomass_imp %>% 
-  distinct(treatment, plot, sampling, date, .keep_all = TRUE) %>% 
-  group_by(treatment) %>% 
-  mutate(
-    mean_biomass = mean(biomass, na.rm = T),
-    sd_biomass = sd(biomass, na.rm = T),
-    n = n()
-  )%>% 
-  mutate(
-    cv_biomass = sd_biomass/mean_biomass
-  ) %>% 
-  select(treatment, n, mean_biomass, sd_biomass, cv_biomass) %>% 
-  distinct(treatment, n, mean_biomass, sd_biomass, cv_biomass)
 
 
 nmds_df_treatmeans <- nmds_df_plot %>%
@@ -518,7 +696,13 @@ ggNMDS3_boxplot_plot <-
         panel.background = element_rect(fill = NA, colour = NA), # Transparent background
         plot.background = element_rect(fill = NA, colour = NA))
 
-# NMDS at sampling level
+
+
+
+
+
+
+###### DIFFERENCES AT TREATMENT x SAMPLING x PLOT level but with distance-matrix at sampling level 
 
 
 # Initialize a list to store NMDS results
@@ -595,6 +779,9 @@ ggplot(nmds_df_1x1sampling, aes(x = NMDS1, y = NMDS2, color = treatment, fill = 
     axis.title.y = element_text(size = 10)
   ) + 
   labs(color = "Treatment")
+
+
+
 
 
 

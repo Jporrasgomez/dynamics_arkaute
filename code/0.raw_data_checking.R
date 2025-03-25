@@ -346,6 +346,105 @@ ggplot(flora_nobs, aes(x = code_abnobs, y = abnobs, fill = abnobs)) +
 
 }
 
+{
+### Species presence
+
+species_presence_treat <- flora_medium %>%
+  distinct(treatment, sampling, plot, code) %>%
+  count(treatment, code, name = "n_obs_xtreat") %>%
+  group_by(code) %>%
+  mutate(total_obs = sum(n_obs_xtreat),
+         perc_obs = round(n_obs_xtreat / total_obs, 2))
+
+species_presence <- merge(flora_nobs, species_presence_treat, by = "code") %>% 
+  select(treatment, code, n_obs_xtreat, total_obs, perc_obs) 
+
+# Ensure all (treatment, code) combinations exist
+species_presence <- expand_grid(
+  treatment = unique(species_presence$treatment),
+  code = unique(species_presence$code)) %>%
+  left_join(species_presence, by = c("treatment", "code"))
+
+species_presence <- merge(species_presence, species_code, by = "code")
+
+# Convert perc_obs to a factor to handle missing values separately
+species_presence <- species_presence %>%
+  mutate(perc_obs = ifelse(is.na(perc_obs), 0 , perc_obs), 
+         n_obs_xtreat = ifelse(is.na(n_obs_xtreat), 0, n_obs_xtreat),
+         total_obs = ifelse(is.na(total_obs), 0, total_obs))
+
+species_presence <- species_presence %>%
+  mutate(code = reorder(code, total_obs))
+
+
+family_presence <- species_presence %>% 
+  group_by(family, treatment) %>% 
+  summarise(n_obs_xtreat = sum(n_obs_xtreat)) %>% 
+  group_by(family) %>% 
+  mutate(total_obs = sum(n_obs_xtreat)) %>% 
+  mutate(perc_obs = round((total_obs/sum(family_presence$total_obs))*100, 2)) %>% 
+  ungroup() %>% 
+  mutate(family = reorder(family, total_obs))
+
+length(unique(family_presence$family))
+length(unique(family_presence$family))
+
+
+  ggplot(species_presence, aes(x = treatment, y = code, fill = n_obs_xtreat)) +
+  geom_tile(color = "gray13") +  # Keep black grid lines
+  geom_text(aes(label = n_obs_xtreat), size = 2.3) +  # Add text labels
+  scale_fill_gradientn(
+    colors = c("white", "#FFF5E1", "orange2"),  # Very pale gray (#F0F0F0), white, orange
+    values = scales::rescale(c(0, 1, max(flora_nobs_presence$n_obs_xtreat, na.rm = TRUE))),
+    name = "Observations"
+  ) +
+  theme_minimal() +
+  theme(
+    panel.grid = element_blank(),  # Remove default grid lines
+    axis.text.y = element_text(face = "italic"),  # Italicize species names
+    legend.position = "bottom"  # Move legend to the bottom
+  ) +
+  labs(x = "Treatment", y = "Species")
+
+
+
+  ggplot(family_presence, aes(x = treatment, y = family, fill = n_obs_xtreat)) +
+  geom_tile(color = "gray13") +  # Keep black grid lines
+  geom_text(aes(label = n_obs_xtreat), size = 2.3) +  # Add text labels
+  scale_fill_gradientn(
+    colors = c("white", "#FFF5E1", "orange2"),  # Very pale gray (#F0F0F0), white, orange
+    values = scales::rescale(c(0, 1, max(flora_nobs_presence$n_obs_xtreat, na.rm = TRUE))),
+    name = "Observations"
+  ) +
+  theme_minimal() +
+  theme(
+    panel.grid = element_blank(),  # Remove default grid lines
+    axis.text.y = element_text(face = "italic"),  # Italicize species names
+    legend.position = "bottom"  # Move legend to the bottom
+  ) +
+  labs(x = "Treatment", y = "Family")
+
+
+ggplot(species_presence, aes(x = reorder(species, -n_obs_xtreat), y = n_obs_xtreat, fill = treatment)) +
+  geom_col() + 
+  scale_fill_manual(values = palette, labels = labels, guide = "legend") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  labs(x = "Species", y = "Number of observations")
+
+ggplot(family_presence, aes(x = reorder(family, -n_obs_xtreat), y = n_obs_xtreat, fill = treatment)) +
+  geom_col() + 
+  scale_fill_manual(values = palette, labels = labels, guide = "legend") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  labs(x = "Family", y = "Number of observations")
+
+length(unique(family_presence$family))
+length(unique(species_presence$code))
+
+
+
+}
+
+
 ## BIOMASS AT SPECIES LEVEL ###########
 
 #For biomass, we do not have information for samplings 0, 1, 2 and 12. 
