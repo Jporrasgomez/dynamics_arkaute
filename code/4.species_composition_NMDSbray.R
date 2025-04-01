@@ -4,9 +4,9 @@
 
 
 
-#rm(list = ls(all.names = TRUE))
+rm(list = ls(all.names = TRUE))
 pacman::p_load(dplyr, tidyverse, DT, viridis, ggrepel, codyn, vegan, eulerr, ggplot2, ggthemes, ggpubr, ggforce )#
-#source("code/1.first_script.R"); rm(list = setdiff(ls(), c("flora_abrich", "biomass_imp", "biomass_noimp")))
+source("code/1.first_script.R"); rm(list = setdiff(ls(), c("flora_abrich", "biomass_imp", "biomass_noimp")))
 
 source("code/palettes_labels.R")
 palette <- palette5
@@ -450,6 +450,7 @@ nmds_df_treatmeans <- nmds_df_plot %>%
            mean_NMDS2, sd_NMDS2, cv_NMDS2,
            mean_NMDS3, sd_NMDS3, cv_NMDS3)
 
+nmds_df_treatmeans %>%  write.csv("data/nmds_df_treatmeans.csv")
 
 
 

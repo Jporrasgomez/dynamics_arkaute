@@ -7,21 +7,38 @@ effect_size_treatment_wp <- function(data, variable){
   mean_variable <- paste0("mean_", variable)
   sd_variable <- paste0("sd_", variable)
   
-  mean_variable_wp <- paste0("mean_", variable, "_wp")
-  sd_variable_wp<- paste0("sd_", variable, "_wp")
+  mean_variable_w <- paste0("mean_", variable, "_w")
+  sd_variable_w <- paste0("sd_", variable, "_w")
+  
+  mean_variable_p <- paste0("mean_", variable, "_p")
+  sd_variable_p <- paste0("sd_", variable, "_p")
   
   
-  effect <- data %>% 
-    select(treatment, n, all_of(mean_variable), all_of(sd_variable)) %>% 
+  effect_wp <- data %>% 
+    filter(treatment == "wp") %>% 
+    select(date, sampling, treatment, n,all_of(mean_variable), all_of(sd_variable)) %>% 
+    distinct()
+  
+  effect_w <- data %>% 
+    filter(treatment == "w") %>% 
+    select(date, n,  sampling, all_of(mean_variable), all_of(sd_variable)) %>% 
+    rename(!!mean_variable_w := !!sym(mean_variable),
+           !!sd_variable_w := !!sym(sd_variable), 
+           n_w = n) %>% 
+    mutate(RR_descriptor = "wp_vs_w") %>% 
+    distinct()
+  
+  effect_p <- data %>% 
+    filter(treatment == "p") %>% 
+    select(date, n,  sampling, all_of(mean_variable), all_of(sd_variable)) %>% 
+    rename(!!mean_variable_p := !!sym(mean_variable),
+           !!sd_variable_p := !!sym(sd_variable),
+           n_p = n) %>% 
+    mutate(RR_descriptor = "wp_vs_p") %>% 
     distinct()
   
   
-  effect_wp <- effect %>% 
-    filter(treatment == "wp") %>% 
-    select(treatment, n, all_of(mean_variable), all_of(sd_variable)) %>%  # Mantener treatment
-    rename(!!mean_variable_wp := !!sym(mean_variable),
-           !!sd_variable_wp := !!sym(sd_variable),
-           n_wp = n)
+ 
   
   
   ytitle_dict <- list(
@@ -44,12 +61,12 @@ effect_size_treatment_wp <- function(data, variable){
   
 
   ### Perturbation / Global Change
-  RR_treatment_wp <- effect %>% 
+  RR_wp_vs_w <- effect_wp %>% 
     filter(!treatment %in% c("c", "wp")) %>% 
     mutate(
       !!mean_variable_wp := effect_wp[[mean_variable_wp]],
       !!sd_variable_wp := effect_wp[[sd_variable_wp]],
-      !!sym("n_wp") := effect_wp[["n_wo"]]
+      !!sym("n_wp") := effect_wp[["n_wp"]]
       
     ) %>% 
     mutate(

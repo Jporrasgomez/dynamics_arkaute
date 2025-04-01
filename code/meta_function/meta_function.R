@@ -24,6 +24,7 @@ gg_ttest_cv <<- gg_ttest
 source("code/meta_function/sampling_0.R")
 sampling_0(data, variable1, variable2)
 gg_dunn_0 <<- gg_dunn_0
+mean_0 <<- mean_0
 
 
 source("code/meta_function/gg_dynamics.R")
@@ -48,14 +49,14 @@ gg_sigma_RR_variable <<- gg_sigma_RR
 RR_treatment <<- RR_treatment
 
 
-source("code/meta_function/effect_size_wp.R")
+source("code/meta_function/effect_size_wp_vs_treatment.R")
 
 
-effect_size_wp(data, variable1)
+effect_size_wp_vs_treatment(data, variable1)
 gg_RR_wp <<- gg_RR_wp
 gg_delta_RR_wp <<- gg_delta_RR_wp
 gg_sigma_RR_wp <<- gg_sigma_RR_wp
-RR_treatment_wp <<- RR_treatment_wp
+RR_wp_vs_treatment <<-  RR_wp_vs_treatment
 
 
 

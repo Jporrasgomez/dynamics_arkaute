@@ -44,6 +44,7 @@ palette_recodyn3 <- c(
 )
 
 palette_wp <- c("w" = "#D08A00", "p" = "#3A3A3A")
+palette_wp_vs_treatment <- c("wp_vs_w" = "#D08A00", "wp_vs_p" = "#3A3A3A")
 
 
 
@@ -65,6 +66,6 @@ labels3 <- c("c" = "Control", "w" = "Warming", "p" = "Perturbation", "wp" = "Glo
 labels_RR <- c("w" = "Warming cs Control", "p" = "Perturbation vs Control", "wp" = "Global change vs Control")
 
 labels_RR_wp <- c("w" = "Warming vs Global Change", "p" = "Perturbation vs Global Change")
-
+labels_RR_wp <- c("wp_vs_w" = "Global Change vs Warming", "wp_vs_p" = "Global Change vs Perturbation")
 
 point_shapes <- c("c" = 16, "w" = 17, "p" = 15, "wp" = 18)

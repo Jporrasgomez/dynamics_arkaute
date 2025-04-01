@@ -25,14 +25,19 @@ variables <- c("richness", "abundance", "Y_zipf", "mu_log", "sigma_log")
 meta_function(ab_rich_dynamics, variables[i], "treatment")}
 
 gg_stats_variable
+
 gg_dunn_variable 
 gg_ttest_variable
-gg_dunn_0
-gg_all1n
 
+gg_dunn_0
+mean_0 
+
+gg_all1n
 gg_facet
+
 gg_delta_RR
 gg_delta_RR_wp 
+
 gg_stats_cv
 gg_dunn_cv
 gg_ttest_cv  
@@ -47,8 +52,6 @@ abundance_list <- list()
 Y_zipf_list <- list()
 mu_log_list <- list()
 sigma_log_list <- list()
-
-
 
 meta_list <- list(richness_list, abundance_list, Y_zipf_list, mu_log_list, sigma_log_list)
 

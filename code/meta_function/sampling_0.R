@@ -44,6 +44,30 @@ sampling_0 <- function(data, response_variable, explanatory_variable){
   
   gg_dunn_0  <<- gg_dunn_0
   
+  
+  mean_0 <- data %>% 
+    filter(sampling == "0") %>% 
+    select(treatment,
+           response_variable, 
+           !!sym(paste0("mean_", response_variable)), 
+           !!sym(paste0("sd_", response_variable))) %>% 
+    distinct() %>% 
+    mutate(
+      max_value = !!sym(paste0("mean_", response_variable)) + !!sym(paste0("sd_", response_variable)),
+      min_value = !!sym(paste0("mean_", response_variable)) - !!sym(paste0("sd_", response_variable))
+    ) %>% 
+    as.data.frame() %>% 
+    ggplot(aes(x = treatment, y = !!sym(paste0("mean_", response_variable)), color = treatment)) + 
+    geom_point(size = 4, fill = "white" )+
+    geom_point(aes(x = treatment, y = !!sym(response_variable))) + 
+    geom_errorbar(aes(ymin = max_value,
+                      ymax = min_value,
+                      color = treatment), width = 0.5, linewidth = 0.3) + 
+    scale_color_manual(values = palette) + 
+    scale_x_discrete(labels = labels) + 
+    labs(y = paste0("Mean ", response_variable), title = "Sampling 0")
+  
+  mean_0 <<- mean_0
 
   
 }

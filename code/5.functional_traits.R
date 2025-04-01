@@ -7,21 +7,29 @@ pacman::p_load(dplyr, tidyr, tidyverse, ggplot2, BIEN, ape, maps, sf, rtry, ggre
 
 
 
-
 #Outliers of TRAITS"
 
 source("code/1.first_script.R")  
+rm(list = setdiff(ls(), "flora_abrich"))
 traits <- read.csv('data/traits/all.indi.used.csv')
+
+# I remove 8 dummy rows of flora_abrich that I use for other 
+flora_abrich <- flora_abrich %>% 
+  filter(!is.na(code))
 
 traits <- traits %>%
   mutate(across(where(is.character), as.factor))
 
-species_code <- read.csv("data/species_code.csv") 
+species_code <- read.csv("data/species_code.csv") %>% 
+  mutate(species = recode(species, "CAPSELLA BURSA-PASTORIS" = "Capsella bursa-pastoris"))
+  
+
 
 
 ## Checking which species are absent
 checking <- anti_join(traits, species_code, by = "species") %>% 
-  distinct(species, .keep_all = T) #Anagallis arvensis = Lysimachia arvensis
+  distinct(species, .keep_all = T) %>% 
+  print()#Anagallis arvensis = Lysimachia arvensis
 
 traits <- traits %>% 
   mutate(species = recode(species, "Anagallis arvensis" = "Lysimachia arvensis"))
@@ -133,7 +141,8 @@ traits_mean <- traits_cleaned %>%
 traits_mean <- bind_rows(traits_mean, traits_poaceae, traits_asteraceae, traits_torilis, traits_orchidaceae)
 
 trait_na <- traits_mean %>% 
-  filter(if_any(everything(), is.na))
+  filter(if_any(everything(), is.na)) %>% 
+  print()
 
 
 
@@ -141,8 +150,8 @@ setdiff(unique(traits_mean$code), unique(flora_abrich$code))
 setdiff(unique(flora_abrich$code), unique(traits_mean$code))
 
 #The function checks which species are present in traits_mean$species but not present in flora$species.
-setdiff(unique(traits_mean$species), unique(flora_abrich$species))
-setdiff(unique(flora_abrich$species), unique(traits_mean$species))
+setdiff(unique(traits_mean$code), unique(flora_abrich$code))
+setdiff(unique(flora_abrich$code), unique(traits_mean$code))
 
 # I have to check on Myosotis, Sonchus and Cirsium. 
 

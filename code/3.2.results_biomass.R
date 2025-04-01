@@ -21,6 +21,7 @@ gg_stats_variable
 gg_dunn_variable 
 gg_ttest_variable
 gg_dunn_0
+mean_0 
 gg_all1n
 gg_facet
 gg_stats_cv

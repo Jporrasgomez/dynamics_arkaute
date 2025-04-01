@@ -3,7 +3,8 @@
 
 
 source("code/1.first_script.R")
-source("code/4.species_composition_NMDSbray.R")
+#source("code/4.species_composition_NMDSbray.R")
+nmds_df_treatmeans <- read.csv("data/nmds_df_treatmeans.csv")
 rm(list = setdiff(ls(), c("ab_rich_treatmeans", "biomass_treatmeans", "biomass_treatmeans012", "nmds_df_treatmeans")))
                           
 source("code/palettes_labels.R")                          
@@ -17,7 +18,7 @@ source("code/meta_function/effect_size_treatment_wp.R")
 
 
 
-list_c <- list()
+{list_c <- list()
 gglist_c <- list()
 list_wp <- list()
 gglist_wp <- list()
@@ -38,7 +39,7 @@ for (i in 1:5){
 
 
 RR_c <- reduce(list_c, bind_rows)
-RR_wp <- reduce(list_wp, bind_rows)
+RR_wp <- reduce(list_wp, bind_rows)}
 
 
 
@@ -65,7 +66,7 @@ RR_wp <- bind_rows(RR_wp, RR_biomass_wp)
 # filter(! variable %in% c("mu_log", "sigma_log"))
 
 
-list_NMDS_c <- list()
+{list_NMDS_c <- list()
 list_NMDS_wp <- list()
 gglist_NMDS_c <- list()
 gglist_NMDS_wp <- list()
@@ -81,15 +82,15 @@ for (i in 1:3){
     select(treatment, n, variable, starts_with("RR"), starts_with("se_RR"))
   gglist_NMDS_wp[[i]] <- gg_RR_wp
   
-}
+}}
 
-gglist_NMDS_c[[1]]
-gglist_NMDS_c[[2]]
-gglist_NMDS_c[[3]]
-
-gglist_NMDS_wp[[1]]
-gglist_NMDS_wp[[2]]
-gglist_NMDS_wp[[3]]
+#gglist_NMDS_c[[1]]
+#gglist_NMDS_c[[2]]
+#gglist_NMDS_c[[3]]
+#
+#gglist_NMDS_wp[[1]]
+#gglist_NMDS_wp[[2]]
+#gglist_NMDS_wp[[3]]
 
 RR_NMDS_c <- reduce(list_NMDS_c, bind_rows)
 RR_NMDS_wp <- reduce(list_NMDS_wp, bind_rows)
@@ -109,7 +110,7 @@ ggplot(RR_c, aes(x = variable, y = RR, color = treatment)) +
                 position = position_dodge(width = 0.2),
                 width = 0.1) +  
   geom_point(aes(color = treatment), position = position_dodge(width = 0.2)) + 
-  scale_color_manual(values = palette) +
+  scale_color_manual(values = palette, labels = labels) +
   scale_x_discrete(
     limits = c("richness",
                "abundance",
@@ -123,8 +124,8 @@ ggplot(RR_c, aes(x = variable, y = RR, color = treatment)) +
     labels = function(x) str_to_title(x)  
   ) +
   geom_hline(yintercept = 0, linetype = "dashed", color = "gray40") +
-  labs(x = NULL, y = "RR") +
-  theme(legend.position = "none"),
+  labs(x = NULL, y = "RR of mean values at plot level", color = NULL) +
+  theme(legend.position = "bottom"),
 
 
 ggplot(RR_wp, aes(x = variable, y = RR, color = treatment)) + 
@@ -135,7 +136,7 @@ ggplot(RR_wp, aes(x = variable, y = RR, color = treatment)) +
                 position = position_dodge(width = 0.2),
                 width = 0.1) +  
   geom_point(aes(color = treatment), position = position_dodge(width = 0.2)) + 
-  scale_color_manual(values = palette_wp) +
+  scale_color_manual(values = palette_wp, labels = labels_RR_wp) +
   scale_x_discrete(
     limits = c("richness",
                "abundance",
@@ -149,8 +150,8 @@ ggplot(RR_wp, aes(x = variable, y = RR, color = treatment)) +
     labels = function(x) str_to_title(x)  
   ) +
   geom_hline(yintercept = 0, linetype = "dashed", color = "gray40") +
-  labs(x = NULL, y = "RR") +
-  theme(legend.position = "none"),
+  labs(x = NULL, y = "RR of mean values at plot level", color = NULL) +
+  theme(legend.position = "bottom"),
 
 ncol = 1, nrow = 2)
 
