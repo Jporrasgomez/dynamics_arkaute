@@ -85,6 +85,9 @@ effect_size <- function(data, variable){
         log(1.0 + var_RR + ((.data[[sd_variable]]^2) * (.data[[sd_variable_c]]^2)) / 
               (n^2 * .data[[mean_variable]]^2 * .data[[mean_variable_c]]^2)),
       se_sigma_RR = sqrt(var_sigma_RR)  # Error estándar de sigma_RR
+    ) %>% 
+    mutate(
+      variable = variable
     )
   
   RR_treatment <- RR_treatment %>% 

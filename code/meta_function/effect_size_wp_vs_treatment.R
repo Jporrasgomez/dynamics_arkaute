@@ -105,7 +105,10 @@ effect_size_wp_vs_treatment <- function(data, variable){
     select(date, sampling, RR_descriptor, RR, se_RR, delta_RR, se_delta_RR, 
            sigma_RR, se_sigma_RR)%>% 
     filter(!RR == "Inf")%>% 
-    filter(!RR == "-Inf")
+    filter(!RR == "-Inf") %>% 
+    mutate(
+      variable = variable
+    )
   
   
   
@@ -153,7 +156,10 @@ effect_size_wp_vs_treatment <- function(data, variable){
            sigma_RR, se_sigma_RR)%>% 
     filter(!RR == "Inf")%>% 
     filter(!RR == "-Inf") %>% 
-    filter(!RR == "NaN")
+    filter(!RR == "NaN") %>% 
+    mutate(
+      variable = variable
+    )
   
   
   RR_wp_vs_treatment <- rbind(RR_wp_vs_p, RR_wp_vs_w)
