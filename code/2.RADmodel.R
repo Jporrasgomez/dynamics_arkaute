@@ -6,6 +6,7 @@ source("code/1.first_script.R")
 
 rm(list = setdiff(ls(), c("flora_abrich")))
 
+source("code/palettes_labels.R")
 
 pacman::p_load(tidyverse, vegan, ggpubr)
 
@@ -14,8 +15,6 @@ flora_rad <- flora_abrich %>%
   select(plot, sampling, treatment, code, abundance_s) %>%
   mutate(abundance_s = ifelse(abundance_s < 1, 1, abundance_s)) %>%   # Radfit function does not work with 0.x values.  
   filter(!(sampling == 1 & treatment %in% c("p", "wp")))  # Remove rows where treatment is p or wp only for sampling 1.
-
-
 
 
 ##| We are going yo use the function radfit of package vegan. This function iterates over a matrix or vector of abundances
@@ -134,7 +133,6 @@ hist(log(rad_all$abundance_s), breaks = 12)
 
 
 
-
 # And aslo, per treatment. 
 
 
@@ -188,83 +186,88 @@ for(i in 1:length(treats)) {
 }
 
 
-rad_treat_list[[2]] %>% View()
+
+
 rad_treat_db <- do.call(rbind, rad_treat_list)
 
 
 ggplot(rad_treat_db, aes(x = rank, y = abundance_s)) +
-  facet_wrap(~treatment) + 
+  facet_wrap(~treatment, labeller = labeller(treatment = labels3)) + 
   geom_point() +
-  geom_line(aes(x = rank, y = preemption_fit), color = "blue") +
+  geom_line(aes(x = rank, y = preemption_fit), color = "blue3") +
   geom_line(aes(x = rank, y = log_fit), color = "red3") +
   geom_line(aes(x = rank, y = zipf_fit), color = "green3", size = 1, linetype = "dashed") +
-  geom_line(aes(x = rank, y = mandelbrot_fit), color = "pink4") +
-  labs(x = "Rank" , y = "Mean abundance",
-       title = "RAD per treatment") +
-  # Agregar texto con los valores AIC para cada modelo
-  annotate("text", x = max(rad_treat_db$rank) * 0.7, y = max(rad_treat_db$abundance_s) * 0.9, 
-           label = paste("Preemption AIC:", round(rad_treat_db$pre_AIC[1], 2)), color = "blue", size = 4) +
-  annotate("text", x = max(rad_treat_db$rank) * 0.7, y = max(rad_treat_db$abundance_s) * 0.85, 
-           label = paste("Lognormal AIC:", round(rad_treat_db$log_AIC[1], 2)), color = "red3", size = 4) +
-  annotate("text", x = max(rad_treat_db$rank) * 0.7, y = max(rad_treat_db$abundance_s) * 0.8, 
-           label = paste("Zipf AIC:", round(rad_treat_db$zipf_AIC[1], 2)), color = "green4", size = 4) +
-  annotate("text", x = max(rad_treat_db$rank) * 0.7, y = max(rad_treat_db$abundance_s) * 0.75, 
-           label = paste("Mandelbrot AIC:", round(rad_treat_db$mand_AIC[1], 2)), color = "pink4", size = 4)
+  geom_line(aes(x = rank, y = mandelbrot_fit), color = "pink3") +
+  labs(x = "Rank", y = "Mean abundance", title = "RAD per treatment") +
+  geom_text(aes(x = max(rank) * 0.5, y = max(abundance_s) * 0.9, 
+                label = paste("Preemption AIC:", round(pre_AIC, 2))),
+            color = "blue3", size = 3.5, hjust = 0) +
+  
+  geom_text(aes(x = max(rank) * 0.5, y = max(abundance_s) * 0.85, 
+                label = paste("Lognormal AIC:", round(log_AIC, 2))),
+            color = "red3", size = 3.5, hjust = 0) +
+  
+  geom_text(aes(x = max(rank) * 0.5, y = max(abundance_s) * 0.8, 
+                label = paste("Zipf AIC:", round(zipf_AIC, 2))),
+            color = "green4", size = 3.5, hjust = 0) +
+  
+  geom_text(aes(x = max(rank) * 0.5, y = max(abundance_s) * 0.75, 
+                label = paste("Mandelbrot AIC:", round(mand_AIC, 2))),
+            color = "pink3", size = 3.5, hjust = 0) +
+  
+  theme(strip.text = element_text(size = 10))
+
+
+
+# We choose ZIPF
+
+ggplot(rad_treat_db, aes(x = rank, y = abundance_s)) +
+  facet_wrap(~treatment, labeller = labeller(treatment = labels3)) + 
+  geom_point() +
+  geom_line(aes(x = rank, y = zipf_fit), color = "green3", size = 1) +
+  labs(x = "Rank", y = "Mean abundance", title = "RAD per treatment") +
+  geom_text(aes(x = max(rank) * 0.7, y = max(abundance_s) * 0.9, 
+                label = paste("Zipf gamma:", round(zipf_gamma, 4))))
+
+ggplot(rad_treat_db, aes(x = rank, y = abundance_s, color = treatment)) +
+  geom_point(size = 1.5) +
+  geom_line(aes(x = rank, y = zipf_fit, color = treatment), size = 1) +
+  scale_color_manual(values = palette5, name = "Treatment", labels = labels3) + 
+  labs(x = "Rank", y = "Mean abundance", title = "RAD per treatment") +
+  geom_text(aes(x = max(rank) * 0.7, 
+                y = max(abundance_s) * 0.99 + as.numeric(factor(treatment)) * 0.05 * max(abundance_s), 
+                label = paste("Zipf gamma:", round(zipf_gamma, 4))), 
+            size = 4, hjust = 0, show.legend = FALSE) +
+  theme(legend.position = "bottom")+ 
+  guides(color = guide_legend(override.aes = list(linetype = "solid", shape = 16)))  # Solo muestra punto y línea
 
 
 
 
+# PLOT LEVEL
 
-
-# Now create a ggplot with observed abundance and fitted curves for each model
-ggplot(rad_c, aes(x = reorder(code, -abundance_s), y = abundance_s)) +
-  geom_col() +  # Observed data
-  geom_line(data = fit_values, aes(x = x, y = preemption), color = "blue", size = 1, linetype = "dashed") +
-  geom_line(data = fit_values, aes(x = x, y = lognormal), color = "green", size = 1, linetype = "dashed") +
-  geom_line(data = fit_values, aes(x = x, y = zipf), color = "red", size = 1, linetype = "dashed") +
-  geom_line(data = fit_values, aes(x = x, y = mandelbrot), color = "purple", size = 1, linetype = "dashed") +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
-  labs(
-    title = "Model Fits (Preemption, Lognormal, Zipf, Mandelbrot)",
-    x = "Species Code",
-    y = "Abundance"
-  )
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-# CHOOSING MODEL
+# Choosing model
 
 
 #Sampling 1 gives problems since there are no species for p and wp
 
 ### AIC comparison 
 
+samps <- sort(unique(flora_rad$sampling))
+plots <- sort(unique(flora_rad$plot))
+
 rad_dfplot <- matrix(nrow = (length(samps)*length(plots)), ncol = 6)
 colnames(rad_dfplot) <- c("sampling", "plot", "AIC_pree", "AIC_log", "AIC_zipf", "AIC_man")
 rad_dfplot <-  as.data.frame(rad_dfplot)
 
-samps <- sort(unique(flora_rad$sampling))
-plots <- sort(unique(flora_rad$plot))
-
 count <- 0
 for (i in 1:length(samps)){
   for (j in 1:length(plots)){
+    
+    if (samps[i] == 1 && plots[j] %in% c(3, 6, 10, 15, 4, 5, 12, 13)) {
+      next  # Avoiding plots from treatment p and wp in sampling 1 because there are no data
+    }
+  
     
     count <- count + 1
   
@@ -284,7 +287,6 @@ for (i in 1:length(samps)){
     
     rad_dfplot$sampling[count] <- samps[i]
     rad_dfplot$plot[count] <- plots[j]
-    rad_dfplot$AIC_brok[count] <- rad_fit$models$Null$aic
     rad_dfplot$AIC_pree[count] <- rad_fit$models$Preemption$aic
     rad_dfplot$AIC_log[count] <- rad_fit$models$Lognormal$aic
     rad_dfplot$AIC_zipf[count] <- rad_fit$models$Zipf$aic
@@ -298,7 +300,12 @@ rad_dfplot <- pivot_longer(rad_dfplot, cols = c("AIC_pree", "AIC_log","AIC_zipf"
 ggplot(rad_dfplot, aes(x = model, y = AIC))+
   geom_boxplot()
 
-# No differences. We decide to use zipf because it only has one explanatory coefficient of the curve (gamma)
+# Again, we decide to use zipf because it only has one explanatory coefficient of the curve (gamma)
+
+
+
+
+############################## CONTINUAR AQUÍ MAÑANA
 
 # Applying Zipf and lognormal to the dataset: ############
 

@@ -128,7 +128,7 @@ ggplot(RR_c, aes(x = variable, y = RR, color = treatment)) +
 
 
 ggplot(RR_wp, aes(x = variable, y = RR, color = RR_descriptor)) + 
-  facet_wrap(~ RR_descriptor, ncol = 1, nrow = 2, labeller = labeller(RR_descriptor = labels_RR_wp)) +
+  facet_wrap(~ RR_descriptor, ncol = 1, nrow = 2, labeller = labeller(RR_descriptor = labels_RR_wp2)) +
   geom_errorbar(aes(ymin = RR - se_RR,
                     ymax = RR + se_RR,
                     color = RR_descriptor), 
@@ -136,7 +136,7 @@ ggplot(RR_wp, aes(x = variable, y = RR, color = RR_descriptor)) +
                 position = position_dodge(width = 0.2),
                 width = 0.1) +  
   geom_point(aes(color = RR_descriptor), position = position_dodge(width = 0.2)) + 
-  scale_color_manual(values = palette_wp_vs_treatment, labels = labels_RR_wp) +
+  scale_color_manual(values = palette_wp_vs_treatment, labels = labels_RR_wp2) +
   scale_x_discrete(
     limits = c("richness",
                "abundance",

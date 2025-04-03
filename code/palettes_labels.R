@@ -11,6 +11,7 @@ theme_set(theme_bw() +
               strip.text = element_text(face = "bold"),
               text = element_text(size = 11)))
 
+
 #favs:
 palette5 <- c("c" = "#00C4A7", "w" = "#E0352F", "p" = "#0077FF", "wp" = "#A238A2")
 
