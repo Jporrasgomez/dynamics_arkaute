@@ -43,24 +43,43 @@ RR_wp <- reduce(list_wp, bind_rows)}
 
 
 {effect_size_treatment_c(biomass_treatmeans012, "biomass")
+  RR_biomass_c012 <- RR_treatment %>%
+    select(treatment, variable, starts_with("RR"), starts_with("se_RR")) %>% 
+    mutate(variable = fct_recode(variable,
+                                  "biomass012" = "biomass"))
+  print(gg_RR)
+}
+
+{effect_size_treatment_wp(biomass_treatmeans012, "biomass")
+  RR_biomass_wp012 <- RR_wp_vs_treatment %>%
+    select(RR_descriptor, variable, starts_with("RR"), starts_with("se_RR")) %>% 
+    mutate(variable = fct_recode(variable,
+                                 "biomass012" = "biomass"))
+  print(gg_RR_wp)
+}
+
+
+{effect_size_treatment_c(biomass_treatmeans, "biomass")
   RR_biomass_c <- RR_treatment %>%
     select(treatment, variable, starts_with("RR"), starts_with("se_RR"))
   print(gg_RR)
 }
 
-{effect_size_treatment_wp(biomass_treatmeans012, "biomass")
+{effect_size_treatment_wp(biomass_treatmeans, "biomass")
   RR_biomass_wp <- RR_wp_vs_treatment %>%
     select(RR_descriptor, variable, starts_with("RR"), starts_with("se_RR"))
   print(gg_RR_wp)
 }
 
 
-RR_c <- bind_rows(RR_c, RR_biomass_c) 
+RR_c <- bind_rows(RR_c, RR_biomass_c)
+RR_c <-bind_rows(RR_c, RR_biomass_c012)
 #  RR_c <- RR_c %>% 
 # filter(! variable %in% c("mu_log", "sigma_log"))
 
 
 RR_wp <- bind_rows(RR_wp, RR_biomass_wp) 
+RR_wp <- bind_rows(RR_wp, RR_biomass_wp012) 
 #  RR_wp <- RR_wp %>% 
 # filter(! variable %in% c("mu_log", "sigma_log"))
 
@@ -115,6 +134,7 @@ ggplot(RR_c, aes(x = variable, y = RR, color = treatment)) +
                "abundance",
                "Y_zipf",
                "biomass",
+               "biomass012",
                "NMDS1"),
                #"NMDS2",
                #"NMDS3"),  
@@ -140,6 +160,7 @@ ggplot(RR_wp, aes(x = variable, y = RR, color = RR_descriptor)) +
                "abundance",
                "Y_zipf",
                "biomass",
+               "biomass012",
                "NMDS1"),
                #"NMDS2",
                #"NMDS3"),  
