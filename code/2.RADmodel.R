@@ -219,15 +219,18 @@ ggplot(rad_treat_db, aes(x = rank, y = abundance_s)) +
 
 
 
+
 # We choose ZIPF
 
-ggplot(rad_treat_db, aes(x = rank, y = abundance_s)) +
+ggplot(rad_treat_db, aes(x = rank, y = abundance_s, color = treatment)) +
   facet_wrap(~treatment, labeller = labeller(treatment = labels3)) + 
   geom_point() +
-  geom_line(aes(x = rank, y = zipf_fit), color = "green3", size = 1) +
+  geom_line(aes(x = rank, y = zipf_fit), size = 1) +
   labs(x = "Rank", y = "Mean abundance", title = "RAD per treatment") +
+  scale_color_manual(values = palette5) + 
   geom_text(aes(x = max(rank) * 0.7, y = max(abundance_s) * 0.9, 
-                label = paste("Zipf gamma:", round(zipf_gamma, 4))))
+                label = paste("Zipf gamma:", round(zipf_gamma, 4))), size = 3.2)+
+  theme(legend.position = "none")
 
 ggplot(rad_treat_db, aes(x = rank, y = abundance_s, color = treatment)) +
   geom_point(size = 1.5) +
@@ -256,9 +259,9 @@ ggplot(rad_treat_db, aes(x = rank, y = abundance_s, color = treatment)) +
 samps <- sort(unique(flora_rad$sampling))
 plots <- sort(unique(flora_rad$plot))
 
-rad_dfplot <- matrix(nrow = (length(samps)*length(plots)), ncol = 6)
-colnames(rad_dfplot) <- c("sampling", "plot", "AIC_pree", "AIC_log", "AIC_zipf", "AIC_man")
-rad_dfplot <-  as.data.frame(rad_dfplot)
+rad_plot_AIC <- matrix(nrow = (length(samps)*length(plots)), ncol = 6)
+colnames(rad_plot_AIC) <- c("sampling", "plot", "AIC_pree", "AIC_log", "AIC_zipf", "AIC_man")
+rad_plot_AIC <-  as.data.frame(rad_plot_AIC)
 
 count <- 0
 for (i in 1:length(samps)){
@@ -285,131 +288,105 @@ for (i in 1:length(samps)){
     rad_fit <- radfit(rad)
       
     
-    rad_dfplot$sampling[count] <- samps[i]
-    rad_dfplot$plot[count] <- plots[j]
-    rad_dfplot$AIC_pree[count] <- rad_fit$models$Preemption$aic
-    rad_dfplot$AIC_log[count] <- rad_fit$models$Lognormal$aic
-    rad_dfplot$AIC_zipf[count] <- rad_fit$models$Zipf$aic
-    rad_dfplot$AIC_man[count] <- rad_fit$models$Mandelbrot$aic
+    rad_plot_AIC$sampling[count] <- samps[i]
+    rad_plot_AIC$plot[count] <- plots[j]
+    rad_plot_AIC$AIC_pree[count] <- rad_fit$models$Preemption$aic
+    rad_plot_AIC$AIC_log[count] <- rad_fit$models$Lognormal$aic
+    rad_plot_AIC$AIC_zipf[count] <- rad_fit$models$Zipf$aic
+    rad_plot_AIC$AIC_man[count] <- rad_fit$models$Mandelbrot$aic
     
   }
 }
 
-rad_dfplot <- pivot_longer(rad_dfplot, cols = c("AIC_pree", "AIC_log","AIC_zipf","AIC_man"), 
+rad_plot_AIC <- pivot_longer(rad_plot_AIC, cols = c("AIC_pree", "AIC_log","AIC_zipf","AIC_man"), 
                            names_to = "model", values_to = "AIC")
-ggplot(rad_dfplot, aes(x = model, y = AIC))+
+ggplot(rad_plot_AIC, aes(x = model, y = AIC))+
   geom_boxplot()
 
 # Again, we decide to use zipf because it only has one explanatory coefficient of the curve (gamma)
 
 
 
+rad_plot_list <- list()
 
-############################## CONTINUAR AQUÍ MAÑANA
+count <- 0
 
-# Applying Zipf and lognormal to the dataset: ############
-
-radcoeff_df <- matrix(nrow = (length(unique(flora_rad$sampling))*length(unique(flora_rad$plot))), ncol = 5)
-colnames(radcoeff_df) <- c("plot", "sampling", "Y_zipf", "mu_log", "sigma_log")
-radcoeff_df <- as.data.frame(radcoeff_df)
-
-count = 0
-for(i in 1:length(unique(flora_rad$sampling))){
-  for(j in 1:length(unique(flora_rad$plot))){
+for(i in 1:length(samps)) {
+  for(j in 1:length(plots)){
     
-    count <- count + 1
-    subset_data <- subset(flora_rad, sampling == unique(flora_rad$sampling)[i] & plot == unique(flora_rad$plot)[j])
-    subrad <- summarise(group_by(subset_data, code),
-                        abundance = round(mean(abundance), 0)) 
-    subrad <- pivot_wider(subrad, names_from = code, values_from = abundance, values_fill = 0)
-    subrad <- as.data.frame(subrad)
-    rad_sub <- vegan::radfit(subrad)
+    if (samps[i] == 1 && plots[j] %in% c(3, 6, 10, 15, 4, 5, 12, 13)) {
+      next  # Avoiding plots from treatment p and wp in sampling 1 because there are no data
+    }
     
-    radcoeff_df$plot[count] <- unique(flora_rad$plot)[j]
-    radcoeff_df$sampling[count] <- unique(flora_rad$sampling)[i]
-    radcoeff_df$Y_zipf[count] <- rad_sub$models$Zipf$coefficients[2]
-    radcoeff_df$mu_log[count] <- rad_sub$models$Lognormal$coefficients[1]
-    radcoeff_df$sigma_log[count] <- rad_sub$models$Lognormal$coefficients[2]
+    count = count + 1
     
-    rm(subrad)
-    rm(subset_data)
-    rm(rad_sub)
+    rad_plot <- flora_rad %>% 
+      filter(sampling == samps[i]) %>% 
+      filter(plot == plots[j])
+    
+    treatment <- droplevels(unique(rad_plot$treatment))
+    
+      rad_plot <- rad_plot %>% 
+        group_by(code) %>% 
+        summarise(abundance_s = round(mean(abundance_s), 0)) %>% 
+        as.data.frame() 
+    
+    radfit_plot <- rad_plot %>% 
+      pivot_wider(
+        names_from = code,
+        values_from = abundance_s,
+        values_fill = 0) %>% 
+      as.data.frame() %>% 
+      radfit() 
+    
+    rad_plot_list[[count]] <- rad_plot %>% 
+      mutate(rank = rank(-abundance_s, ties.method = "first")) %>% 
+      mutate(
+        zipf_p1 = as.numeric(radfit_plot$models$Zipf$coefficients[1]),
+        zipf_gamma = as.numeric(radfit_plot$models$Zipf$coefficients[2]),
+        total_abundance = sum(abundance_s)
+      ) %>% 
+      mutate(
+        zipf_fit = total_abundance*zipf_p1 * (rank^zipf_gamma),
+      ) %>% 
+      mutate(
+        treatment = treatment, 
+        sampling = samps[i],
+        plot = plots[j]
+      )
   }
 }
 
-# *** #mean here is "fake". Actually we keep the same number of abundance per species. However,
-# we have several replicates of the same species per plot due to the different morphological measuremens
-# for biomass. The mean of the same number is the same number. 
+rad_plot <- do.call(rbind, rad_plot_list) %>% 
+  mutate(plot_treat = paste0(treatment, "-", plot))  
+  #mutate(zipf_gamma = ifelse(0, is.na, zipf_gamma))
 
-#Plot 15 (t = p) del sampling 2 aparece como NA. Hacer individual dar valores de i = 5 y j = 7
-# (*la posicion de los niveles no corresponde con el valor del muestreo o plot). Da valores de "inf". 
-
-
-# Al hacer el loop los samplings van del 1 al 12 en vez del 0 al 11
-radcoeff_df$sampling <- factor(as.integer(radcoeff_df$sampling) - 1,
-                           levels = 0:max(as.integer(radcoeff_df$sampling)) - 1)
-radcoeff_df$plot <- as.factor(radcoeff_df$plot )
-radcoeff_df$sampling <- as.factor(radcoeff_df$sampling)
-
-plots <- read.csv("data/plots.csv") %>% 
-  mutate(across(where(is.character), as.factor)) %>% 
-  mutate(plot = nplot, treatment = treatment_code) %>% 
-  select(treatment, plot)
-
-
-radcoeff_df <- merge(radcoeff_df, plots, by = "plot")
-
-# Adding by hand sampling == 1 and treatments w and c. ######
-
-flora_s1cw <- flora_rad[(flora_rad$sampling == 1 & (flora_rad$treatment == "c" | flora_rad$treatment == "w")), ]
-
-radcoeff_s1cw <- matrix(nrow = (length(unique(flora_s1cw$sampling))*length(unique(flora_s1cw$plot))), ncol = 5)
-colnames(radcoeff_s1cw) <- c("plot", "sampling", "Y_zipf", "mu_log", "sigma_log")
-radcoeff_s1cw <- as.data.frame(radcoeff_s1cw)
-
-count = 0 
-for(i in 1:length(unique(flora_s1cw$plot))){
-  count <- count + 1
-  subset_data <- subset(flora_s1cw, sampling == "1" & plot == unique(flora_s1cw$plot)[i])
-  subrad <- summarise(group_by(subset_data, code),
-                      abundance = round(mean(abundance), 0))
-  subrad <- pivot_wider(subrad, names_from = code, values_from = abundance, values_fill = 0)
-  subrad <- as.data.frame(subrad)
-  rad_sub <- radfit(subrad)
-  
-  radcoeff_s1cw$plot[count] <- unique(flora_s1cw$plot)[i]
-  radcoeff_s1cw$sampling[count] <- "1"
-  radcoeff_s1cw$Y_zipf[count] <- rad_sub$models$Zipf$coefficients[2]
-  radcoeff_s1cw$mu_log[count] <- rad_sub$models$Lognormal$coefficients[1]
-  radcoeff_s1cw$sigma_log[count] <- rad_sub$models$Lognormal$coefficients[2]
-  
-  rm(subrad)
-  rm(subset_data)
-  rm(rad_sub)
-}
-
-#15 warnings due to plot 1. But it works
-
-radcoeff_s1cw$plot <- as.factor(radcoeff_s1cw$plot )
-radcoeff_s1cw$sampling <- as.factor(radcoeff_s1cw$sampling)
-
-radcoeff_s1cw <- merge(radcoeff_s1cw, plots, by = "plot")
+{i = 3
+rad_plot %>% 
+  filter(sampling == samps[i]) %>% 
+  ggplot(aes(x = rank, y = abundance_s, color = treatment)) +
+  facet_wrap(~ plot_treat) + 
+  geom_point() +
+  geom_line(aes(x = rank, y = zipf_fit), color = "black") +
+  scale_color_manual(values = palette5)+
+  labs(x = "Rank", y = "Mean abundance", title = paste0("RAD per plot at sampling ", samps[i])) +
+  geom_text(aes(x = max(rank) * 0.7, y = max(abundance_s) * 0.9, 
+                label = paste("Zipf gamma:", round(zipf_gamma, 4))), size = 3.2)}
 
 
 
-#Adding muestreo 1 de c y w. 
-
-radcoeff_df <- rbind(radcoeff_df, radcoeff_s1cw)
-radcoeff_df$treatment <- as.factor(radcoeff_df$treatment)
-
-radcoeff_df$plot <- factor(radcoeff_df$plot, levels = sort(unique(radcoeff_df$plot)))
-radcoeff_df$treatment <- as.factor(radcoeff_df$treatment) 
-radcoeff_df$treatment <- factor(radcoeff_df$treatment, levels = c("c", "w", "p", "wp"))
-radcoeff_df$sampling <- factor(radcoeff_df$sampling, levels = sort(unique(radcoeff_df$sampling)))  #Sort from lowest to highest
 
 
-dummy_rows_p <- matrix(nrow = 4, ncol = 6)
-  colnames(dummy_rows_p) <- c("sampling", "plot", "treatment", "Y_zipf", "mu_log", "sigma_log")
+# Means
+
+radcoeff_df <- rad_plot %>% 
+  select(plot, sampling, treatment, zipf_gamma) %>% 
+  rename(Y_zipf = zipf_gamma)
+
+
+
+{dummy_rows_p <- matrix(nrow = 4, ncol = 4)
+  colnames(dummy_rows_p) <- c("sampling", "plot", "treatment", "Y_zipf")
   dummy_rows_p <- as.data.frame(dummy_rows_p)
   
   dummy_rows_p[] <- NA
@@ -418,8 +395,8 @@ dummy_rows_p <- matrix(nrow = 4, ncol = 6)
   dummy_rows_p[, 3] <- "p"
   
   
-  dummy_rows_wp <- matrix(nrow = 4, ncol = 6)
-  colnames(dummy_rows_wp) <- c("sampling", "plot", "treatment", "Y_zipf", "mu_log", "sigma_log")
+  dummy_rows_wp <- matrix(nrow = 4, ncol = 4)
+  colnames(dummy_rows_wp) <- c("sampling", "plot", "treatment", "Y_zipf")
   dummy_rows_wp <- as.data.frame(dummy_rows_wp)
   
   dummy_rows_wp[] <- NA
@@ -435,7 +412,7 @@ dummy_rows_p <- matrix(nrow = 4, ncol = 6)
  
 
 
-radcoeff_df <- bind_rows(radcoeff_df, dummy_rows) 
+radcoeff_df <- bind_rows(radcoeff_df, dummy_rows) }
 
 
 radcoeff_df %>% write.csv("data/radcoeff_df.csv", row.names = FALSE)

@@ -369,17 +369,6 @@ radcoeff_df <- read.csv("data/radcoeff_df.csv") %>%
          sampling = as.factor(sampling), 
          plot = as.factor(plot))
 
-min(radcoeff_df$Y_zipf, na.rm = T)
-min(radcoeff_df$mu_log, na.rm = T)
-min(radcoeff_df$sigma_log, na.rm = T)
-
-### Corrección donde quito 0 y negativos para los análisis de logRR y CV. Al ser unidades adimensionales da igual. 
-
-radcoeff_df<- radcoeff_df %>% 
-  mutate(Y_zipf = Y_zipf + abs(min(radcoeff_df$Y_zipf, na.rm = T)) + 1,
-         mu_log = mu_log + abs(min(radcoeff_df$mu_log, na.rm = T)) + 1, 
-         sigma_log = sigma_log - min(radcoeff_df$sigma_log, na.rm = T) + 1)
-
 
 ab_rich_dynamics <- full_join(flora_abrich, radcoeff_df)   
 
@@ -392,21 +381,14 @@ ab_rich_dynamics <- ab_rich_dynamics %>%
          sd_abundance = sd(abundance, na.rm = T),
          mean_Y_zipf = mean(Y_zipf, na.rm = T),
          sd_Y_zipf = sd(Y_zipf, na.rm = T),
-         mean_mu_log = mean(mu_log, na.rm = T),
-         sd_mu_log = sd(mu_log, na.rm = T),
-         mean_sigma_log = mean(sigma_log, na.rm = T),
-         sd_sigma_log = sd(sigma_log, na.rm = T),
          n = n()) %>% 
   mutate(cv_richness = sd_richness/mean_richness,
          cv_abundance = sd_abundance/mean_abundance,
-         cv_Y_zipf = sd_Y_zipf/mean_Y_zipf,
-         cv_mu_log = sd_mu_log/mean_mu_log,
-         cv_sigma_log = sd_sigma_log/mean_sigma_log) %>% 
+         cv_Y_zipf = sd_Y_zipf/mean_Y_zipf) %>% 
   ungroup() %>% 
   select(treatment, sampling, year, date, sampling_date, plot, n, richness, mean_richness, sd_richness, 
-         abundance, mean_abundance, sd_abundance, Y_zipf, mean_Y_zipf, sd_Y_zipf,
-         mu_log, mean_mu_log, sd_mu_log, sigma_log, mean_sigma_log, sd_sigma_log, cv_richness,
-         cv_abundance, cv_Y_zipf, cv_mu_log, cv_sigma_log)
+         abundance, mean_abundance, sd_abundance, Y_zipf, mean_Y_zipf, sd_Y_zipf, cv_richness, cv_abundance,
+         cv_Y_zipf)
 
 
 biomass_imp_dynamics <- biomass_imp %>%
@@ -470,26 +452,20 @@ ab_rich_treatmeans <- full_join(flora_abrich, radcoeff_df)  %>%
     mean_abundance = mean(abundance, na.rm = T),
     sd_abundance = sd(abundance, na.rm = T),
     mean_Y_zipf = mean(Y_zipf, na.rm = T),
-    sd_Y_zipf = sd(Y_zipf, na.rm = T),
-    mean_mu_log = mean(mu_log, na.rm = T),
-    sd_mu_log = sd(mu_log, na.rm = T),
-    mean_sigma_log = mean(sigma_log, na.rm = T),
-    sd_sigma_log = sd(sigma_log, na.rm = T), 
+    sd_Y_zipf = sd(Y_zipf, na.rm = T), 
     n = n()
   )%>% 
   mutate(
     cv_richness = sd_richness/mean_richness,
     cv_abundance = sd_abundance/mean_abundance,
-    cv_Y_zipf = sd_Y_zipf/mean_Y_zipf,
-    cv_mu_log = sd_mu_log/mean_mu_log,
-    cv_sigma_log = sd_sigma_log/mean_sigma_log
+    cv_Y_zipf = sd_Y_zipf/mean_Y_zipf
   ) %>% 
   select(treatment, n, mean_richness, sd_richness, mean_abundance, sd_abundance, mean_Y_zipf, 
-         sd_Y_zipf, mean_mu_log, sd_mu_log, mean_sigma_log, sd_sigma_log, cv_richness,
-         cv_abundance, cv_Y_zipf, cv_mu_log, cv_sigma_log) %>% 
+         sd_Y_zipf, cv_richness,
+         cv_abundance, cv_Y_zipf) %>% 
   distinct(treatment, n, mean_richness, sd_richness, mean_abundance, sd_abundance, mean_Y_zipf, 
-           sd_Y_zipf, mean_mu_log, sd_mu_log, mean_sigma_log, sd_sigma_log, cv_richness,
-           cv_abundance, cv_Y_zipf, cv_mu_log, cv_sigma_log)
+           sd_Y_zipf, cv_richness,
+           cv_abundance, cv_Y_zipf)
 
 
 

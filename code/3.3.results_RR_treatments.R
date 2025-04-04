@@ -22,8 +22,8 @@ gglist_c <- list()
 list_wp <- list()
 gglist_wp <- list()
 
-variables <- c("richness", "abundance", "Y_zipf", "mu_log", "sigma_log")
-for (i in 1:5){
+variables <- c("richness", "abundance", "Y_zipf")
+for (i in 1:3){
   effect_size_treatment_c(ab_rich_treatmeans, variables[i])
   list_c[[i]] <- RR_treatment %>%
     select(treatment, variable, starts_with("RR"), starts_with("se_RR"))
@@ -114,12 +114,10 @@ ggplot(RR_c, aes(x = variable, y = RR, color = treatment)) +
     limits = c("richness",
                "abundance",
                "Y_zipf",
-               "mu_log",
-               "sigma_log",
                "biomass",
-               "NMDS1",
-               "NMDS2",
-               "NMDS3"),  
+               "NMDS1"),
+               #"NMDS2",
+               #"NMDS3"),  
     labels = function(x) str_to_title(x)  
   ) +
   geom_hline(yintercept = 0, linetype = "dashed", color = "gray40") +
@@ -141,12 +139,10 @@ ggplot(RR_wp, aes(x = variable, y = RR, color = RR_descriptor)) +
     limits = c("richness",
                "abundance",
                "Y_zipf",
-               "mu_log",
-               "sigma_log",
                "biomass",
-               "NMDS1",
-               "NMDS2",
-               "NMDS3"),  
+               "NMDS1"),
+               #"NMDS2",
+               #"NMDS3"),  
     labels = function(x) str_to_title(x)  
   ) +
   geom_hline(yintercept = 0, linetype = "dashed", color = "gray40") +

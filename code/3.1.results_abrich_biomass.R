@@ -19,9 +19,9 @@ labels <- labels3
 
 source("code/meta_function/meta_function.R")
 
-variables <- c("richness", "abundance", "Y_zipf", "mu_log", "sigma_log")
-                 # 1          # 2         # 3       # 4       # 5     
-{i = 1
+variables <- c("richness", "abundance", "Y_zipf")
+                 # 1          # 2         # 3         
+{i = 3
 meta_function(ab_rich_dynamics, variables[i], "treatment")}
 
 gg_stats_variable
@@ -77,7 +77,7 @@ RR_biomass_wp <- RR_wp_vs_treatment %>%
   list_wp <- list()
   
   
-  for(i in 1:5){
+  for(i in 1:3){
     
     meta_function(ab_rich_dynamics, variables[i], "treatment")
     
