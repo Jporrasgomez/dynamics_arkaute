@@ -17,15 +17,18 @@ gg_dynamics_cv <- function(data, variable) {
 
   ytitle_dict <- list(
     
-    "abundance" = "CV of abundance",
-    "richness" = "CV of richness",
-    "sigma_log" = "CV of Sigma for Log model RADs",
-    "mu_log" = "CV of Mu for Log model RADs",
-    "Y_zipf" = "CV of Gamma for Zipf model RADs",
-    "biomass" = "CV of community biomass",
-    "NMDS1" = "CV of NMDS1",
-    "NMDS2" = "CV of NMDS2",
-    "NMDS3" = "CV of NMDS3"
+    "richness" = "Richness",
+    "abundance" = "Community cover",
+    "sigma_log" = "Sigma (Coefficient 2 in Log model for RADs)",
+    "mu_log" = "Mu (Coefficient 1 in Log model for RADs)",
+    "Y_zipf" = "Gamma (Coefficient in Zipf model for RADs)",
+    "biomass" = "Community biomass",
+    "NMDS1" = "NMDS1",
+    "NMDS2" = "NMDS2",
+    "NMDS3" = "NMDS3",
+    "total_turnover" = "Total turnover", 
+    "appearance" = "Turnover: appearance", 
+    "disappearance" = "Turnover: disappearance"
   )
   
 

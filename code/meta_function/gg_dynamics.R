@@ -26,7 +26,10 @@ gg_dynamics <- function(data, variable) {
     "biomass" = "Community biomass",
     "NMDS1" = "NMDS1",
     "NMDS2" = "NMDS2",
-    "NMDS3" = "NMDS3"
+    "NMDS3" = "NMDS3",
+    "total_turnover" = "Total turnover", 
+    "appearance" = "Turnover: appearance", 
+    "disappearance" = "Turnover: disappearance"
   )
   
   ytitle <- ytitle_dict[[variable]]

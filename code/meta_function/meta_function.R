@@ -5,6 +5,28 @@
 
 meta_function <- function(data, variable1, variable2){
   
+
+  #mean_variable1 <- paste0("mean_", variable1)
+  #sd_variable1 <- paste0("sd_", variable1)
+  #cv_variable1 <- paste0("cv_", variable1)
+  #
+  #data <- data %>% 
+  #  distinct(treatment, plot, sampling, date, .data[[variable1]], .keep_all = TRUE) %>% 
+  #  group_by(treatment, sampling, date) %>% 
+  #  mutate(
+  #    n = n(),
+  #    !!mean_variable1 := mean(.data[[variable1]], na.rm = TRUE),
+  #    !!sd_variable1 := sd(.data[[variable1]], na.rm = TRUE)
+  #  ) %>%
+  #  mutate(
+  #    !!cv_variable1 := .data[[sd_variable1]] / .data[[mean_variable1]]
+  #  ) %>% 
+  #  ungroup() %>% 
+  #  select(treatment, sampling, year, date, sampling_date, plot, n,
+  #         !!variable1, !!mean_variable1, !!sd_variable1, !!cv_variable1)
+  #  
+    
+  
   
 source("code/meta_function/stats_function.R")
   
@@ -21,10 +43,10 @@ gg_dunn_cv <<- gg_dunn
 gg_ttest_cv <<- gg_ttest
 
 
-source("code/meta_function/sampling_0.R")
-sampling_0(data, variable1, variable2)
-gg_dunn_0 <<- gg_dunn_0
-mean_0 <<- mean_0
+#source("code/meta_function/sampling_0.R")
+#sampling_0(data, variable1, variable2)
+#gg_dunn_0 <<- gg_dunn_0
+#mean_0 <<- mean_0
 
 
 source("code/meta_function/gg_dynamics.R")

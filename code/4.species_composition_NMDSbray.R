@@ -27,11 +27,6 @@ species_ab_sampling <- species_ab_sampling %>%
 
 
 
-
-
-
-
-
 ####### DIFFERENCES AT SAMPLING x TREATMENT LEVEL #############
 
 treats <- unique(flora_abrich$treatment)

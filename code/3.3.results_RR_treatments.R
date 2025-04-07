@@ -16,7 +16,7 @@ labels <- labels_RR
 source("code/meta_function/effect_size_treatment_c.R")
 source("code/meta_function/effect_size_treatment_wp.R")
 
-
+in
 {list_c <- list()
 gglist_c <- list()
 list_wp <- list()
