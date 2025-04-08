@@ -406,46 +406,7 @@ nmds_df_plot<- nmds_df_plot %>%
          NMDS2 = NMDS2 + abs(min(nmds_df_plot$NMDS2)) + 1,
          NMDS3 = NMDS3 + abs(min(nmds_df_plot$NMDS3)) + 1)
 
-nmds_df_plot <- nmds_df_plot %>%
-  arrange(sampling) %>% 
-  group_by(treatment, sampling) %>% 
-  mutate(mean_NMDS1 = mean (NMDS1, na.rm = T), 
-         mean_NMDS2 = mean (NMDS2, na.rm = T), 
-         mean_NMDS3 = mean (NMDS3, na.rm = T), 
-         sd_NMDS1 = sd (NMDS1, na.rm = T), 
-         sd_NMDS2 = sd (NMDS2, na.rm = T), 
-         sd_NMDS3 = sd (NMDS3, na.rm = T)) %>% 
-  mutate(cv_NMDS1 = sd_NMDS1/mean_NMDS1,
-         cv_NMDS2 = sd_NMDS2/mean_NMDS2,
-         cv_NMDS3 = sd_NMDS1/mean_NMDS3) %>% 
-  ungroup()
-
-
-
-nmds_df_treatmeans <- nmds_df_plot %>%
-  distinct(treatment, plot, sampling, date, .keep_all = TRUE) %>% 
-  group_by(treatment) %>% 
-  mutate(mean_NMDS1 = mean (NMDS1, na.rm = T), 
-         mean_NMDS2 = mean (NMDS2, na.rm = T), 
-         mean_NMDS3 = mean (NMDS3, na.rm = T), 
-         sd_NMDS1 = sd (NMDS1, na.rm = T), 
-         sd_NMDS2 = sd (NMDS2, na.rm = T), 
-         sd_NMDS3 = sd (NMDS3, na.rm = T), 
-         n = n()
-         ) %>% 
-  mutate(cv_NMDS1 = sd_NMDS1/mean_NMDS1,
-         cv_NMDS2 = sd_NMDS2/mean_NMDS2,
-         cv_NMDS3 = sd_NMDS1/mean_NMDS3) %>% 
-  select(treatment, n,
-         mean_NMDS1, sd_NMDS1, cv_NMDS1,
-         mean_NMDS2, sd_NMDS2, cv_NMDS2,
-         mean_NMDS3, sd_NMDS3, cv_NMDS3) %>% 
-  distinct(treatment, n, 
-           mean_NMDS1, sd_NMDS1, cv_NMDS1,
-           mean_NMDS2, sd_NMDS2, cv_NMDS2,
-           mean_NMDS3, sd_NMDS3, cv_NMDS3)
-
-nmds_df_treatmeans %>%  write.csv("data/nmds_df_treatmeans.csv")
+nmds_df_plot %>%  write.csv("data/nmds_df_plot.csv")
 
 
 

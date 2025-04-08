@@ -14,6 +14,7 @@ effect_size <- function(data, variable){
   sd_variable_c<- paste0("sd_", variable, "_c")
   
   
+  
   effect <- data %>% 
     select(date, sampling, treatment, all_of(mean_variable), all_of(sd_variable)) %>% 
     distinct()

@@ -7,9 +7,10 @@
 
 
 
-rm(list = ls(all.names = TRUE))
+#rm(list = ls(all.names = TRUE))
 pacman::p_load(dplyr, tidyverse, DT, viridis, ggrepel, codyn, vegan, eulerr, ggplot2, ggthemes, ggpubr, ggforce )#
-source("code/1.first_script.R"); rm(list = setdiff(ls(), c("flora_abrich", "biomass_imp", "biomass_noimp")))
+source("code/1.first_script.R")
+#rm(list = setdiff(ls(), c("flora_abrich", "biomass_imp", "biomass_noimp")))
 
 source("code/palettes_labels.R")
 palette <- palette5
@@ -90,19 +91,19 @@ sp_total_turnover <- sp_total_turnover %>%
   filter(!is.na(total))
 
 
-ggplot(sp_turnover, aes(x = date, y = rate)) +
+ggplot(sp_turnover, aes(x = as.numeric(sampling), y = rate)) +
   facet_grid(~ treatment, labeller = labeller(treatment = labels3)) +
   geom_col(aes(fill = metric)) +
   geom_point(data = sp_total_turnover, aes(y = total)) +
   geom_line(data = sp_total_turnover, aes(y = total)) +
   scale_fill_viridis_d(begin = 0.2) +
-  #scale_x_continuous(breaks = function(x) seq(ceiling(x[1]), floor(x[2]), by = 80)) + # Por si ponemos sampling
-  scale_x_date(date_breaks = "4 months", date_labels = "%b %Y") +
+  scale_x_continuous(breaks = function(x) seq(ceiling(x[1]), floor(x[2]), by = 2)) + # Por si ponemos sampling
+  #scale_x_date(date_breaks = "4 months", date_labels = "%b %Y") +
   ylim(0,1) + 
   labs(title = "Community turnover relative to the preceding sampling",
        x = "Sampling",
        y = "Turnover") +
-  theme(axis.text.x = element_text(angle = 30, vjust = 1, hjust = 1),
+  theme(axis.text.x = element_text(angle = 0, vjust = 1, hjust = 1),
         legend.position = "bottom")
 
 
@@ -170,52 +171,64 @@ for(i in seq_along(plots)){
   
 }
 
-
-
-appear_plot_db <- do.call(rbind, list_appear) %>% 
-  group_by(sampling, treatment) %>% 
-  mutate(mean_appearance = mean(appearance, na.rm = T), 
-         sd_appearance = sd(appearance, na.rm = T)) %>% 
-  mutate(cv_appearance = sd_appearance/mean_appearance) %>% 
-  ungroup() %>% 
-  filter(!is.na(appearance))
-
-disappear_plot_db <- do.call(rbind, list_disappear) %>% 
-  group_by(sampling, treatment) %>% 
-  mutate(mean_disappearance = mean(disappearance, na.rm = T), 
-         sd_disappearance = sd(disappearance, na.rm = T)) %>% 
-  mutate(cv_disappearance = sd_disappearance/mean_disappearance) %>% 
-  ungroup() %>% 
-  filter(!is.na(disappearance))
-
+appearance_plot_db <- do.call(rbind, list_appear) %>% 
+  filter(!is.na(treatment))
+disappearance_plot_db <- do.call(rbind, list_disappear) %>% 
+  filter(!is.na(treatment))
 total_plot_db <- do.call(rbind, list_total) %>% 
-  group_by(sampling, treatment) %>% 
-  mutate(mean_total_turnover = mean(total_turnover, na.rm = T),
-         sd_total_turnover = sd(total_turnover, na.rm = T)) %>% 
-  mutate(cv_total_turnover = sd_total_turnover/mean_total_turnover) %>% 
-  ungroup() %>% 
-  filter(!is.na(total_turnover))
+  filter(!is.na(treatment))
+
+turnover_db<- left_join(appearance_plot_db, disappearance_plot_db)
+turnover_db <- left_join(turnover_db, total_plot_db) 
+
+#turnover_db <- turnover_db %>% 
+#  distinct(treatment, plot, sampling, date, .keep_all = TRUE) %>%
+#  group_by(sampling, treatment) %>% 
+#  mutate(
+#    mean_appearance = mean(appearance, na.rm = T), 
+#    sd_appearance = sd(appearance, na.rm = T),
+#    mean_disappearance = mean(disappearance, na.rm = T), 
+#    sd_disappearance = sd(disappearance, na.rm = T),
+#    mean_total_turnover = mean(total_turnover, na.rm = T),
+#    sd_total_turnover = sd(total_turnover, na.rm = T)
+#    ) %>% 
+#  mutate(
+#    cv_appearance = sd_appearance/mean_appearance,
+#    cv_disappearance = sd_disappearance/mean_disappearance,  
+#    cv_appearance = sd_appearance/mean_appearance) %>% 
+#  ungroup()
+#
+#
+#turnover_treatmeans_db <- turnover_db %>% 
+#  group_by(treatment) %>% 
+#  summarize(
+#    mean_appearance = mean(appearance, na.rm = T), 
+#    sd_appearance = sd(appearance, na.rm = T),
+#    mean_disappearance = mean(disappearance, na.rm = T), 
+#    sd_disappearance = sd(disappearance, na.rm = T),
+#    mean_total_turnover = mean(total_turnover, na.rm = T), 
+#    sd_total_turnover = sd(total_turnover, na.rm = T),
+#    n = n()) 
+  
 
 
-
-
-source("code/meta_function/meta_function.R")
-source("code/meta_function/gg_dynamics.R")
-
-meta_function(appear_plot_db, "appearance", "treatment")
-
-gg_stats_variable
-
-gg_dunn_variable 
-gg_ttest_variable
-
-gg_all1n
-gg_facet
-
-gg_delta_RR
-gg_delta_RR_wp 
-
-gg_stats_cv
-gg_dunn_cv
-gg_ttest_cv  
-gg_dynamics_cv
+#source("code/meta_function/meta_function.R")
+#source("code/meta_function/gg_dynamics.R")
+#
+#meta_function(appear_plot_db, "appearance", "treatment")
+#
+#gg_stats_variable
+#
+#gg_dunn_variable 
+#gg_ttest_variable
+#
+#gg_all1n
+#gg_facet
+#
+#gg_delta_RR
+#gg_delta_RR_wp 
+#
+#gg_stats_cv
+#gg_dunn_cv
+#gg_ttest_cv  
+#gg_dynamics_cv

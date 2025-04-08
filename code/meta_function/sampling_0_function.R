@@ -4,8 +4,28 @@
 sampling_0 <- function(data, response_variable, explanatory_variable){
   
   
+  mean_response_variable <- paste0("mean_", response_variable)
+  sd_response_variable <- paste0("sd_", response_variable)
+  cv_response_variable <- paste0("cv_", response_variable)
+  
+  data <- data %>% 
+    distinct(treatment, plot, sampling, .data[[response_variable]], .keep_all = TRUE) %>% 
+    group_by(treatment, sampling, ) %>% 
+    mutate(
+      n = n(),
+      !!mean_response_variable := mean(.data[[response_variable]], na.rm = TRUE),
+      !!sd_response_variable := sd(.data[[response_variable]], na.rm = TRUE)
+    ) %>%
+    mutate(
+      !!cv_response_variable := .data[[sd_response_variable]] / .data[[mean_response_variable]]
+    ) %>% 
+    ungroup() %>% 
+    select(treatment, sampling, plot, n,
+           !!response_variable, !!mean_response_variable, !!sd_response_variable, !!cv_response_variable)
+  
   data <- data %>% 
     filter(sampling == "0")
+  
   
   
   dunn_results <- 
@@ -17,7 +37,7 @@ sampling_0 <- function(data, response_variable, explanatory_variable){
   max_y <- max(data[[response_variable]], na.rm = TRUE)
   
   # Define y.position based on the sign of max_y
-  if (response_variable %in% c("richness", "abundance", "mu_log", "sigma_log")) {
+  if (response_variable %in% c("richness", "abundance")) {
     dunn_results <- dunn_results %>%
       mutate(y.position = max_y * 1.5 +
                seq(0, by = max_y * 0.1, length.out = n()))

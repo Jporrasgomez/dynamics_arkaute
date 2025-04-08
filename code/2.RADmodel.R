@@ -306,9 +306,7 @@ ggplot(rad_plot_AIC, aes(x = model, y = AIC))+
 # Again, we decide to use zipf because it only has one explanatory coefficient of the curve (gamma)
 
 
-
 rad_plot_list <- list()
-
 count <- 0
 
 for(i in 1:length(samps)) {
@@ -361,7 +359,7 @@ rad_plot <- do.call(rbind, rad_plot_list) %>%
   mutate(plot_treat = paste0(treatment, "-", plot))  
   #mutate(zipf_gamma = ifelse(0, is.na, zipf_gamma))
 
-{i = 3
+{i = 1
 rad_plot %>% 
   filter(sampling == samps[i]) %>% 
   ggplot(aes(x = rank, y = abundance_s, color = treatment)) +
@@ -380,6 +378,7 @@ rad_plot %>%
 # Means
 
 radcoeff_df <- rad_plot %>% 
+  distinct(plot, sampling, treatment, zipf_gamma) %>% 
   select(plot, sampling, treatment, zipf_gamma) %>% 
   rename(Y_zipf = zipf_gamma)
 

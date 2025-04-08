@@ -3,12 +3,29 @@
 
 effect_size_treatment_c <- function(data, variable){
 
+  
+
+  
 
 mean_variable <- paste0("mean_", variable)
 sd_variable <- paste0("sd_", variable)
 
 mean_variable_c <- paste0("mean_", variable, "_c")
 sd_variable_c<- paste0("sd_", variable, "_c")
+
+
+
+data <- data %>% 
+  distinct(treatment, plot, sampling, date, .data[[variable]], .keep_all = TRUE) %>% 
+  group_by(treatment) %>% 
+  mutate(
+    n = n(),
+    !!mean_variable := mean(.data[[variable]], na.rm = TRUE),
+    !!sd_variable := sd(.data[[variable]], na.rm = TRUE)
+  ) %>%
+  ungroup() %>% 
+  select(treatment, sampling, date, plot, n,
+         !!variable, !!mean_variable, !!sd_variable)
 
 
 effect <- data %>% 
@@ -33,7 +50,10 @@ ytitle_dict <- list(
   "biomass"    = "Community biomass",
   "NMDS1" = "NMDS1",
   "NMDS2" = "NMDS2",
-  "NMDS3" = "NMDS3"
+  "NMDS3" = "NMDS3",
+  "total_turnover" = "Total turnover", 
+  "appearance" = "Turnover: appearance", 
+  "disappearance" = "Turnover: disappearance"
 )
 
 ytitle <- ytitle_dict[[variable]]
