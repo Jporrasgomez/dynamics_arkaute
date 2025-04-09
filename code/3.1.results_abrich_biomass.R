@@ -6,9 +6,12 @@ rm(list = ls(all.names = TRUE))  #Se limpia el environment
 pacman::p_unload(pacman::p_loaded(), character.only = TRUE) #se quitan todos los paquetes (limpiamos R)
 
 source("code/1.first_script.R")
-source("code/species_composition_TURNOVER.R")
+
+turnover_db <- read.csv("data/turnover_db.csv")
+nmds_df_plot <- read.csv("data/nmds_df_plot.csv")
+
 rm(list = setdiff(ls(), c("ab_rich_dynamics", "biomass_imp", "biomass_imp012",
-                          "turnover_db")))
+                          "turnover_db", "nmds_df_plot")))
 
 pacman::p_load(dplyr,reshape2,tidyverse, lubridate, ggplot2, ggpubr, gridExtra,
                car, ggsignif, dunn.test, rstatix) #Cargamos los paquetes que necesitamos
@@ -81,29 +84,29 @@ RR_abricheven_wp <- do.call(rbind, list_wp)
 
 #Biomass
 
-meta_function(biomass_imp012, "biomass", "treatment")
-#gg_stats_variable
-#gg_dunn_variable 
-#gg_ttest_variable
+{meta_function(biomass_imp012, "biomass", "treatment")
 
-#gg_all1n
-#gg_facet
-#gg_stats_cv
-#gg_dunn_cv
-#gg_ttest_cv  
-#gg_dynamics_cv
-#gg_RR
-#gg_delta_RR
-#gg_sigma_RR
-#gg_RR_wp 
-#gg_delta_RR_wp 
-#gg_sigma_RR_wp
+RR_biomass012 <- RR_treatment %>% 
+  select(date, treatment, sampling, variable, delta_RR, se_delta_RR) %>% 
+  mutate(
+    variable = fct_recode(variable,
+                          "biomass012" = "biomass"))
 
-RR_biomass <- RR_treatment %>% 
-  select(date, treatment, sampling, variable, delta_RR, se_delta_RR)
+RR_biomass012_wp <- RR_wp_vs_treatment %>% 
+  select(date, RR_descriptor, sampling, variable, delta_RR, se_delta_RR) %>% 
+  mutate(
+    variable = fct_recode(variable,
+                          "biomass012" = "biomass"))}
 
-RR_biomass_wp <- RR_wp_vs_treatment %>% 
-  select(date, RR_descriptor, sampling, variable, delta_RR, se_delta_RR)
+
+{meta_function(biomass_imp, "biomass", "treatment")
+  
+  RR_biomass <- RR_treatment %>% 
+    select(date, treatment, sampling, variable, delta_RR, se_delta_RR)
+  
+  RR_biomass_wp <- RR_wp_vs_treatment %>% 
+    select(date, RR_descriptor, sampling, variable, delta_RR, se_delta_RR)}
+
 
 
 
@@ -129,11 +132,21 @@ RR_turnover_wp <- do.call(rbind, list_turnover_wp)
 
 
 
+{meta_function(nmds_df_plot, "NMDS1", "treatment")
+RR_nmds <- RR_treatment %>% 
+  select(date, treatment, sampling, variable, delta_RR, se_delta_RR)
+
+RR_nmds_wp <- RR_wp_vs_treatment %>% 
+  select(date, RR_descriptor, sampling, variable, delta_RR, se_delta_RR)}
+
+
 
 library(forcats)
 
 RR_whole <- rbind(RR_abricheven, RR_biomass) %>% 
+  rbind(RR_biomass012) %>% 
   rbind(RR_turnover) %>% 
+  rbind(RR_nmds) %>% 
   mutate(variable = as.factor(variable)) %>% 
   mutate(
     delta_RR = if_else(variable == "Y_zipf", -1 * delta_RR, delta_RR),
@@ -144,44 +157,53 @@ RR_whole <- rbind(RR_abricheven, RR_biomass) %>%
                           "Cover" = "abundance",
                           "Evenness" = "Y_zipf",
                           "Biomass" = "biomass",
+                          "Biomass012" = "biomass012",
+                          "Species comp." = "NMDS1",
                           "Total Turnover" = "total_turnover",
-                          "Turnover (Appearance)" = "appearance",
-                          "Turnover (Disappearance)" = "disappearance"),
+                          "Turnover (Appear.)" = "appearance",
+                          "Turnover (Disappear.)" = "disappearance"),
     variable = fct_relevel(variable,
                            "Richness",
                            "Cover",
                            "Evenness",
                            "Biomass",
+                           "Biomass012",
+                           "Species comp.",
                            "Total Turnover",
-                           "Turnover (Appearance)",
-                           "Turnover (Disappearance)"))
+                           "Turnover (Appear.)",
+                           "Turnover (Disappear.)"))
     
 
 
 RR_whole_wp <- rbind(RR_abricheven_wp, RR_biomass_wp) %>% 
+  rbind(RR_biomass012_wp) %>% 
   rbind(RR_turnover_wp) %>%
+  rbind(RR_nmds_wp) %>% 
+  mutate(variable = as.factor(variable)) %>% 
     mutate(
       delta_RR = if_else(variable == "Y_zipf", -1 * delta_RR, delta_RR),
       delta_se_RR = if_else(variable == "Y_zipf", -1 * se_delta_RR, se_delta_RR),
+      
       variable = fct_recode(variable,
-                        "Richness" = "richness",
-                        "Cover" = "abundance",
-                        "Evenness" = "Y_zipf",
-                        "Biomass" = "biomass",
-                        "Total Turnover" = "total_turnover",
-                        "Turnover (Appearance)" = "appearance",
-                        "Turnover (Disappearance)" = "disappearance"
-                        ),
+                            "Richness" = "richness",
+                            "Cover" = "abundance",
+                            "Evenness" = "Y_zipf",
+                            "Biomass" = "biomass",
+                            "Biomass012" = "biomass012",
+                            "Species comp." = "NMDS1",
+                            "Total Turnover" = "total_turnover",
+                            "Turnover (Appear.)" = "appearance",
+                            "Turnover (Disappear.)" = "disappearance"),
       variable = fct_relevel(variable,
                              "Richness",
                              "Cover",
                              "Evenness",
                              "Biomass",
+                             "Biomass012",
+                             "Species comp.",
                              "Total Turnover",
-                             "Turnover (Appearance)",
-                             "Turnover (Disappearance)"))
-
-
+                             "Turnover (Appear.)",
+                             "Turnover (Disappear.)"))
 
 z = 1.96
 
