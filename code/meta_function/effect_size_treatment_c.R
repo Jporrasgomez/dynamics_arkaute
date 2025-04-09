@@ -87,11 +87,13 @@ RR_treatment <- effect %>%
 
 RR_treatment <<- RR_treatment
 
+z = 1.96
+
 
 gg_RR<-
   ggplot(RR_treatment, aes(x = treatment, y = RR)) + 
-  geom_errorbar(aes(ymin = RR - se_RR,
-                    ymax = RR + se_RR,
+  geom_errorbar(aes(ymin = RR - z * se_RR,
+                    ymax = RR + z * se_RR,
                     color = treatment), linewidth = 0.5) +
   geom_point(aes(color = treatment)) + 
   scale_color_manual(values = palette) +

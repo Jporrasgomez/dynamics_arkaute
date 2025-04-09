@@ -3,11 +3,9 @@
 
 
 source("code/1.first_script.R")
-source("code/species_composition_TURNOVER.R")
-#source("code/4.species_composition_NMDSbray.R")
+
+turnover_db <- read.csv("data/turnover_db.csv")
 nmds_df_plot <- read.csv("data/nmds_df_plot.csv")
-#rm(list = setdiff(ls(), c("ab_rich_treatmeans", "biomass_treatmeans", "biomass_treatmeans012", "nmds_df_treatmeans",
-#                          "total_treatmeans_db", "appearance_treatmeans_db", "disappearance_treatmeans_db")))
 
 rm(list = setdiff(ls(), c("ab_rich_dynamics", "biomass_imp", "biomass_imp012",
                           "turnover_db", "nmds_df_plot")))
@@ -181,12 +179,13 @@ RR_wp  <- RR_wp %>%
     RR = if_else(variable == "Y_zipf", -1 * RR, RR),
     se_RR = if_else(variable == "Y_zipf", -1 * se_RR, se_RR))
 
-
+z = 1.96
 
 RR_c %>% 
   ggplot(aes(x = variable, y = RR, color = treatment)) + 
   geom_errorbar(
-    aes(ymin = RR - se_RR, ymax = RR + se_RR),
+    aes(ymin = RR - z * se_RR,
+        ymax = RR + z * se_RR),
     linewidth = 0.5,
     position = position_dodge(width = 0.2),
     width = 0.1
@@ -212,14 +211,16 @@ RR_c %>%
   labs(x = NULL, y = "RR of mean values at plot level", color = NULL) +
   theme(legend.position = "bottom")
 
- 
+
+
+
  
 RR_wp %>%
   filter(RR_descriptor == "wp_vs_p") %>% 
 ggplot(aes(x = variable, y = RR, color = RR_descriptor)) + 
   #facet_wrap(~ RR_descriptor, ncol = 1, nrow = 2, labeller = labeller(RR_descriptor = labels_RR_wp2)) +
-  geom_errorbar(aes(ymin = RR - se_RR,
-                    ymax = RR + se_RR,
+  geom_errorbar(aes(ymin = RR - z * se_RR,
+                    ymax = RR + z * se_RR,
                     color = RR_descriptor), 
                 linewidth = 0.5,
                 position = position_dodge(width = 0.2),

@@ -172,13 +172,14 @@ effect_size_wp_vs_treatment <- function(data, variable){
   
   RR_wp_vs_treatment <<- RR_wp_vs_treatment
   
+  z = 1.96
   
   gg_RR_wp <- 
     ggplot(RR_wp_vs_treatment, aes(x = date, y = RR)) + 
     facet_wrap(~ RR_descriptor, labeller = labeller(RR_descriptor = labels_RR_wp)) +
     #geom_ribbon(aes(ymin = RR - se_RR, ymax = RR + se_RR, fill = treatment), alpha = 0.2) +
-    geom_errorbar(aes(ymin = RR - se_RR,
-                      ymax = RR + se_RR,
+    geom_errorbar(aes(ymin = RR - z * se_RR,
+                      ymax = RR + z * se_RR,
                       color = RR_descriptor), alpha = 0.5) +
     geom_point(aes(color = RR_descriptor)) + 
     geom_line(aes(color = RR_descriptor)) +
@@ -195,8 +196,8 @@ effect_size_wp_vs_treatment <- function(data, variable){
     ggplot(RR_wp_vs_treatment, aes(x = date, y = delta_RR)) + 
     facet_wrap(~ RR_descriptor, labeller = labeller(RR_descriptor = labels_RR_wp)) +
     #geom_ribbon(aes(ymin = RR - se_RR, ymax = RR + se_RR, fill = treatment), alpha = 0.2) +
-    geom_errorbar(aes(ymin = delta_RR - se_delta_RR,
-                      ymax = delta_RR + se_delta_RR,
+    geom_errorbar(aes(ymin = delta_RR - z * se_delta_RR,
+                      ymax = delta_RR + z * se_delta_RR,
                       color = RR_descriptor), alpha = 0.5) +
     geom_point(aes(color = RR_descriptor)) + 
     geom_line(aes(color = RR_descriptor)) +
@@ -213,8 +214,8 @@ effect_size_wp_vs_treatment <- function(data, variable){
     ggplot(RR_wp_vs_treatment, aes(x = date, y = sigma_RR)) + 
     facet_wrap(~ RR_descriptor, labeller = labeller(RR_descriptor = labels_RR_wp)) +
     #geom_ribbon(aes(ymin = RR - se_RR, ymax = RR + se_RR, fill = treatment), alpha = 0.2) +
-    geom_errorbar(aes(ymin = delta_RR - se_sigma_RR,
-                      ymax = delta_RR + se_sigma_RR,
+    geom_errorbar(aes(ymin = delta_RR - z * se_sigma_RR,
+                      ymax = delta_RR + z * se_sigma_RR,
                       color = RR_descriptor), alpha = 0.5) +
     geom_point(aes(color = RR_descriptor)) + 
     geom_line(aes(color = RR_descriptor)) +

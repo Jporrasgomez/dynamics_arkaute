@@ -99,12 +99,14 @@ effect_size <- function(data, variable){
   
   RR_treatment <<- RR_treatment
   
+  z = 1.96
+  
   gg_RR <- 
     ggplot(RR_treatment, aes(x = date, y = RR)) + 
     facet_wrap(~ treatment, labeller = labeller(treatment = labels_RR)) +
     #geom_ribbon(aes(ymin = RR - se_RR, ymax = RR + se_RR, fill = treatment), alpha = 0.2) +
-    geom_errorbar(aes(ymin = RR - se_RR,
-                      ymax = RR + se_RR,
+    geom_errorbar(aes(ymin = RR - z * se_RR,
+                      ymax = RR + z * se_RR,
                       color = treatment), alpha = 0.5) +
     geom_point(aes(color = treatment)) + 
     geom_line(aes(color = treatment)) +
@@ -120,8 +122,8 @@ effect_size <- function(data, variable){
   gg_delta_RR <- 
     ggplot(RR_treatment, aes(x = date, y = delta_RR)) + 
     facet_wrap(~ treatment, labeller = labeller(treatment = labels_RR)) +
-    geom_errorbar(aes(ymin = delta_RR - se_delta_RR,
-                      ymax = delta_RR + se_delta_RR,
+    geom_errorbar(aes(ymin = delta_RR - z * se_delta_RR,
+                      ymax = delta_RR + z * se_delta_RR,
                       color = treatment), alpha = 0.5) +
     geom_point(aes(color = treatment)) + 
     geom_line(aes(color = treatment)) +
@@ -136,8 +138,8 @@ effect_size <- function(data, variable){
   gg_sigma_RR <- 
     ggplot(RR_treatment, aes(x = date, y = sigma_RR)) + 
     facet_wrap(~ treatment, labeller = labeller(treatment = labels_RR)) +
-    geom_errorbar(aes(ymin = sigma_RR - se_sigma_RR,
-                      ymax = sigma_RR + se_sigma_RR,
+    geom_errorbar(aes(ymin = sigma_RR - z * se_sigma_RR,
+                      ymax = sigma_RR + z * se_sigma_RR,
                       color = treatment), alpha = 0.5) +
     geom_point(aes(color = treatment)) + 
     geom_line(aes(color = treatment)) +

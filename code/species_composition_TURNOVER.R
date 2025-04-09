@@ -181,6 +181,8 @@ total_plot_db <- do.call(rbind, list_total) %>%
 turnover_db<- left_join(appearance_plot_db, disappearance_plot_db)
 turnover_db <- left_join(turnover_db, total_plot_db) 
 
+turnover_db %>%  write.csv("data/turnover_db.csv")
+
 #turnover_db <- turnover_db %>% 
 #  distinct(treatment, plot, sampling, date, .keep_all = TRUE) %>%
 #  group_by(sampling, treatment) %>% 
