@@ -1,7 +1,7 @@
 
 
 
-effect_size_treatment_c <- function(data, variable){
+RR_treatment_c <- function(data, variable){
 
   
 

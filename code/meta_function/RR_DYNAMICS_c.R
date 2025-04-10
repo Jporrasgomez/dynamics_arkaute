@@ -4,7 +4,7 @@
 
 
 
-effect_size <- function(data, variable){
+RR_dynamics_c <- function(data, variable){
   
   
   mean_variable <- paste0("mean_", variable)

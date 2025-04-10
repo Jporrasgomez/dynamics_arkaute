@@ -57,19 +57,19 @@ gg_dynamics_cv <<- gg_dynamics_cv
 
 
 # Log response ratio
-source("code/meta_function/effect_size_c.R")
+source("code/meta_function/RR_DYNAMICS_c.R")
 
-effect_size(data, variable1)
+RR_dynamics_c(data, variable1)
 gg_RR_variable <<- gg_RR
 gg_delta_RR_variable <<- gg_delta_RR
 gg_sigma_RR_variable <<- gg_sigma_RR
 RR_treatment <<- RR_treatment
 
 
-source("code/meta_function/effect_size_wp_vs_treatment.R")
+source("code/meta_function/RR_DYNAMICS_wp.R")
 
 
-effect_size_wp_vs_treatment(data, variable1)
+RR_dynamics_wp(data, variable1)
 gg_RR_wp <<- gg_RR_wp
 gg_delta_RR_wp <<- gg_delta_RR_wp
 gg_sigma_RR_wp <<- gg_sigma_RR_wp

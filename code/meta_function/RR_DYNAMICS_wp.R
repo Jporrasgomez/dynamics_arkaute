@@ -1,7 +1,7 @@
 
 
 
-effect_size_wp_vs_treatment <- function(data, variable){
+RR_dynamics_wp <- function(data, variable){
   
 
   

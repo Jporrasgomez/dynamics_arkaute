@@ -14,10 +14,8 @@ source("code/palettes_labels.R")
 palette <- palette5
 labels <- labels_RR
 
-
-
-source("code/meta_function/effect_size_treatment_c.R")
-source("code/meta_function/effect_size_treatment_wp.R")
+source("code/meta_function/RR_TREATMENT_c.R")
+source("code/meta_function/RR_TREATMENT_wp.R")
 
 
 {list_c <- list()
@@ -27,12 +25,12 @@ gglist_wp <- list()
 
 variables <- c("richness", "abundance", "Y_zipf")
 for (i in 1:3){
-  effect_size_treatment_c(ab_rich_dynamics, variables[i])
+  RR_treatment_c(ab_rich_dynamics, variables[i])
   list_c[[i]] <- RR_treatment %>%
     select(treatment, variable, starts_with("RR"), starts_with("se_RR"))
   gglist_c[[i]] <- gg_RR
   
-  effect_size_treatment_wp(ab_rich_dynamics, variables[i])
+  RR_treatment_wp(ab_rich_dynamics, variables[i])
   list_wp[[i]] <- RR_wp_vs_treatment %>%
     select(RR_descriptor, variable, starts_with("RR"), starts_with("se_RR"))
   gglist_wp[[i]] <- gg_RR_wp
@@ -53,7 +51,7 @@ RR_wp <- reduce(list_wp, bind_rows)}
 
 
 
-{effect_size_treatment_c(biomass_imp012, "biomass")
+{RR_treatment_c(biomass_imp012, "biomass")
   RR_biomass_c012 <- RR_treatment %>%
     select(treatment, variable, starts_with("RR"), starts_with("se_RR")) %>% 
     mutate(variable = fct_recode(variable,
@@ -61,7 +59,7 @@ RR_wp <- reduce(list_wp, bind_rows)}
   print(gg_RR)
 }
 
-{effect_size_treatment_wp(biomass_imp012, "biomass")
+{RR_treatment_wp(biomass_imp012, "biomass")
   RR_biomass_wp012 <- RR_wp_vs_treatment %>%
     select(RR_descriptor, variable, starts_with("RR"), starts_with("se_RR")) %>% 
     mutate(variable = fct_recode(variable,
@@ -70,13 +68,13 @@ RR_wp <- reduce(list_wp, bind_rows)}
 }
 
 
-{effect_size_treatment_c(biomass_imp, "biomass")
+{RR_treatment_c(biomass_imp, "biomass")
   RR_biomass_c <- RR_treatment %>%
     select(treatment, variable, starts_with("RR"), starts_with("se_RR"))
   print(gg_RR)
 }
 
-{effect_size_treatment_wp(biomass_imp, "biomass")
+{RR_treatment_wp(biomass_imp, "biomass")
   RR_biomass_wp <- RR_wp_vs_treatment %>%
     select(RR_descriptor, variable, starts_with("RR"), starts_with("se_RR"))
   print(gg_RR_wp)
@@ -101,12 +99,12 @@ gglist_NMDS_c <- list()
 gglist_NMDS_wp <- list()
 NMDS <- c("NMDS1", "NMDS2", "NMDS3")
 for (i in 1:3){
-  effect_size_treatment_c(nmds_df_plot, NMDS[i])
+  RR_treatment_c(nmds_df_plot, NMDS[i])
   list_NMDS_c[[i]] <- RR_treatment %>%
     select(treatment, variable, starts_with("RR"), starts_with("se_RR"))
   gglist_NMDS_c[[i]] <- gg_RR
   
-  effect_size_treatment_wp(nmds_df_plot, NMDS[i])
+  RR_treatment_wp(nmds_df_plot, NMDS[i])
   list_NMDS_wp[[i]] <- RR_wp_vs_treatment %>%
     select(RR_descriptor, variable, starts_with("RR"), starts_with("se_RR"))
   gglist_NMDS_wp[[i]] <- gg_RR_wp
@@ -135,12 +133,12 @@ RR_wp <- bind_rows(RR_wp, RR_NMDS_wp)
   gglist_turnover_wp <- list()
   turnover <- c("total_turnover", "appearance", "disappearance")
   for (i in 1:3){
-    effect_size_treatment_c(turnover_db, turnover[i])
+    RR_treatment_c(turnover_db, turnover[i])
     list_turnover_c[[i]] <- RR_treatment %>%
       select(treatment, variable, starts_with("RR"), starts_with("se_RR"))
     gglist_turnover_c[[i]] <- gg_RR
     
-    effect_size_treatment_wp(turnover_db, turnover[i])
+    RR_treatment_wp(turnover_db, turnover[i])
     list_turnover_wp[[i]] <- RR_wp_vs_treatment %>%
       select(RR_descriptor, variable, starts_with("RR"), starts_with("se_RR"))
     gglist_turnover_wp[[i]] <- gg_RR_wp
@@ -166,22 +164,17 @@ RR_wp <- bind_rows(RR_wp, RR_turnover_wp)
 
 
 
-## Multiplying by -1 gamma zipf in order to have positive values and being able to read the plots as
-## evenness
-RR_c  <- RR_c %>% 
-  mutate(
-    RR = if_else(variable == "Y_zipf", -1 * RR, RR),
-    se_RR = if_else(variable == "Y_zipf", -1 * se_RR, se_RR))
 
 
-RR_wp  <- RR_wp %>% 
-  mutate(
-    RR = if_else(variable == "Y_zipf", -1 * RR, RR),
-    se_RR = if_else(variable == "Y_zipf", -1 * se_RR, se_RR))
 
 z = 1.96
 
 RR_c %>% 
+  mutate(
+    RR = if_else(variable == "Y_zipf", -1 * RR, RR), 
+    se_RR = if_else(variable == "Y_zipf", -1 * se_RR, se_RR)) %>% 
+  ## Multiplying by -1 gamma zipf in order to have positive values and being able to read the plots as
+  ## evenness
   ggplot(aes(x = variable, y = RR, color = treatment)) + 
   geom_errorbar(
     aes(ymin = RR - z * se_RR,
@@ -213,9 +206,11 @@ RR_c %>%
 
 
 
-
  
 RR_wp %>%
+  mutate(
+    RR = if_else(variable == "Y_zipf", -1 * RR, RR),
+    se_RR = if_else(variable == "Y_zipf", -1 * se_RR, se_RR)) %>% 
   filter(RR_descriptor == "wp_vs_p") %>% 
 ggplot(aes(x = variable, y = RR, color = RR_descriptor)) + 
   #facet_wrap(~ RR_descriptor, ncol = 1, nrow = 2, labeller = labeller(RR_descriptor = labels_RR_wp2)) +

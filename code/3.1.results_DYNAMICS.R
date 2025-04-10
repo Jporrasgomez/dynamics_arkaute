@@ -24,8 +24,8 @@ labels <- labels3
 
 
 source("code/meta_function/meta_function.R")
-source("code/meta_function/effect_size_treatment_c.R")
-source("code/meta_function/effect_size_treatment_wp.R")
+source("code/meta_function/RR_TREATMENT_c.R")
+source("code/meta_function/RR_TREATMENT_wp.R")
 
 # Richness, abundance and evenness
 
@@ -33,8 +33,8 @@ variables <- c("richness", "abundance", "Y_zipf")
                  # 1         # 2         # 3         
 {i = 1
 meta_function(ab_rich_dynamics, variables[i], "treatment")
-effect_size_treatment_c(ab_rich_dynamics, variables[i])
-effect_size_treatment_wp(ab_rich_dynamics, variables[i])
+RR_treatment_c(ab_rich_dynamics, variables[i])
+RR_treatment_wp(ab_rich_dynamics, variables[i])
 }
 
 gg_stats_variable
