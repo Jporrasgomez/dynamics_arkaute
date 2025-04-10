@@ -4,7 +4,6 @@
 
 
 
-#We calculate the mean area of the individual by taking Ah and Ab both and transform it into m2 (cm2/10000)
 biomass <- flora_biomass_raw
 
 biomass <- merge(biomass, species_code)
@@ -56,8 +55,7 @@ ggNA_species <- biomass %>%
   # we create a new variable capturing cell content
   # as we are interested in defining 3 different situations, we use the case_when function
   ggplot(aes(y = code)) +
-  geom_bar(aes(fill = cell_content),
-           binwidth = .5, center = 0) +
+  geom_bar(aes(fill = cell_content)) +
   scale_fill_discrete(drop = F) +
   labs(x = "Number of rows")
 
@@ -68,10 +66,8 @@ ggNA_species <- biomass %>%
 
 
 
-na <- biomass
-summary(na)
-
-na$nind_m2_na <- ifelse(is.na(na$nind_m2), -1, na$nind_m2)
+na <- biomass %>% 
+  mutate(nind_m2_na  = ifelse(is.na(na$nind_m2), -1, na$nind_m2))
 
 plots <- sort(unique(biomass$plot))
 nalist <- list()
@@ -188,7 +184,20 @@ imput_stability_db <- imputed_db %>%
         plot.title = element_text(hjust = 0.5))
   
   
-  mice_results <- ggplot(imputed_db, aes( x = sampling, y = nind_m2_imputed, color = as.factor(label_imputation))) +
+imput_stability_boxplot <- 
+    ggplot(imput_stability_db, aes(y = CV)) +
+    geom_boxplot(fill = "steelblue") +
+    geom_hline(aes(yintercept = 1), color = "red3", linetype = "dashed", size = 1) +
+    labs(title = "Distribution of Coefficient of Variation for Imputed Values",
+         x = "(SD/mean) Ratio",
+         y = "Count") +
+    theme(panel.grid.major = element_blank(),
+          panel.grid.minor = element_blank(),
+          plot.title = element_text(hjust = 0.5))
+  
+  
+  mice_results <-
+    ggplot(imputed_db, aes( x = sampling, y = nind_m2_imputed, color = as.factor(label_imputation))) +
     facet_wrap(~code, ncol = 7, nrow = 6)+
     geom_point(alpha = 0.5) +
     scale_color_manual(values = c("0" = "cyan3", "1" = "red3")) +

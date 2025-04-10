@@ -14,7 +14,7 @@ plotlist <- list()
 
 counter = 0
 
-for (i in c(1:6)){
+for (i in c(1:100)){
   
   counter = counter + 1
   
