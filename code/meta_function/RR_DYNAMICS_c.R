@@ -2,28 +2,18 @@
 
 
 
-
-
 RR_dynamics_c <- function(data, variable){
   
-  
-  mean_variable <- paste0("mean_", variable)
-  sd_variable <- paste0("sd_", variable)
-  
-  mean_variable_c <- paste0("mean_", variable, "_c")
-  sd_variable_c<- paste0("sd_", variable, "_c")
-  
-  
-  
+
   effect <- data %>% 
-    select(date, sampling, treatment, all_of(mean_variable), all_of(sd_variable)) %>% 
+    select(date, sampling, treatment, mean, sd) %>% 
     distinct()
   
   effect_c <- effect %>% 
     filter(treatment == "c") %>% 
-    select(date, sampling, all_of(mean_variable), all_of(sd_variable)) %>% 
-    rename(!!mean_variable_c := !!sym(mean_variable),
-           !!sd_variable_c := !!sym(sd_variable))
+    select(date, sampling, mean, sd) %>% 
+    rename(mean_c = mean,
+           sd_c = sd)
   
   
   ytitle_dict <- list(
@@ -56,38 +46,38 @@ RR_dynamics_c <- function(data, variable){
     left_join(effect_c, by = c("date", "sampling")) %>% 
     mutate(
       # Cálculo del Log Response Ratio (RR)
-      RR = log(.data[[mean_variable]] / .data[[mean_variable_c]]),
+      RR = log(mean / mean_c),
       
       # Cálculo de la varianza de RR
-      var_RR = (.data[[sd_variable]]^2) / (n * .data[[mean_variable]]^2) + 
-        (.data[[sd_variable_c]]^2) / (n * .data[[mean_variable_c]]^2),
+      var_RR = (sd^2) / (n * mean^2) + 
+        (sd_c^2) / (n * mean_c^2),
       
       se_RR = sqrt(var_RR)  # Error estándar de RR
     ) %>% 
     mutate(
       # Cálculo de delta_RR (ajuste de sesgo)
       delta_RR = RR + 0.5 * (
-        (.data[[sd_variable]]^2) / (n * .data[[mean_variable]]^2) - 
-          (.data[[sd_variable_c]]^2) / (n * .data[[mean_variable_c]]^2)
+        (sd^2) / (n * mean^2) - 
+          (sd_c^2) / (n * mean_c^2)
       ),
       
       # Varianza de delta_RR
       var_delta_RR = var_RR + 0.5 * (
-        (.data[[sd_variable]]^4) / (n^2 * .data[[mean_variable]]^4) + 
-          (.data[[sd_variable_c]]^4) / (n^2 * .data[[mean_variable_c]]^4)
+        (sd^4) / (n^2 * mean^4) + 
+          (sd_c^4) / (n^2 * mean_c^4)
       ),
       se_delta_RR = sqrt(var_delta_RR),  # Error estándar de delta_RR
       
       # Cálculo de sigma_RR
       sigma_RR = 0.5 * log(
-        (.data[[mean_variable]]^2 + (.data[[sd_variable]]^2) / n) / 
-          (.data[[mean_variable_c]]^2 + (.data[[sd_variable_c]]^2) / n)
+        (mean^2 + (sd^2) / n) / 
+          (mean_c^2 + (sd_c^2) / n)
       ),
       
       # Varianza de sigma_RR
       var_sigma_RR = 2.0 * var_RR - 
-        log(1.0 + var_RR + ((.data[[sd_variable]]^2) * (.data[[sd_variable_c]]^2)) / 
-              (n^2 * .data[[mean_variable]]^2 * .data[[mean_variable_c]]^2)),
+        log(1.0 + var_RR + ((sd^2) * (sd_c^2)) / 
+              (n^2 * mean^2 * mean_c^2)),
       se_sigma_RR = sqrt(var_sigma_RR)  # Error estándar de sigma_RR
     ) %>% 
     mutate(
@@ -95,7 +85,14 @@ RR_dynamics_c <- function(data, variable){
     )
   
   RR_treatment <- RR_treatment %>% 
-    filter(! RR == "-Inf")
+    filter(! RR == "-Inf") %>% 
+    rename(RR_descriptor = treatment) %>% 
+    mutate(
+      RR_descriptor = fct_recode(RR_descriptor,
+                            "w_vs_c" = "w",
+                            "p_vs_c" = "p", 
+                            "wp_vs_c" = "wp"))
+    
   
   RR_treatment <<- RR_treatment
   
@@ -103,15 +100,14 @@ RR_dynamics_c <- function(data, variable){
   
   gg_RR <- 
     ggplot(RR_treatment, aes(x = date, y = RR)) + 
-    facet_wrap(~ treatment, labeller = labeller(treatment = labels_RR)) +
-    #geom_ribbon(aes(ymin = RR - se_RR, ymax = RR + se_RR, fill = treatment), alpha = 0.2) +
+    facet_wrap(~ RR_descriptor, labeller = labeller(RR_descriptor = labels_RR)) +
+    #geom_ribbon(aes(ymin = RR - se_RR, ymax = RR + se_RR, fill = RR_descriptor), alpha = 0.2) +
     geom_errorbar(aes(ymin = RR - z * se_RR,
                       ymax = RR + z * se_RR,
-                      color = treatment), alpha = 0.5) +
-    geom_point(aes(color = treatment)) + 
-    geom_line(aes(color = treatment)) +
-    scale_color_manual(values = palette) +
-    scale_fill_manual(values = palette) +
+                      color = RR_descriptor), alpha = 0.5) +
+    geom_point(aes(color = RR_descriptor)) + 
+    geom_line(aes(color = RR_descriptor)) +
+    scale_color_manual(values = palette_RR) +
     geom_hline( yintercept= 0, linetype = "dashed", color = "gray40") +
     geom_vline(xintercept = as.Date("2023-05-11"), linetype = "dashed", color = "gray40") +
     labs(x = NULL, y = paste0("RR ", ytitle)) +
@@ -121,13 +117,13 @@ RR_dynamics_c <- function(data, variable){
   
   gg_delta_RR <- 
     ggplot(RR_treatment, aes(x = date, y = delta_RR)) + 
-    facet_wrap(~ treatment, labeller = labeller(treatment = labels_RR)) +
+    facet_wrap(~ RR_descriptor, labeller = labeller(RR_descriptor = labels_RR)) +
     geom_errorbar(aes(ymin = delta_RR - z * se_delta_RR,
                       ymax = delta_RR + z * se_delta_RR,
-                      color = treatment), alpha = 0.5) +
-    geom_point(aes(color = treatment)) + 
-    geom_line(aes(color = treatment)) +
-    scale_color_manual(values = palette) +
+                      color = RR_descriptor), alpha = 0.5) +
+    geom_point(aes(color = RR_descriptor)) + 
+    geom_line(aes(color = RR_descriptor)) +
+    scale_color_manual(values = palette_RR) +
     geom_hline( yintercept= 0, linetype = "dashed", color = "gray40") +
     geom_vline(xintercept = as.Date("2023-05-11"), linetype = "dashed", color = "gray40") +
     labs(x = NULL, y = paste0("delta-RR ", ytitle)) +
@@ -137,13 +133,13 @@ RR_dynamics_c <- function(data, variable){
   
   gg_sigma_RR <- 
     ggplot(RR_treatment, aes(x = date, y = sigma_RR)) + 
-    facet_wrap(~ treatment, labeller = labeller(treatment = labels_RR)) +
+    facet_wrap(~ RR_descriptor, labeller = labeller(RR_descriptor = labels_RR)) +
     geom_errorbar(aes(ymin = sigma_RR - z * se_sigma_RR,
                       ymax = sigma_RR + z * se_sigma_RR,
-                      color = treatment), alpha = 0.5) +
-    geom_point(aes(color = treatment)) + 
-    geom_line(aes(color = treatment)) +
-    scale_color_manual(values = palette) +
+                      color = RR_descriptor), alpha = 0.5) +
+    geom_point(aes(color = RR_descriptor)) + 
+    geom_line(aes(color = RR_descriptor)) +
+    scale_color_manual(values = palette_RR) +
     geom_hline( yintercept= 0, linetype = "dashed", color = "gray40") +
     geom_vline(xintercept = as.Date("2023-05-11"), linetype = "dashed", color = "gray40") +
     labs(x = NULL, y = paste0("sigma-RR ", ytitle)) +

@@ -15,6 +15,17 @@ theme_set(theme_bw() +
 #favs:
 palette5 <- c("c" = "#00C4A7", "w" = "#E0352F", "p" = "#0077FF", "wp" = "#A238A2")
 
+
+
+labels_RR <- c("w_vs_c" = "Warming vs Control", "p_vs_c" = "Perturbation vs Control", "wp_vs_c" = "Global change vs Control")
+palette_RR <- c("w_vs_c" = "#E0352F", "p_vs_c" = "#0077FF", "wp_vs_c" = "#A238A2")
+
+
+palette_wp <- c("w" = "#D08A00", "p" = "#3A3A3A")
+palette_wp_vs_treatment <- c("wp_vs_w" = "#D08A00", "wp_vs_p" = "#3A3A3A")
+labels_RR_wp <- c("wp_vs_w" = "Global Change vs Warming", "wp_vs_p" = "Global Change vs Perturbation")
+
+
 palette3 <- c("c" = "#1F8A8C", "w" = "#D93232", "p" = "#F4A300", "wp" = "#3A3A3A")
 palette8 <- c("c" = "#00C4A7", "w" = "#A238A2", "p" = "#F4A300", "wp" = "#3A3A3A")
 
@@ -44,8 +55,8 @@ palette_recodyn3 <- c(
   "w" = "#DD4124"
 )
 
-palette_wp <- c("w" = "#D08A00", "p" = "#3A3A3A")
-palette_wp_vs_treatment <- c("wp_vs_w" = "#D08A00", "wp_vs_p" = "#3A3A3A")
+
+
 
 
 
@@ -64,12 +75,12 @@ labels1 <- c("c" = "Control", "w" = "Warming", "p" = "Perturbation", "wp" = "Com
 labels2 <- c("c" = "C", "w" = "W", "p" = "P", "wp" = "W+P")
 labels3 <- c("c" = "Control", "w" = "Warming", "p" = "Perturbation", "wp" = "Global change")
 
-labels_RR <- c("w" = "Warming vs Control", "p" = "Perturbation vs Control", "wp" = "Global change vs Control")
+
 
 labels_variable <- c("richness" = "Richness", "abundance" = "Abundance", "Y_zipf" = expression("RAD coefficient ("*gamma*")"),
                      "biomass" = "Biomass")
 
-labels_RR_wp <- c("wp_vs_w" = "Global Change vs Warming", "wp_vs_p" = "Global Change vs Perturbation")
+
 labels_RR_wp2 <- c("wp_vs_w" = "Perturbation effect", "wp_vs_p" = "Warming effect")
 
 

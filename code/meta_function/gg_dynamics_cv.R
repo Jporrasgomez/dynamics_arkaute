@@ -43,13 +43,13 @@ gg_dynamics_cv <- function(data, variable) {
   
   
   gg_dynamics_cv <- 
-  ggplot(data, aes(x = date, y = .data[[paste0("cv_", variable)]])) + 
+  ggplot(data, aes(x = date, y = cv)) + 
     
     facet_wrap(~ treatment ,  nrow = 1, ncol = 4, labeller = labeller(treatment = labels)) +
     
     geom_smooth(
       se = TRUE, aes(color = treatment, fill = treatment),
-      method = "loess", span = 0.6, alpha = 0.2 ) +
+      method = "lm", span = 0.6, alpha = 0.2 ) +
     
     geom_point(aes(color = treatment), alpha = 0.2) +
     

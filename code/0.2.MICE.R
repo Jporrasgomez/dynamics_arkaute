@@ -66,8 +66,11 @@ ggNA_species <- biomass %>%
 
 
 
-na <- biomass %>% 
-  mutate(nind_m2_na  = ifelse(is.na(na$nind_m2), -1, na$nind_m2))
+na <- biomass
+
+na <- na %>% 
+  mutate(nind_m2_na = ifelse(is.na(na$nind_m2), -1, na$nind_m2))
+
 
 plots <- sort(unique(biomass$plot))
 nalist <- list()

@@ -4,48 +4,36 @@
 RR_treatment_wp <- function(data, variable){
   
 
-  
-  
-  
-  mean_variable <- paste0("mean_", variable)
-  sd_variable <- paste0("sd_", variable)
-  
-  mean_variable_w <- paste0("mean_", variable, "_w")
-  sd_variable_w <- paste0("sd_", variable, "_w")
-  
-  mean_variable_p <- paste0("mean_", variable, "_p")
-  sd_variable_p <- paste0("sd_", variable, "_p")
-  
-  
 
-  
   
   data <- data %>% 
     distinct(treatment, plot, sampling, date, .data[[variable]], .keep_all = TRUE) %>% 
     group_by(treatment) %>% 
     mutate(
       n = n(),
-      !!mean_variable := mean(.data[[variable]], na.rm = TRUE),
-      !!sd_variable := sd(.data[[variable]], na.rm = TRUE)
+      mean := mean(.data[[variable]], na.rm = TRUE),
+      sd := sd(.data[[variable]], na.rm = TRUE)
     ) %>%
     ungroup() %>% 
     select(treatment, sampling, date, plot, n,
-           !!variable, !!mean_variable, !!sd_variable)
+           !!variable, mean, sd) %>% 
+    mutate( variable = variable)
+  
   
   
   effect_wp <- data %>% 
     filter(treatment == "wp") %>% 
     ungroup() %>% 
-    select(treatment, n,all_of(mean_variable), all_of(sd_variable)) %>% 
+    select(treatment, n, mean, sd) %>% 
     distinct()%>% 
     select(-treatment)
   
   effect_w <- data %>% 
     filter(treatment == "w") %>% 
     ungroup() %>% 
-    select(n, treatment, all_of(mean_variable), all_of(sd_variable)) %>% 
-    rename(!!mean_variable_w := !!sym(mean_variable),
-           !!sd_variable_w := !!sym(sd_variable), 
+    select(n, treatment, mean, sd) %>% 
+    rename(mean_w = mean,
+           sd_w = sd, 
            n_w = n) %>% 
     mutate(RR_descriptor = "wp_vs_w") %>% 
     distinct() %>% 
@@ -54,9 +42,9 @@ RR_treatment_wp <- function(data, variable){
   effect_p <- data %>% 
     filter(treatment == "p") %>% 
     ungroup() %>% 
-    select(n, treatment, all_of(mean_variable), all_of(sd_variable)) %>% 
-    rename(!!mean_variable_p := !!sym(mean_variable),
-           !!sd_variable_p := !!sym(sd_variable),
+    select(n, treatment, mean, sd) %>% 
+    rename(mean_p = mean,
+           sd_p = sd,
            n_p = n) %>% 
     mutate(RR_descriptor = "wp_vs_p") %>% 
     distinct()%>% 
@@ -91,11 +79,11 @@ RR_treatment_wp <- function(data, variable){
     cbind(effect_w) %>% 
     mutate(
       # Cálculo del Log Response Ratio (RR)
-      RR = log(.data[[mean_variable]] / .data[[mean_variable_w]]),
+      RR = log(mean / mean_w),
       
       # Cálculo de la varianza de RR
-      se_RR = sqrt((.data[[sd_variable]]^2) / (n * .data[[mean_variable]]^2) + 
-        (.data[[sd_variable_w]]^2) / (n_w * .data[[mean_variable_w]]^2))
+      se_RR = sqrt((sd^2) / (n * mean^2) + 
+        (sd_w^2) / (n_w * mean_w^2))
     ) %>% 
     mutate(
       variable = variable
@@ -108,11 +96,11 @@ RR_treatment_wp <- function(data, variable){
     cbind(effect_p) %>% 
     mutate(
       # Cálculo del Log Response Ratio (RR)
-      RR = log(.data[[mean_variable]] / .data[[mean_variable_p]]),
+      RR = log(mean / mean_p),
       
       # Cálculo de la varianza de RR
-      se_RR = sqrt((.data[[sd_variable]]^2) / (n * .data[[mean_variable]]^2) + 
-                     (.data[[sd_variable_p]]^2) / (n_p * .data[[mean_variable_p]]^2))
+      se_RR = sqrt((sd^2) / (n * mean^2) + 
+                     (sd_p^2) / (n_p * mean_p^2))
     ) %>% 
     mutate(
       variable = variable

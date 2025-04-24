@@ -70,7 +70,7 @@ for(i in 1:3){
   meta_function(ab_rich_dynamics, variables[i], "treatment")
   
   list[[i]] <- RR_treatment %>% 
-    select(date, treatment, sampling, variable, delta_RR, se_delta_RR)
+    select(date, RR_descriptor, sampling, variable, delta_RR, se_delta_RR)
   
   list_wp[[i]] <- RR_wp_vs_treatment %>% 
     select(date, RR_descriptor, sampling, variable, delta_RR, se_delta_RR)
@@ -87,7 +87,7 @@ RR_abricheven_wp <- do.call(rbind, list_wp)
 {meta_function(biomass_imp012, "biomass", "treatment")
 
 RR_biomass012 <- RR_treatment %>% 
-  select(date, treatment, sampling, variable, delta_RR, se_delta_RR) %>% 
+  select(date, RR_descriptor, sampling, variable, delta_RR, se_delta_RR) %>% 
   mutate(
     variable = fct_recode(variable,
                           "biomass012" = "biomass"))
@@ -102,7 +102,7 @@ RR_biomass012_wp <- RR_wp_vs_treatment %>%
 {meta_function(biomass_imp, "biomass", "treatment")
   
   RR_biomass <- RR_treatment %>% 
-    select(date, treatment, sampling, variable, delta_RR, se_delta_RR)
+    select(date, RR_descriptor, sampling, variable, delta_RR, se_delta_RR)
   
   RR_biomass_wp <- RR_wp_vs_treatment %>% 
     select(date, RR_descriptor, sampling, variable, delta_RR, se_delta_RR)}
@@ -120,12 +120,13 @@ for(i in 1:3){
   meta_function(turnover_db, turnover[i], "treatment")
   
   list_turnover[[i]] <- RR_treatment %>% 
-    select(date, treatment, sampling, variable, delta_RR, se_delta_RR)
+    select(date, RR_descriptor, sampling, variable, delta_RR, se_delta_RR)
   
   list_turnover_wp[[i]] <- RR_wp_vs_treatment %>% 
     select(date, RR_descriptor, sampling, variable, delta_RR, se_delta_RR)
   
 }
+
 
 RR_turnover <- do.call(rbind, list_turnover)
 RR_turnover_wp <- do.call(rbind, list_turnover_wp)
@@ -134,7 +135,7 @@ RR_turnover_wp <- do.call(rbind, list_turnover_wp)
 
 {meta_function(nmds_df_plot, "NMDS1", "treatment")
 RR_nmds <- RR_treatment %>% 
-  select(date, treatment, sampling, variable, delta_RR, se_delta_RR)
+  select(date, RR_descriptor, sampling, variable, delta_RR, se_delta_RR)
 
 RR_nmds_wp <- RR_wp_vs_treatment %>% 
   select(date, RR_descriptor, sampling, variable, delta_RR, se_delta_RR)}
@@ -208,17 +209,17 @@ RR_whole_wp <- rbind(RR_abricheven_wp, RR_biomass_wp) %>%
 z = 1.96
 
 ggplot(RR_whole, aes(x = date, y = delta_RR)) + 
-  facet_grid(variable ~ treatment, scales = "free_y",
+  facet_grid(variable ~ RR_descriptor, scales = "free_y",
              labeller = labeller(
-               treatment = as_labeller(labels_RR), 
+               RR_descriptor = as_labeller(labels_RR), 
                variable = function(x) ifelse(x == "Y_zipf", "RAD coefficient (γ-Zipf)", str_to_title(x))
              )) +  
   geom_errorbar(aes(ymin = delta_RR - z * se_delta_RR,
                     ymax = delta_RR + z * se_delta_RR,
-                    color = treatment), alpha = 0.5) +
-  geom_point(aes(color = treatment), size = 1.2) + 
-  geom_line(aes(color = treatment)) +
-  scale_color_manual(values = palette) +
+                    color = RR_descriptor), alpha = 0.5) +
+  geom_point(aes(color = RR_descriptor), size = 1.2) + 
+  geom_line(aes(color = RR_descriptor)) +
+  scale_color_manual(values = palette_RR) +
   geom_hline(yintercept= 0, linetype = "dashed", color = "gray40") +
   geom_vline(xintercept = as.Date("2023-05-11"), linetype = "dashed", color = "gray40") +
   theme(legend.position = "none")

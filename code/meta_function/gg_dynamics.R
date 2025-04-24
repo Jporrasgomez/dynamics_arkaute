@@ -45,27 +45,27 @@ gg_dynamics <- function(data, variable) {
     gg_all1n <- 
       
       ggplot(data, aes(x = date),
-                            y = data[[paste0("mean_", variable)]]) +
+                            y = mean) +
       
         geom_smooth(
-          se = TRUE, aes(x = date, y = .data[[paste0("mean_", variable)]],
+          se = TRUE, aes(x = date, y = mean,
                          color = treatment, fill = treatment),
           method = "loess", span = 0.6, alpha = 0.2 
         ) +
       
 
-      geom_errorbar(aes(ymin = .data[[paste0("mean_", variable)]] - .data[[paste0("sd_", variable)]],
-                        ymax = .data[[paste0("mean_", variable)]] + .data[[paste0("sd_", variable)]],
+      geom_errorbar(aes(ymin = mean - sd,
+                        ymax = mean + sd,
                         color = treatment), 
                     alpha = 0.2, position = position_dodge(width = 8)) +
       
       geom_point(data = data, aes(x = date,
-                                       y = .data[[variable]],
+                                       y = value,
                                        color = treatment),
                  alpha = 0.2, position = position_dodge(width = 8))+
       
       
-      geom_point(aes(x = date, y = .data[[paste0("mean_", variable)]],
+      geom_point(aes(x = date, y = mean,
                      color = treatment), fill = "white", position = position_dodge(width = 0.5), size = 2.1, shape = 21) +
         
       
@@ -92,24 +92,24 @@ gg_dynamics <- function(data, variable) {
     gg_facet <- 
       
     ggplot(data, aes(x = date),
-           y = data[[paste0("mean_", variable)]]) +
+           y = mean) +
       
       facet_wrap(~ treatment ,  nrow = 1, ncol = 4, labeller = labeller(treatment = labels)) +
       
-      geom_errorbar(aes(ymin = .data[[paste0("mean_", variable)]] - .data[[paste0("sd_", variable)]],
-                        ymax = .data[[paste0("mean_", variable)]] + .data[[paste0("sd_", variable)]],
+      geom_errorbar(aes(ymin = mean - sd,
+                        ymax = mean + sd,
                         color = treatment), 
                     alpha = 0.2, position = position_dodge(width = 8)) +
       
       geom_point(data = data, aes(x = date,
-                                  y = .data[[variable]],
+                                  y = value,
                                   color = treatment),
                  alpha = 0.2, position = position_dodge(width = 8))+
       
-      geom_line(group = "treatment", aes(x = date, y = .data[[paste0("mean_", variable)]], color = treatment)) +
+      geom_line(group = "treatment", aes(x = date, y = mean, color = treatment)) +
       
       
-      geom_point(aes(x = date, y = .data[[paste0("mean_", variable)]],
+      geom_point(aes(x = date, y = mean,
                      color = treatment), fill = "white", position = position_dodge(width = 0.5), size = 2.1, shape = 21) +
       
       scale_colour_manual(values = palette)+

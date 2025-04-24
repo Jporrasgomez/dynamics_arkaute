@@ -4,38 +4,26 @@
 RR_dynamics_wp <- function(data, variable){
   
 
-  
-  mean_variable <- paste0("mean_", variable)
-  sd_variable <- paste0("sd_", variable)
-  
-  mean_variable_w <- paste0("mean_", variable, "_w")
-  sd_variable_w <- paste0("sd_", variable, "_w")
-  
-  mean_variable_p <- paste0("mean_", variable, "_p")
-  sd_variable_p <- paste0("sd_", variable, "_p")
-  
-  
   effect_wp <- data %>% 
     filter(treatment == "wp") %>% 
-    select(date, sampling, treatment, all_of(mean_variable), all_of(sd_variable)) %>% 
+    select(date, sampling, treatment,mean,sd) %>% 
     distinct()
   
   effect_w <- data %>% 
     filter(treatment == "w") %>% 
-    select(date, sampling, all_of(mean_variable), all_of(sd_variable)) %>% 
-    rename(!!mean_variable_w := !!sym(mean_variable),
-           !!sd_variable_w := !!sym(sd_variable)) %>% 
+    select(date, sampling,mean,sd) %>% 
+    rename(mean_w = mean,
+           sd_w = sd) %>% 
     mutate(RR_descriptor = "wp_vs_w") %>% 
     distinct()
   
   effect_p <- data %>% 
     filter(treatment == "p") %>% 
-    select(date, sampling, all_of(mean_variable), all_of(sd_variable)) %>% 
-    rename(!!mean_variable_p := !!sym(mean_variable),
-           !!sd_variable_p := !!sym(sd_variable)) %>% 
+    select(date, sampling,mean,sd) %>% 
+    rename(mean_p = mean,
+           sd_p = sd) %>% 
     mutate(RR_descriptor = "wp_vs_p") %>% 
     distinct()
-  
   
   
   ytitle_dict <- list(
@@ -70,11 +58,11 @@ RR_dynamics_wp <- function(data, variable){
   
     mutate(
       # Cálculo del Log Response Ratio (RR)
-      RR = log(.data[[mean_variable]] / .data[[mean_variable_w]]),
+      RR = log(mean / mean_w),
       
       # Cálculo de la varianza de RR_wp_vs_w
-      var_RR = (.data[[sd_variable]]^2) / (n * .data[[mean_variable]]^2) + 
-        (.data[[sd_variable_w]]^2) / (n * .data[[mean_variable_w]]^2),
+      var_RR = (sd^2) / (n * mean^2) + 
+        (sd_w^2) / (n * mean_w^2),
       
       se_RR = sqrt(var_RR)  # Error estándar de RR_wp_vs_w
       
@@ -82,27 +70,27 @@ RR_dynamics_wp <- function(data, variable){
     mutate(
       # Cálculo de delta_RR_wp_vs_w (ajuste de sesgo)
       delta_RR= RR + 0.5 * (
-        (.data[[sd_variable]]^2) / (n * .data[[mean_variable]]^2) - 
-          (.data[[sd_variable_w]]^2) / (n * .data[[mean_variable_w]]^2)
+        (sd^2) / (n * mean^2) - 
+          (sd_w^2) / (n * mean_w^2)
       ),
       
       # Varianza de delta_RR_wp_vs_w
       var_delta_RR = var_RR + 0.5 * (
-        (.data[[sd_variable]]^4) / (n^2 * .data[[mean_variable]]^4) + 
-          (.data[[sd_variable_w]]^4) / (n^2 * .data[[mean_variable_w]]^4)
+        (sd^4) / (n^2 * mean^4) + 
+          (sd_w^4) / (n^2 * mean_w^4)
       ),
       se_delta_RR = sqrt(var_delta_RR),  # Error estándar de delta_RR_wp_vs_w
       
       # Cálculo de sigma_RR_wp_vs_w
       sigma_RR = 0.5 * log(
-        (.data[[mean_variable]]^2 + (.data[[sd_variable]]^2) / n) / 
-          (.data[[mean_variable_w]]^2 + (.data[[sd_variable_w]]^2) / n)
+        (mean^2 + (sd^2) / n) / 
+          (mean_w^2 + (sd_w^2) / n)
       ),
       
       # Varianza de sigma_RR_wp_vs_w
       var_sigma_RR = 2.0 * var_RR - 
-        log(1.0 + var_RR + ((.data[[sd_variable]]^2) * (.data[[sd_variable_w]]^2)) / 
-              (n^2 * .data[[mean_variable]]^2 * .data[[mean_variable_w]]^2)),
+        log(1.0 + var_RR + ((sd^2) * (sd_w^2)) / 
+              (n^2 * mean^2 * mean_w^2)),
       se_sigma_RR = sqrt(var_sigma_RR)  # Error estándar de sigma_RR_wp_vs_w
     ) %>% 
     select(date, sampling, RR_descriptor, RR, se_RR, delta_RR, se_delta_RR, 
@@ -120,11 +108,11 @@ RR_dynamics_wp <- function(data, variable){
     
     mutate(
       # Cálculo del Log Response Ratio (RR)
-      RR = log(.data[[mean_variable]] / .data[[mean_variable_p]]),
+      RR = log(mean / mean_p),
       
       # Cálculo de la varianza de RR_wp_vs_w
-      var_RR = (.data[[sd_variable]]^2) / (n * .data[[mean_variable]]^2) + 
-        (.data[[sd_variable_p]]^2) / (n * .data[[mean_variable_p]]^2),
+      var_RR = (sd^2) / (n * mean^2) + 
+        (sd_p^2) / (n * mean_p^2),
       
       se_RR = sqrt(var_RR)  # Error estándar de RR_wp_vs_w
       
@@ -132,27 +120,27 @@ RR_dynamics_wp <- function(data, variable){
     mutate(
       # Cálculo de delta_RR_wp_vs_w (ajuste de sesgo)
       delta_RR= RR + 0.5 * (
-        (.data[[sd_variable]]^2) / (n * .data[[mean_variable]]^2) - 
-          (.data[[sd_variable_p]]^2) / (n * .data[[mean_variable_p]]^2)
+        (sd^2) / (n * mean^2) - 
+          (sd_p^2) / (n * mean_p^2)
       ),
       
       # Varianza de delta_RR_wp_vs_w
       var_delta_RR = var_RR + 0.5 * (
-        (.data[[sd_variable]]^4) / (n^2 * .data[[mean_variable]]^4) + 
-          (.data[[sd_variable_p]]^4) / (n^2 * .data[[mean_variable_p]]^4)
+        (sd^4) / (n^2 * mean^4) + 
+          (sd_p^4) / (n^2 * mean_p^4)
       ),
       se_delta_RR = sqrt(var_delta_RR),  # Error estándar de delta_RR_wp_vs_w
       
       # Cálculo de sigma_RR_wp_vs_w
       sigma_RR = 0.5 * log(
-        (.data[[mean_variable]]^2 + (.data[[sd_variable]]^2) / n) / 
-          (.data[[mean_variable_p]]^2 + (.data[[sd_variable_p]]^2) / n)
+        (mean^2 + (sd^2) / n) / 
+          (mean_p^2 + (sd_p^2) / n)
       ),
       
       # Varianza de sigma_RR_wp_vs_w
       var_sigma_RR = 2.0 * var_RR - 
-        log(1.0 + var_RR + ((.data[[sd_variable]]^2) * (.data[[sd_variable_p]]^2)) / 
-              (n^2 * .data[[mean_variable]]^2 * .data[[mean_variable_p]]^2)),
+        log(1.0 + var_RR + ((sd^2) * (sd_p^2)) / 
+              (n^2 * mean^2 * mean_p^2)),
       se_sigma_RR = sqrt(var_sigma_RR)  # Error estándar de sigma_RR_wp_vs_w
     ) %>% 
     select(date, sampling, RR_descriptor, RR, se_RR, delta_RR, se_delta_RR, 

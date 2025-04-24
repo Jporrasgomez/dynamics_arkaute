@@ -119,9 +119,7 @@ ggarrange(
 
 
 list_sorensen <- list()
-list_jaccard <- list()
 list_sorensen_df <- list()
-list_jaccard_df <- list()
 samps <- sort(unique(flora_abrich$sampling))
 
 for(i in 1:length(samps)){
@@ -155,22 +153,6 @@ for(i in 1:length(samps)){
   list_sorensen_df[[i]] <- sorensen_df
   
   
-  jaccard <- vegdist(abundance_data, method = "jaccard", binary = TRUE)
-  jaccard <- as.matrix(jaccard)  
-  rownames(jaccard) <- sp_wide$id
-  colnames(jaccard) <- sp_wide$id
-  jaccard[upper.tri(jaccard)] <- NA
-  
-  jaccard_df <- jaccard %>% 
-    as.data.frame() %>%
-    rownames_to_column(var = "row_name") %>%
-    pivot_longer(-row_name, names_to = "col_name", values_to = "value") %>% 
-    filter(!is.na(value))
-  
-  list_jaccard[[i]] <- jaccard
-  list_jaccard_df[[i]] <- jaccard_df
-
-  
 }
 
 
@@ -195,52 +177,28 @@ sorensen_df <- bind_rows(list_sorensen_df) %>%
 sorensen_df %>% 
   filter(comparison %in% c("c-p", "c-w", "c-wp")) %>% 
 ggplot(aes(x = sampling, y = value, color = comparison, group = comparison)) + 
+  facet_wrap(~ comparison) + 
   geom_point() + 
   geom_line() +
+  geom_smooth(
+    se = TRUE, aes(color = comparison, fill = comparison),
+    method = "lm", span = 0.6, alpha = 0.2 ) + 
   scale_color_manual(values = c("c-p" = "#0077FF", "c-w" = "#E0352F", "c-wp" = "#A238A2")) +
+  scale_fill_manual(values = c("c-p" = "#0077FF", "c-w" = "#E0352F", "c-wp" = "#A238A2")) +
   labs( y = "Beta-diversity Sorensen")
 
 sorensen_df %>% 
   filter(comparison %in% c("p-wp", "w-wp")) %>% 
   ggplot(aes(x = sampling, y = value, color = comparison, group = comparison)) + 
+  facet_wrap(~ comparison) + 
   geom_point() + 
   geom_line() +
+  geom_smooth(
+    se = TRUE, aes(color = comparison, fill = comparison),
+    method = "lm", span = 0.6, alpha = 0.2 ) + 
   scale_color_manual(values = c("w-wp" = "#D08A00", "p-wp" = "#3A3A3A")) +
+  scale_fill_manual(values = c("w-wp" = "#D08A00", "p-wp" = "#3A3A3A")) +
   labs( y = "Beta-diversity Sorensen")
-
-
-
-jaccard_df <- bind_rows(list_jaccard_df) %>% 
-  filter(!value == "0") %>%
-  separate(col_name, into = c("treatment_x", "sampling_x"), sep = "/") %>%
-  separate(row_name, into = c("treatment_y", "sampling_y"), sep = "/") %>% 
-  select(-sampling_x) %>% 
-  rename(sampling = sampling_y) %>% 
-  mutate(sampling = factor(as.numeric(sampling), levels = sort(unique(as.numeric(sampling))))) %>% 
-  arrange(sampling) %>% 
-  mutate(comparison = paste0(treatment_x, "-", treatment_y )) %>% 
-  select(-treatment_x, -treatment_y) %>% 
-  mutate(comparison = ifelse(comparison == "p-c", "c-p", comparison),
-         comparison = ifelse(comparison == "w-c", "c-w", comparison),
-         comparison = ifelse(comparison == "wp-c", "c-wp", comparison))
-
-
-jaccard_df %>% 
-  filter(comparison %in% c("c-p", "c-w", "c-wp")) %>% 
-  ggplot(aes(x = sampling, y = value, color = comparison, group = comparison)) + 
-  geom_point() + 
-  geom_line() +
-  scale_color_manual(values = c("c-p" = "#0077FF", "c-w" = "#E0352F", "c-wp" = "#A238A2")) +
-  labs( y = "Beta diviersity - Jaccard")
-
-jaccard_df %>% 
-  filter(comparison %in% c("p-wp", "w-wp")) %>% 
-  ggplot(aes(x = sampling, y = value, color = comparison, group = comparison)) + 
-  geom_point() + 
-  geom_line() +
-  scale_color_manual(values = c("w-wp" = "#D08A00", "p-wp" = "#3A3A3A")) +
-  labs( y = "Beta-diversity Jaccard")
-
 
 
 
@@ -406,8 +364,22 @@ nmds_df_plot<- nmds_df_plot %>%
          NMDS2 = NMDS2 + abs(min(nmds_df_plot$NMDS2)) + 1,
          NMDS3 = NMDS3 + abs(min(nmds_df_plot$NMDS3)) + 1)
 
-nmds_df_plot %>%  write.csv("data/nmds_df_plot.csv")
+nmds_df_plot %>%  write.csv("data/nmds_df_plot.csv", row.names = F)
 
+source("code/meta_function/meta_function.R")
+
+meta_function(nmds_df_plot, "NMDS1", "treatment")
+gg_all1n
+gg_delta_RR
+
+source("code/meta_function/RR_TREATMENT_c.R")
+RR_treatment_c(nmds_df_plot, "NMDS1")
+gg_RR
+
+
+source("code/meta_function/RR_TREATMENT_wp.R")
+RR_treatment_wp(nmds_df_plot, "NMDS1")
+gg_RR_wp
 
 
 cor1 <- cor(distance_matrix_bc_plot, dist(nmds_bc_plot$points[,1]), method = "pearson")
@@ -474,81 +446,6 @@ ggNMDS23_allplots<-
 
 hist(nmds_df_plot$NMDS1, breaks = 50)
 
-ggNMDS1_dynamics_plot <- 
-ggplot(nmds_df_plot,
-       aes(x = date, y =  NMDS1)) +
-  geom_smooth(
-    se = TRUE, aes(color = treatment, fill = treatment),
-    method = "loess", span = 0.6, alpha = 0.2 
-  ) +
-  geom_point(aes(color = treatment),
-             alpha = 0.5, position = position_dodge(width = 8)) +
-  geom_errorbar(aes(ymax = mean_NMDS1 + sd_NMDS1, ymin = mean_NMDS1 - sd_NMDS1, color = treatment),
-                , alpha = 0.2, position = position_dodge(width = 8)) + 
-  geom_point(aes(x = date, y = mean_NMDS1, color = treatment), fill = "white", 
-             shape = 21, size = 2, position = position_dodge(width = 8))+
-  scale_colour_manual(values = palette) +
-  scale_fill_manual(values = palette) +
-  scale_x_date(
-    date_breaks = "4 weeks", # Specify the interval (e.g., every 2 weeks)
-    date_labels = "%d-%b-%y" # Customize the date format (e.g., "04-May-23")
-  ) +
-  geom_vline(xintercept = as.Date("2023-05-11"), linetype = "dashed", color = "gray40") +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1), legend.position = "none",
-  ) +
-  labs(y = "NMDS1", x = NULL) #
-
-
-
-
-
-
-ggboxplot(nmds_df_plot, x = "treatment", y = "NMDS1", fill = "treatment") +
-  stat_compare_means(comparisons = list(c("c", "w"), c("c", "p"), c("c", "wp"), c("w", "wp"), c("p", "wp")),
-                     method = "t.test",
-                     label = "p.signif") +  # Show significance stars (*, **, ***)
-  scale_fill_manual(values = palette) +
-  scale_x_discrete(labels = labels) +
-  labs( x = NULL, y = "NMDS1", fill = "Treatment") +
-  theme(legend.position = "none")
-
-
-ggNMDS1_boxplot_plot <- 
-ggplot(nmds_df_plot, aes(y = NMDS1, x = treatment)) +
-  geom_boxplot(aes(fill = treatment), color = "black", alpha = 0.5) + # Set the outline color to black
-  scale_fill_manual(values = palette) +
-  theme(legend.position = "none",
-        axis.text.x = element_blank(), axis.text.y = element_blank(),
-        panel.background = element_rect(fill = NA, colour = NA), # Transparent background
-        plot.background = element_rect(fill = NA, colour = NA))
-
-
-hist(nmds_df_plot$NMDS2, breaks = 50)
-
-ggNMDS2_dynamics_plot <- 
-  ggplot(nmds_df_plot,
-         aes(x = date, y =  NMDS2)) +
-  geom_smooth(
-    se = TRUE, aes(color = treatment, fill = treatment),
-    method = "loess", span = 0.6, alpha = 0.2 
-  ) +
-  geom_point(aes(color = treatment),
-             alpha = 0.5, position = position_dodge(width = 8)) +
-  geom_errorbar(aes(ymax = mean_NMDS2 + sd_NMDS2, ymin = mean_NMDS2 - sd_NMDS2, color = treatment),
-                , alpha = 0.2, position = position_dodge(width = 8)) + 
-  geom_point(aes(x = date, y = mean_NMDS2, color = treatment), fill = "white", 
-             shape = 21, size = 2, position = position_dodge(width = 8))+
-  scale_colour_manual(values = palette) +
-  scale_fill_manual(values = palette) +
-  scale_x_date(
-    date_breaks = "4 weeks", # Specify the interval (e.g., every 2 weeks)
-    date_labels = "%d-%b-%y" # Customize the date format (e.g., "04-May-23")
-  ) +
-  geom_vline(xintercept = as.Date("2023-05-11"), linetype = "dashed", color = "gray40") +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1), legend.position = "none",
-  ) +
-  labs(y = "NMDS2", x = NULL) #
-
 
 ggNMDS2_boxplot_plot <- 
   ggplot(nmds_df_plot, aes(y = NMDS2, x = treatment)) +
@@ -562,49 +459,7 @@ ggNMDS2_boxplot_plot <-
 
 
 
-hist(nmds_df_plot$NMDS3, breaks = 50)
-
-ggNMDS3_dynamics_plot <- 
-  ggplot(nmds_df_plot,
-         aes(x = date, y =  NMDS3)) +
-  geom_smooth(
-    se = TRUE, aes(color = treatment, fill = treatment),
-    method = "loess", span = 0.6, alpha = 0.2 
-  ) +
-  geom_point(aes(color = treatment),
-             alpha = 0.5, position = position_dodge(width = 8)) +
-  geom_errorbar(aes(ymax = mean_NMDS3 + sd_NMDS3, ymin = mean_NMDS3 - sd_NMDS3, color = treatment),
-                , alpha = 0.2, position = position_dodge(width = 8)) + 
-  geom_point(aes(x = date, y = mean_NMDS3, color = treatment), fill = "white", 
-             shape = 21, size = 2, position = position_dodge(width = 8))+
-  scale_colour_manual(values = palette) +
-  scale_fill_manual(values = palette) +
-  scale_x_date(
-    date_breaks = "4 weeks", # Specify the interval (e.g., every 2 weeks)
-    date_labels = "%d-%b-%y" # Customize the date format (e.g., "04-May-23")
-  ) +
-  geom_vline(xintercept = as.Date("2023-05-11"), linetype = "dashed", color = "gray40") +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1), legend.position = "none",
-  ) +
-  labs(y = "NMDS3", x = NULL) #
-
-
-ggNMDS3_boxplot_plot <- 
-  ggplot(nmds_df_plot, aes(y = NMDS3, x = treatment)) +
-  geom_boxplot(aes(fill = treatment), color = "black", alpha = 0.5) + # Set the outline color to black
-  scale_fill_manual(values = palette) +
-  theme(legend.position = "none",
-        axis.text.x = element_blank(), axis.text.y = element_blank(),
-        panel.background = element_rect(fill = NA, colour = NA), # Transparent background
-        plot.background = element_rect(fill = NA, colour = NA))
-
-
-
-
-
-
-
-###### DIFFERENCES AT TREATMENT x SAMPLING x PLOT level but with distance-matrix at sampling level 
+###### DIFFERENCES AT TREATMENT x SAMPLING x PLOT level but with different distance-matrix at sampling level 
 
 
 # Initialize a list to store NMDS results
@@ -630,7 +485,7 @@ for (i in seq_along(samps)) {
     distance_matrix_bc <- vegan::vegdist(abundance_data_subset, method = "bray")
     
     # Run NMDS
-    nmds_result <- metaMDS(distance_matrix_bc, k = 3, trymax = 250, maxit = 999)
+    nmds_result <- metaMDS(distance_matrix_bc, k = 2, trymax = 250, maxit = 999)
     
     # Store NMDS scores and stress values
     nmds_df_temp <- data.frame(
@@ -662,7 +517,7 @@ nmds_df_1x1sampling <- left_join(nmds_df_1x1sampling, stress_values, by = "sampl
 gg_samplings <- 
 ggplot(nmds_df_1x1sampling, aes(x = NMDS1, y = NMDS2, color = treatment, fill = treatment)) +
   #facet_wrap(~ paste0(sampling, " (Stress = ", stress, ")"), ncol = 5, nrow = 5) +
-  facet_wrap(~ sampling, ncol = 5, nrow = 5) + 
+  facet_wrap(~ sampling, ncol = 5, nrow = 5, scales = "free") + 
   geom_point(size = 1.5) +
   stat_ellipse(geom = "polygon", aes(fill = treatment),
                alpha = 0.2, show.legend = FALSE, level = 0.68) +
@@ -684,9 +539,31 @@ ggplot(nmds_df_1x1sampling, aes(x = NMDS1, y = NMDS2, color = treatment, fill = 
   labs(color = "Treatment")
 
 
+nmds_df_plot_matrixxsampling <- nmds_df_1x1sampling
+
+min(nmds_df_plot_matrixxsampling$NMDS1)
+min(nmds_df_plot_matrixxsampling$NMDS2)
+
+nmds_df_plot_matrixxsampling <- nmds_df_plot_matrixxsampling %>%
+  mutate(NMDS1 = NMDS1 + abs(min(nmds_df_plot_matrixxsampling$NMDS1)) + 1,
+         NMDS2 = NMDS2 + abs(min(nmds_df_plot_matrixxsampling$NMDS2)) + 1)
+
+nmds_df_plot_matrixxsampling %>%
+  write.csv("data/nmds_df_plot_matrixxsampling.csv", row.names = F)
+
+source("code/meta_function/meta_function.R")
+
+meta_function(nmds_df_plot_matrixxsampling, "NMDS1", "treatment")
+
+gg_all1n
+gg_delta_RR
+
+source("code/meta_function/RR_TREATMENT_c.R")
+RR_treatment_c(nmds_df_plot_matrixxsampling, "NMDS1")
+gg_RR
 
 
-
-
-
+source("code/meta_function/RR_TREATMENT_wp.R")
+RR_treatment_wp(nmds_df_plot_matrixxsampling, "NMDS1")
+gg_RR_wp
 
