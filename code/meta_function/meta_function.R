@@ -6,38 +6,39 @@
 meta_function <- function(data, variable1, variable2){
   
 
-  mean_variable1 <- paste0("mean_", variable1)
-  sd_variable1 <- paste0("sd_", variable1)
-  cv_variable1 <- paste0("cv_", variable1)
+ 
   
   data <- data %>% 
     distinct(treatment, plot, sampling, date, .data[[variable1]], .keep_all = TRUE) %>% 
     group_by(treatment, sampling, date) %>% 
     mutate(
       n = n(),
-      !!mean_variable1 := mean(.data[[variable1]], na.rm = TRUE),
-      !!sd_variable1 := sd(.data[[variable1]], na.rm = TRUE)
+      mean = mean(.data[[variable1]], na.rm = TRUE),
+      sd = sd(.data[[variable1]], na.rm = TRUE)
     ) %>%
     mutate(
-      !!cv_variable1 := .data[[sd_variable1]] / .data[[mean_variable1]]
+      cv = sd/mean
     ) %>% 
     ungroup() %>% 
     select(treatment, sampling, date, plot, n,
-           !!variable1, !!mean_variable1, !!sd_variable1, !!cv_variable1)
+           !!variable1, n,  mean, sd, cv) %>% 
+    mutate(variable = variable1) %>% 
+    rename(value = !!sym(variable1))
+  
+  data_meta <<- data
     
-   
   
-  
+
 source("code/meta_function/stats_function.R")
   
-stats(data, variable1, variable2)
+stats(data, "value", variable2)
 
 gg_stats_variable <<- gg_stats
 gg_dunn_variable <<- gg_dunn
 gg_ttest_variable <<- gg_ttest
 
 
-stats(data, paste0("cv_", variable1), variable2)
+stats(data, "cv", variable2)
 gg_stats_cv <<- gg_stats
 gg_dunn_cv <<- gg_dunn
 gg_ttest_cv <<- gg_ttest
