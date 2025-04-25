@@ -12,6 +12,14 @@ pacman::p_load(dplyr, tidyr, tidyverse, ggplot2, BIEN, ape, maps, sf, rtry, ggre
 source("code/1.first_script.R")  
 rm(list = setdiff(ls(), "flora_abrich"))
 traits <- read.csv('data/traits/all.indi.used.csv')
+source("code/palettes_labels.R")
+
+theme_set(theme_bw() +
+            theme(legend.position = "right",
+                  panel.grid = element_blank(),
+                  strip.background = element_blank(),
+                  strip.text = element_text(face = "bold"),
+                  text = element_text(size = 11)))
 
 # I remove 8 dummy rows of flora_abrich that I use for other 
 flora_abrich <- flora_abrich %>% 
@@ -53,9 +61,6 @@ traits <- traits %>%
 
 
 
-hist(traits$n_observations, breaks = 50)
-
-
 #Let's try
 
 traits$code_n_obs <- paste(traits$code, traits$n_observations, sep = ", ")
@@ -78,6 +83,9 @@ traits_cleaned <- traits %>%
 # View the cleaned data
 outliers <- anti_join(traits, traits_cleaned)
 
+########################################
+## CALCULATING MEAN VALUES FOR TRAITS
+#######################################
 
 #Calculating the average traits per taxonomic groups: torilis sp, poaceae, asteraceae and orchidaceae
 
@@ -121,8 +129,8 @@ traits_orchidaceae <- traits_orchidaceae %>%
 traits_orchidaceae$code <- "orchidaceae"
 
 
-#I delete all species that are part of all taxonomic groups and also
-#Lotus corniculatus, Erophila verna and Sterllaria media because we did not measure it in the field finally.
+#I delete all species that are aggregate within taxonomic groups and also
+#Lotus corniculatus, Erophila verna and Sterllaria media because we did not measure them in the field finally.
 traits_cleaned <- traits_cleaned %>% 
   filter(!species %in% c("Avena sterilis", "Bromus hordeaceus", "Bromus sterilis", "Cynosurus echinatus", "Elymus repens", 
                          "Hordeum murinum", "Poa annua", "Poa bulbosa", "Crepis capillaris", "Hypochaeris radicata", "Leontodon hispidus", 
@@ -131,6 +139,7 @@ traits_cleaned <- traits_cleaned %>%
 
 
 
+## Calculating trait mean values for the rest of species
 
 traits_mean <- traits_cleaned %>% 
   group_by(code, species, trait_name, trait_ID, database, n_observations) %>% 
@@ -140,10 +149,9 @@ traits_mean <- traits_cleaned %>%
 
 traits_mean <- bind_rows(traits_mean, traits_poaceae, traits_asteraceae, traits_torilis, traits_orchidaceae)
 
-trait_na <- traits_mean %>% 
-  filter(if_any(everything(), is.na)) %>% 
-  print()
-
+#trait_na <- traits_mean %>% 
+#  filter(if_any(everything(), is.na)) %>% 
+#  print()
 
 
 setdiff(unique(traits_mean$code), unique(flora_abrich$code))
@@ -161,7 +169,10 @@ setdiff(unique(flora_abrich$code), unique(traits_mean$code))
 # What can I do about Cirsium? it is one of the most abudance species at the end of the samplings. 
 
 
-#### CWM analysis RAW ####
+
+#######################################
+########## CWM analysis RAW ###########
+#######################################
 
 library(FD)
 library(psych)
@@ -171,7 +182,7 @@ library(psych)
 # !!! abundance matrix tiene que tener la misma cantidad de especies que la matrix de traits y que los codes esténen e mismo orden...
 
 
-# Preparing trait matrix: 
+####### TRAIT MATRIX: 
 
 traits_mean_wide <- traits_mean %>%
   ungroup() %>%                           # Remove grouping structure
@@ -182,74 +193,76 @@ traits_mean_wide <- traits_mean %>%
   )
 
 
-#Transform all SLA traits into one 
-traits_mean_wide$SLA.inc <- ifelse(is.na(traits_mean_wide$SLA.inc), traits_mean_wide$SLA.ex, traits_mean_wide$SLA.inc) 
 
-#Transform all LA traits into one 
-traits_mean_wide$LA.inc <- ifelse(is.na(traits_mean_wide$LA.inc),traits_mean_wide$LA.ex, traits_mean_wide$LA.inc)
-traits_mean_wide$LA.inc <- ifelse(is.na(traits_mean_wide$LA.inc),traits_mean_wide$LA.un, traits_mean_wide$LA.inc)
-traits_mean_wide$LA.inc <- ifelse(is.na(traits_mean_wide$LA.inc),traits_mean_wide$LA, traits_mean_wide$LA.inc)
-
-
-traits_mean_wide <- traits_mean_wide %>% 
-  select(!c("SLA.ex","LA.ex", "LA.un", "LA"))
+##|  Treating SLA and LA traits. 
+##| We have 2 traits for SLA: SLA.ex and SLA.inc
+##| We have 3 traits for LA: LA.ex, LA.un and LA.inc. 
+##| They all differ if they include or no the pedunculum of the leaf. 
+##| When there is one trait available for a species, the others are not. So we will keep just one value per SLA and LA and species
+##| 
 
 traits_mean_wide <- traits_mean_wide %>% 
+  mutate(SLA.inc = ifelse(is.na(SLA.inc), SLA.ex, SLA.inc)) %>% 
+  mutate(LA.inc = ifelse(is.na(LA.inc), LA.ex, LA.inc)) %>% 
+  mutate(LA.inc = ifelse(is.na(LA.inc), LA.un, LA.inc)) %>% 
+  mutate(LA.inc = ifelse(is.na(LA.inc), LA, LA.inc)) %>% 
+  select(!c("SLA.ex","LA.ex", "LA.un", "LA")) %>% 
   rename(SLA = SLA.inc ) %>% 
   rename(LA = LA.inc)
 
+##  ---REMOVING SPECIES WITH LOW NUMBER OF TRAITS AVAILABLE---
 
-missing_data_df <- data.frame(
-  code = traits_mean_wide$code,     # Species names from traits_mean_wide
-  missing_perc = rowSums(is.na(traits_mean_wide)) / ncol(traits_mean_wide) * 100 # Percentages of missing data
-)
-print(missing_data_df_sorted <- missing_data_df[order(missing_data_df$missing_perc), ])
-
+traits_mean_wide %>%
+  mutate(
+    missing_data = rowSums(is.na(.))
+  ) %>%
+  select(code, missing_data) %>%
+  mutate(
+    code = factor(code, levels = code[order(missing_data, decreasing = TRUE)])
+  ) %>%
+  ggplot(aes(x = code, y = missing_data)) +
+  geom_col(fill = "steelblue") +
+  labs(x = "Species code", y = "% Missing traits data", 
+       title = "Number of traits without data per species (n traits = 10)") +
+  geom_hline(yintercept = 5, color = "red", linetype = "dashed", linewidth = 1) +
+  theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1))
+  
 ## According to Carmona et al. 2021, we have to remove the species with less than the 50% of the traits. 
 # These are: libi, amsp and rapa. 
-
-# Before deleting them, we can check the relevance of these species.  
-
-theme_set(theme_bw() +
-            theme(legend.position = "right",
-                  panel.grid = element_blank(),
-                  strip.background = element_blank(),
-                  strip.text = element_text(face = "bold"),
-                  text = element_text(size = 11)))
-
-flora_abrich_nobs <- flora_abrich %>% 
-  group_by(code) %>% 
-  summarize(n_observations= n(),
-            mean_abundance_s = mean(abundance_s))
-
-flora_abrich_nobs$abnobs <- flora_abrich_nobs$mean_abundance_s * flora_abrich_nobs$n_observations
-
-ggplot(flora_abrich_nobs, aes(x = mean_abundance_s, y = n_observations, label = code, color = abnobs))+
-  geom_point() + 
-  scale_color_gradient(low = "blue4", high = "red2") +  
-  geom_text_repel(
-    size = 3,                # Text size
-    min.segment.length = 0.1,  # Ensures lines are always drawn
-    segment.color = "gray50",  # Line color
-    segment.size = 0.5         # Line thickness
-  )
-
-#rapa is a species with a lot of abundance and n_observations, but not one of the highest
+# Before deleting them, we can check the relevance of these species (in checking.results we can do it)
+# rapa is a species with a lot of abundance and n_observations, but not one of the highest
 
 traits_mean_wide <- traits_mean_wide %>% 
   filter(!code %in% c("libi", "amsp", "rapa")) %>% 
   droplevels()
 
-#Now we have 2 traits with NA's above 50%, 1 that is = 50% and 1 that is 44%. I would detele all
-# given that the following one is only 14%
-missing_perc <- colSums(is.na(traits_mean_wide)) / nrow(traits_mean_wide) * 100
-print(missing_perc)
+## REMOVING TRAITS WITH HIGH NUMBER OF NA
+
+missing_data <- colSums(is.na(traits_mean_wide)) / nrow(traits_mean_wide) * 100
+print(missing_data)
+
+data.frame(
+  variable = names(missing_data),
+  missing_perc = as.numeric(missing_data)
+) %>%
+  mutate(
+    variable = factor(variable, levels = variable[order(missing_perc, decreasing = TRUE)])
+  ) %>% 
+ggplot(aes(x = variable, y = missing_perc)) +
+  geom_col(fill = "seagreen") +
+  geom_hline(yintercept = 50, color = "red", linetype = "dashed", linewidth = 1) +
+  labs(x = "Trait", y = "% Missing data", 
+       title = "Percentage of Missing Trait Data per Variable") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1))
 
 traits_mean_wide <- traits_mean_wide %>% 
   select(!c("rootN", "RTD", "SRL", "SSD"))
 
-# We now have only 5 NA in trait leafN 
+#Now we have 2 traits above 50 % NA, 1 = 50% and 1 around 45%. I would delete them all
+# given that the following one is araound 15%
 
+# We now have only 5 NA in trait leafN 
 
 # Prepare the database for the FD function: 
 
@@ -264,7 +277,10 @@ traits_matrix <- traits_matrix %>%
   select(!code)
 
 
-# We can try to impute the NAs with missforest
+
+# We can try to impute the NAs with missforest,
+# however, the amount of NA is so low that we consider that is not necessary
+
 #library(missForest)
 
 #imputed_data <- missForest(traits_matrix) #default ntrees = 100
@@ -281,106 +297,93 @@ traits_matrix <- traits_matrix %>%
 
 
 
-### Preparing abundance matrix: 
-# We will prepare 2 abundance matrix: 1) for abundance_s at level of plot, treatment and sampling 
-#                                     2) for abundance_s at level of treatment. This is: mean abundance of each species per treatment
+### ABUNDANCE MATRIX 
 
-#Common step for both abudance matrix: 
+# We will prepare 2 abundance matrix: 1) for abundance at plot level
+#                                     2) for abundance at treatment level. This is: mean abundance of each species per treatment
+
+# Common step for both abudance matrix: 
 
 flora_abrich <- flora_abrich %>% 
   filter(!code %in% c("cisp", "casp", "mydi",  #Deleting the species for which we do not have traits
                       "libi", "amsp", "rapa"))  #Deleting the species for which we had more than 50% of NAs
 
-# Abundance matrix 1: sampling level (dynamics)
+# Abundance matrix 1: plot level (dynamics)
 
-abundance_ref_dynamics <- flora_abrich %>% 
+abundance_matrix_dynamics <- flora_abrich %>% 
   ungroup() %>% 
-  select(sampling, date, treatment, plot, abundance_s, code)
-
-abundance_ref_dynamics$com <- paste(abundance_ref_dynamics$sampling,
-                                         abundance_ref_dynamics$treatment,
-                                         abundance_ref_dynamics$plot, sep = "/")
-
-
-abundance_wide_dynamics <- abundance_ref_dynamics %>% 
-  select(com, abundance_s, code)
-abundance_wide_dynamics$abundance_s <- abundance_wide_dynamics$abundance_s/100
-
-abundance_wide_dynamics <- abundance_wide_dynamics %>% 
+  select(sampling, date, treatment, plot, abundance_s, code) %>% 
+  mutate(
+    com = paste(sampling, treatment, plot, sep = "/")
+  ) %>% 
+  select(com, abundance_s, code) %>% 
+  mutate(abundance_s = abundance_s/100) %>% # abundance = (0,1)
   pivot_wider(
     names_from = code, 
     values_from = abundance_s) %>%
-  select(com, sort(setdiff(names(.), "com")))
-
-
-# transformation NA into 0 
-codes <- unique(flora_abrich$code)
-for(i in 1:length(codes)){
-  abundance_wide_dynamics[[paste0(codes[i])]] <- 
-    ifelse(is.na(abundance_wide_dynamics[[paste0(codes[i])]]), 0, abundance_wide_dynamics[[paste0(codes[i])]])
-}
-  
-
-abundance_matrix_dynamics <- as.data.frame(abundance_wide_dynamics)
+  select(com, sort(setdiff(names(.), "com"))) %>%
+  column_to_rownames("com") %>% 
+  mutate(across(everything(), ~ replace_na(., 0))) %>%  # NA = 0 
+  as.data.frame() 
 rownames(abundance_matrix_dynamics) <- abundance_matrix_dynamics$com
-abundance_matrix_dynamics <- abundance_matrix_dynamics %>% 
-  select(!com)
 
 
 
 
 # Calculation of cwm with function functcomp
 
-#cwm at sampling level (dynamics)
+#cwm at plot level (dynamics)
 
-cwm_dynamics <- functcomp(as.matrix(traits_matrix), as.matrix(abundance_matrix_dynamics))
-cwm_dynamics$com <- rownames(cwm_dynamics); rownames(cwm_dynamics) <- NULL
+cwm_dynamics <- FD::functcomp(as.matrix(traits_matrix), as.matrix(abundance_matrix_dynamics))
+cwm_dynamics$com <- rownames(abundance_matrix_dynamics); rownames(cwm_dynamics) <- NULL
 
 
-cwm_dynamics$sampling <- sapply(strsplit(cwm_dynamics$com, "/"), function(x) x[1])
-cwm_dynamics$treatment <- sapply(strsplit(cwm_dynamics$com, "/"), function(x) x[2])
-cwm_dynamics$plot <- sapply(strsplit(cwm_dynamics$com, "/"), function(x) x[3])
+cwm_dynamics <- cwm_dynamics %>% 
+  mutate(
+    sampling = sapply(strsplit(com, "/"), function(x) x[1]),
+    treatment = sapply(strsplit(com, "/"), function(x) x[2]),
+    plot = sapply(strsplit(com, "/"), function(x) x[3])
+  ) %>% 
+  select(-com)
+
 
 library(factoextra)
 
 cwm_alltreatments <- cwm_dynamics %>% 
-  select(-treatment, - sampling, -plot, -com, -vegetation.height)
+  select(-treatment, - sampling, -plot, -vegetation.height)
 pca_alltreatments <- prcomp(cwm_alltreatments, center = T, scale. = T)
 pca_alltreatments <- fviz_pca_biplot(pca_alltreatments, geom = "point", repel = T, title = " ",
                          ggthem = theme_test())
 pca_alltreatments
 
-cwm_c <- cwm_dynamics %>% 
+
+{cwm_c <- cwm_dynamics %>% 
   filter(treatment %in% "c") %>% 
-  select(-treatment, - sampling, -plot, -com, -vegetation.height)
+  select(-treatment, - sampling, -plot,  -vegetation.height)
 pca_c <- prcomp(cwm_c, center = T, scale. = T)
 pca_c <- fviz_pca_biplot(pca_c, geom = "point", repel = T, title = " ",
                          ggthem = theme_test())
 
-
 cwm_w <- cwm_dynamics %>% 
   filter(treatment %in% "w")%>% 
-  select(-treatment, - sampling, -plot, -com, -vegetation.height)
+  select(-treatment, - sampling, -plot, -vegetation.height)
 pca_w <- prcomp(cwm_w, center = T, scale. = T)
 pca_w <- fviz_pca_biplot(pca_w, geom = "point", repel = T, title = " ",
                          ggthem = theme_test())
 
-
 cwm_p <- cwm_dynamics %>% 
   filter(treatment %in% "p")%>% 
-  select(-treatment, - sampling, -plot, -com, -vegetation.height)
+  select(-treatment, - sampling, -plot, -vegetation.height)
 pca_p <- prcomp(cwm_p, center = T, scale. = T)
 pca_p <- fviz_pca_biplot(pca_p, geom = "point", repel = T, title = " ",
                          ggthem = theme_test())
 
-
 cwm_wp <- cwm_dynamics %>% 
   filter(treatment %in% "wp")%>% 
-  select(-treatment, - sampling, -plot, -com, -vegetation.height)
+  select(-treatment, - sampling, -plot, -vegetation.height)
 pca_wp <- prcomp(cwm_wp, center = T, scale. = T)
 pca_wp <- fviz_pca_biplot(pca_wp, geom = "point", repel = T, title = " ",
                          ggthem = theme_test())
-
 
 ggarrange(
 labels = c("Control", "Warming", "Perturbation", "Warming + perturbation"),
@@ -388,127 +391,42 @@ pca_c,
 pca_w,
 pca_p,
 pca_wp,
-ncol = 2, nrow = 2)
-
-
-
-
-
-# PCA with ggplot
-#Dividir por tratamientos la base de datos
-
-
-
-
-cwm_c <- cwm_dynamics_pca %>% 
-  filter(treatment %in% "c")
-rownames(cwm_c) <- cwm_c$com
-cwm_c <- cwm_c %>% 
-  select(-com, -treatment)
-pca_c <- prcomp(cwm_c, center = T, scale. = T)
-
-
-# Extract scores (coordinates of individuals)
-individuals <- as.data.frame(pca_c$x)  # Principal components for individuals
-individuals$ID <- rownames(cwm_c)   # Add IDs for individuals
-
-# Extract loadings (coordinates of variables)
-variables <- as.data.frame(pca$rotation)  # Loadings for variables
-variables$Variable <- rownames(variables)
-
-# Plot PCA with ggplot2
-#pca_plot <- 
-  
-  ggplot() +
-  
-  # Plot individuals
-  geom_point(data = individuals, 
-             aes(x = PC1, y = PC2), 
-             size = 2, alpha = 0.7) +
-  
-  # Plot variable loadings as arrows
-  geom_segment(data = variables, 
-               aes(x = 0, y = 0, xend = PC1, yend = PC2), 
-               arrow = arrow(length = unit(0.2, "cm")), 
-               color = "blue4", size = 0.5) +
-  
-  # Add labels for variables
-  geom_text(data = variables, 
-            aes(x = PC1, y = PC2, label = Variable), 
-            color = "blue4", vjust = -0.5, size = 4) +
-  
-  # Customize the plot
-  theme_minimal() +
-  labs(x = "PC1 (Variance %)", 
-       y = "PC2 (Variance %)", 
-       title = "PCA Biplot") +
-  theme(legend.position = "none")
-
-# Display the plot
-pca_plot
-
-ggplot(variables, ae(y = ))
-
-
-
-
-
-
-
-
-
-
-
-pca
-cwmpca1 <- as.data.frame(pca1$x)
-
-cwmpca1 = cwmpca1 %>% rownames_to_column(var = "ID")
-cwmpca1 = cwmpca1 %>% rename(CWM_snp = PC1) %>% dplyr::select(ID, CWM_snp) 
-
-CWM_ID = cwm_dynamics0 %>% rownames_to_column(var = "ID")
-
-#combine indi CWM and CWM PC1
-cwm_all = full_join(cwmpca1, CWM_ID, by = 'ID')
-
+ncol = 2, nrow = 2)}
 
 
 
 # Plotting cwm dynamics
 
 
-cwm_long_dynamics <- cwm_dynamics %>% 
-  pivot_longer(cols = c("LDMC", "leafN", "SLA", "LA", "vegetation.height", "seed.mass"),
-               names_to = "trait_name",
-               values_to = "cwm_value")
-
-
-sampling_dates <- read.csv("data/sampling_dates.csv")
-sampling_dates$sampling <- factor(sampling_dates$sampling)
-
-sampling_dates$date <-  ymd(sampling_dates$date)
-sampling_dates$month <- month(sampling_dates$date, label = TRUE)
-sampling_dates$day <- day(sampling_dates$date)
-sampling_dates$year <- year(sampling_dates$date)
-
-sampling_dates <- sampling_dates %>% 
-  select(sampling, date, day, month, year, one_month_window, omw_date)
-
-sampling_dates <- sampling_dates %>%
+sampling_dates <- read.csv("data/sampling_dates.csv") %>% 
+  mutate(sampling = as.factor(sampling),
+         date = ymd(date), 
+         month = month(date, label = TRUE),
+         day = day(date), 
+         year = year(date)) %>% 
+  select(sampling, date, year 
+         #, day, month, one_month_window, omw_date
+         ) %>% 
   mutate(across(where(is.character), as.factor))
 
-cwm_long_dynamics <- merge(cwm_long_dynamics, sampling_dates)
+cwm_dynamics <- cwm_dynamics %>% 
+  merge(sampling_dates)
+
+source("code/meta_function/stats_function.R")
+stats(cwm_dynamics, "SLA", "treatment")
 
 
-#Adding mean cwm and sd cwm values
-
-cwm_dynamics_db <- cwm_long_dynamics %>% 
+cwm_dynamics_db <- cwm_dynamics %>% 
+  pivot_longer(cols = c("LDMC", "leafN", "SLA", "LA", "vegetation.height", "seed.mass"),
+               names_to = "trait_name",
+               values_to = "cwm_value") %>% 
+  merge(sampling_dates) %>% 
   group_by(sampling, treatment, trait_name) %>% 
   mutate(
     mean_cwm_value = mean(cwm_value, na.rm = TRUE), 
     sd_cwm_value = sd(cwm_value, na.rm = TRUE)
   ) %>% 
   ungroup()
-
 #Añadir mean y sd a la base de datos para lugo añadir las barras de eror y añadir lo de dodge point para cambiarlos de lugar. 
 
 
@@ -516,15 +434,16 @@ library(ggplot2)
 library(grid)
 
 trait_levels <- unique(cwm_dynamics_db$trait_name)
+# solo i = 1, i= 5 y i = 6 parecen mostrar algun tipo de diferencias
 
-#LDMC
-{ a_LDMC <-
-  ggplot(subset(cwm_dynamics_db, trait_name == trait_levels[1]),
-                 aes(x = date, y = cwm_value)) + 
+i = 1
+cwm_dynamics_db %>% 
+  filter(trait_name == trait_levels[i]) %>% 
+ggplot(aes(x = date, y = cwm_value)) + 
     
   geom_smooth(
     se = TRUE, aes(color = treatment, fill = treatment),
-    method = "loess", span = 0.6, alpha = 0.2 
+    method = "lm", span = 0.6, alpha = 0.2 
   ) +
     
   geom_point(aes(color = treatment),
@@ -536,9 +455,9 @@ trait_levels <- unique(cwm_dynamics_db$trait_name)
   geom_point(aes(x = date, y = mean_cwm_value, , color = treatment), fill = "white", 
              shape = 21, size = 2, position = position_dodge(width = 8))+
     
-  scale_colour_manual(values = c("c" = "#48A597", "w" = "#D94E47", "p" = "#3A7CA5", "wp" = "#6D4C7D")) +
+  scale_colour_manual(values = palette5) +
     
-  scale_fill_manual(values = c("c" = "#48A597", "w" = "#D94E47", "p" = "#3A7CA5", "wp" = "#6D4C7D")) +
+  scale_fill_manual(values = palette5) +
     
   scale_x_date(
     date_breaks = "4 weeks", # Specify the interval (e.g., every 2 weeks)
@@ -550,73 +469,13 @@ trait_levels <- unique(cwm_dynamics_db$trait_name)
   theme(axis.text.x = element_text(angle = 45, hjust = 1), legend.position = "none",
         ) +
     
-  labs(y = paste("CWM", trait_levels[1], sep = " "), x = NULL) #
+  labs(y = paste("CWM", trait_levels[i], sep = " "), x = NULL) #
 
-# Box plot
-b_LDMC <- ggplot(subset(cwm_dynamics_db, trait_name == trait_levels[1]), aes(y = cwm_value)) +
+cwm_dynamics_db %>% 
+  filter(trait_name == trait_levels[i]) %>% 
+  ggplot(aes(y = cwm_value)) +
   geom_boxplot(aes(fill = treatment), colour = "black", alpha = 0.5) + # Set the outline color to black
-  scale_fill_manual(values = c("c" = "#48A597", "w" = "#D94E47", "p" = "#3A7CA5", "wp" = "#6D4C7D")) +
-  theme(legend.position = "none",
-        axis.text.x = element_blank(), axis.text.y = element_blank(),
-        panel.background = element_rect(fill = NA, colour = NA), # Transparent background
-        plot.background = element_rect(fill = NA, colour = NA)) + # Transparent plot background+ 
-  labs(y = NULL)
-
-
-# Combine plots
-ggcomb_LDMC <- a_LDMC +
-  annotation_custom(
-    grob = ggplotGrob(b_LDMC),
-    xmin = as.Date("2023-04-20"), # Adjust position: left boundary
-    xmax = as.Date("2023-09-01"), # Adjust position: right boundary
-    ymin = 170, # Adjust position: bottom boundary
-    ymax = 200 # Adjust position: top boundary
-  )
-
-# Render combined plot
-#ggcomb_LDMC
-
-}
-
-#LeafN
-{a_leafN <-
-  ggplot(subset(cwm_dynamics_db, trait_name == trait_levels[2]),
-         aes(x = date, y = cwm_value)) + 
-  
-  geom_smooth(
-    se = TRUE, aes(color = treatment, fill = treatment),
-    method = "loess", span = 0.6, alpha = 0.2 
-  ) +
-  
-  geom_point(aes(color = treatment),
-             alpha = 0.5, position = position_dodge(width = 8)) +
-  
-  geom_errorbar(aes(ymax = mean_cwm_value + sd_cwm_value, ymin = mean_cwm_value - sd_cwm_value, color = treatment),
-                , alpha = 0.2, position = position_dodge(width = 8)) + 
-  
-  geom_point(aes(x = date, y = mean_cwm_value, , color = treatment), fill = "white", 
-             shape = 21, size = 2, position = position_dodge(width = 8))+
-  
-  scale_colour_manual(values = c("c" = "#48A597", "w" = "#D94E47", "p" = "#3A7CA5", "wp" = "#6D4C7D")) +
-  
-  scale_fill_manual(values = c("c" = "#48A597", "w" = "#D94E47", "p" = "#3A7CA5", "wp" = "#6D4C7D")) +
-  
-  scale_x_date(
-    date_breaks = "4 weeks", # Specify the interval (e.g., every 2 weeks)
-    date_labels = "%d-%b-%y" # Customize the date format (e.g., "04-May-23")
-  ) +
-  
-  geom_vline(xintercept = as.Date("2023-05-11"), linetype = "dashed", color = "gray40") +
-  
-  theme(axis.text.x = element_text(angle = 45, hjust = 1), legend.position = "none",
-  ) +
-  
-  labs(y = paste("CWM", trait_levels[2], sep = " "), x = NULL) #
-
-# Box plot
-b_leafN <- ggplot(subset(cwm_dynamics_db, trait_name == trait_levels[2]), aes(y = cwm_value)) +
-  geom_boxplot(aes(fill = treatment), colour = "black", alpha = 0.5) + # Set the outline color to black
-  scale_fill_manual(values = c("c" = "#48A597", "w" = "#D94E47", "p" = "#3A7CA5", "wp" = "#6D4C7D")) +
+  scale_fill_manual(values = palette5) +
   theme(legend.position = "none",
         axis.text.x = element_blank(), axis.text.y = element_blank(),
         panel.background = element_rect(fill = NA, colour = NA), # Transparent background
@@ -625,287 +484,6 @@ b_leafN <- ggplot(subset(cwm_dynamics_db, trait_name == trait_levels[2]), aes(y 
 
 
 
-# Combine plots
-ggcomb_leafN <- a_leafN +
-  annotation_custom(
-    grob = ggplotGrob(b_leafN),
-    xmin = as.Date("2024-06-01"), # Adjust position: left boundary
-    xmax = as.Date("2024-11-05"), # Adjust position: right boundary
-    ymin = 33, # Adjust position: bottom boundary
-    ymax = 37 # Adjust position: top boundary
-  )
-
-# Render combined plot
-#ggcomb_leafN
-}
-
-#SLA
-{ a_SLA <-
-  ggplot(subset(cwm_dynamics_db, trait_name == trait_levels[3]),
-         aes(x = date, y = cwm_value)) + 
-  
-  geom_smooth(
-    se = TRUE, aes(color = treatment, fill = treatment),
-    method = "loess", span = 0.6, alpha = 0.2 
-  ) +
-  
-  geom_point(aes(color = treatment),
-             alpha = 0.5, position = position_dodge(width = 8)) +
-  
-  geom_errorbar(aes(ymax = mean_cwm_value + sd_cwm_value, ymin = mean_cwm_value - sd_cwm_value, color = treatment),
-                , alpha = 0.2, position = position_dodge(width = 8)) + 
-  
-  geom_point(aes(x = date, y = mean_cwm_value, , color = treatment), fill = "white", 
-             shape = 21, size = 2, position = position_dodge(width = 8))+
-  
-  scale_colour_manual(values = c("c" = "#48A597", "w" = "#D94E47", "p" = "#3A7CA5", "wp" = "#6D4C7D")) +
-  
-  scale_fill_manual(values = c("c" = "#48A597", "w" = "#D94E47", "p" = "#3A7CA5", "wp" = "#6D4C7D")) +
-  
-  scale_x_date(
-    date_breaks = "4 weeks", # Specify the interval (e.g., every 2 weeks)
-    date_labels = "%d-%b-%y" # Customize the date format (e.g., "04-May-23")
-  ) +
-  
-  geom_vline(xintercept = as.Date("2023-05-11"), linetype = "dashed", color = "gray40") +
-  
-  theme(axis.text.x = element_text(angle = 45, hjust = 1), legend.position = "none",
-  ) +
-  
-  labs(y = paste("CWM", trait_levels[3], sep = " "), x = NULL) #
-
-# Box plot
-b_SLA <- ggplot(subset(cwm_dynamics_db, trait_name == trait_levels[3]), aes(y = cwm_value)) +
-  geom_boxplot(aes(fill = treatment), colour = "black", alpha = 0.5) + # Set the outline color to black
-  scale_fill_manual(values = c("c" = "#48A597", "w" = "#D94E47", "p" = "#3A7CA5", "wp" = "#6D4C7D")) +
-  theme(legend.position = "none",
-        axis.text.x = element_blank(), axis.text.y = element_blank(),
-        panel.background = element_rect(fill = NA, colour = NA), # Transparent background
-        plot.background = element_rect(fill = NA, colour = NA)) + # Transparent plot background+ 
-  labs(y = NULL)
-
-
-
-# Combine plots
-ggcomb_SLA <- a_SLA +
-  annotation_custom(
-    grob = ggplotGrob(b_SLA),
-    xmin = as.Date("2024-06-01"), # Adjust position: left boundary
-    xmax = as.Date("2024-11-05"), # Adjust position: right boundary
-    ymin = 33, # Adjust position: bottom boundary
-    ymax = 39 # Adjust position: top boundary
-  )
-
-# Render combined plot
-#ggcomb_SLA
-
-}
-
-#LA
-{a_LA <-
-  ggplot(subset(cwm_dynamics_db, trait_name == trait_levels[4]),
-         aes(x = date, y = cwm_value)) + 
-  
-  geom_smooth(
-    se = TRUE, aes(color = treatment, fill = treatment),
-    method = "loess", span = 0.6, alpha = 0.2 
-  ) +
-  
-  geom_point(aes(color = treatment),
-             alpha = 0.5, position = position_dodge(width = 8)) +
-  
-  geom_errorbar(aes(ymax = mean_cwm_value + sd_cwm_value, ymin = mean_cwm_value - sd_cwm_value, color = treatment),
-                , alpha = 0.2, position = position_dodge(width = 8)) + 
-  
-  geom_point(aes(x = date, y = mean_cwm_value, , color = treatment), fill = "white", 
-             shape = 21, size = 2, position = position_dodge(width = 8))+
-  
-  scale_colour_manual(values = c("c" = "#48A597", "w" = "#D94E47", "p" = "#3A7CA5", "wp" = "#6D4C7D")) +
-  
-  scale_fill_manual(values = c("c" = "#48A597", "w" = "#D94E47", "p" = "#3A7CA5", "wp" = "#6D4C7D")) +
-  
-  scale_x_date(
-    date_breaks = "4 weeks", # Specify the interval (e.g., every 2 weeks)
-    date_labels = "%d-%b-%y" # Customize the date format (e.g., "04-May-23")
-  ) +
-  
-  geom_vline(xintercept = as.Date("2023-05-11"), linetype = "dashed", color = "gray40") +
-  
-  theme(axis.text.x = element_text(angle = 45, hjust = 1), legend.position = "none",
-  ) +
-  
-  labs(y = paste("CWM", trait_levels[4], sep = " "), x = NULL) #
-
-# Box plot
-b_LA <- ggplot(subset(cwm_dynamics_db, trait_name == trait_levels[4]), aes(y = cwm_value)) +
-  geom_boxplot(aes(fill = treatment), colour = "black", alpha = 0.5) + # Set the outline color to black
-  scale_fill_manual(values = c("c" = "#48A597", "w" = "#D94E47", "p" = "#3A7CA5", "wp" = "#6D4C7D")) +
-  theme(legend.position = "none",
-        axis.text.x = element_blank(), axis.text.y = element_blank(),
-        panel.background = element_rect(fill = NA, colour = NA), # Transparent background
-        plot.background = element_rect(fill = NA, colour = NA)) + # Transparent plot background+ 
-  labs(y = NULL)
-
-
-
-# Combine plots
-ggcomb_LA <- a_LA +
-  annotation_custom(
-    grob = ggplotGrob(b_LA),
-    xmin = as.Date("2024-06-01"), # Adjust position: left boundary
-    xmax = as.Date("2024-11-05"), # Adjust position: right boundary
-    ymin = 1500, # Adjust position: bottom boundary
-    ymax = 1900 # Adjust position: top boundary
-  )
-
-# Render combined plot
-#ggcomb_LA
-}
-
-#Height
-{a_height <-
-  ggplot(subset(cwm_dynamics_db, trait_name == trait_levels[5]),
-         aes(x = date, y = cwm_value)) + 
-  
-  geom_smooth(
-    se = TRUE, aes(color = treatment, fill = treatment),
-    method = "loess", span = 0.6, alpha = 0.2 
-  ) +
-  
-  geom_point(aes(color = treatment),
-             alpha = 0.5, position = position_dodge(width = 8)) +
-  
-  geom_errorbar(aes(ymax = mean_cwm_value + sd_cwm_value, ymin = mean_cwm_value - sd_cwm_value, color = treatment),
-                , alpha = 0.2, position = position_dodge(width = 8)) + 
-  
-  geom_point(aes(x = date, y = mean_cwm_value, , color = treatment), fill = "white", 
-             shape = 21, size = 2, position = position_dodge(width = 8))+
-  
-  scale_colour_manual(values = c("c" = "#48A597", "w" = "#D94E47", "p" = "#3A7CA5", "wp" = "#6D4C7D")) +
-  
-  scale_fill_manual(values = c("c" = "#48A597", "w" = "#D94E47", "p" = "#3A7CA5", "wp" = "#6D4C7D")) +
-  
-  scale_x_date(
-    date_breaks = "4 weeks", # Specify the interval (e.g., every 2 weeks)
-    date_labels = "%d-%b-%y" # Customize the date format (e.g., "04-May-23")
-  ) +
-  
-  geom_vline(xintercept = as.Date("2023-05-11"), linetype = "dashed", color = "gray40") +
-  
-  theme(axis.text.x = element_text(angle = 45, hjust = 1), legend.position = "none",
-  ) +
-  
-  labs(y = paste("CWM", trait_levels[5], sep = " "), x = NULL) #
-
-# Box plot
-b_height <- ggplot(subset(cwm_dynamics_db, trait_name == trait_levels[5]), aes(y = cwm_value)) +
-  geom_boxplot(aes(fill = treatment), colour = "black", alpha = 0.5) + # Set the outline color to black
-  scale_fill_manual(values = c("c" = "#48A597", "w" = "#D94E47", "p" = "#3A7CA5", "wp" = "#6D4C7D")) +
-  theme(legend.position = "none",
-        axis.text.x = element_blank(), axis.text.y = element_blank(),
-        panel.background = element_rect(fill = NA, colour = NA), # Transparent background
-        plot.background = element_rect(fill = NA, colour = NA)) + # Transparent plot background+ 
-  labs(y = NULL)
-
-
-
-# Combine plots
-ggcomb_height <- a_height +
-  annotation_custom(
-    grob = ggplotGrob(b_height),
-    xmin = as.Date("2024-06-01"), # Adjust position: left boundary
-    xmax = as.Date("2024-11-05"), # Adjust position: right boundary
-    ymin = 0.52, # Adjust position: bottom boundary
-    ymax = 0.63 # Adjust position: top boundary
-  )
-
-# Render combined plot
-#ggcomb_height
-
-}
-
-# Seed mass
-{a_seed_mass <-
-  ggplot(subset(cwm_dynamics_db, trait_name == trait_levels[6]),
-         aes(x = date, y = cwm_value)) + 
-  
-  geom_smooth(
-    se = TRUE, aes(color = treatment, fill = treatment),
-    method = "loess", span = 0.6, alpha = 0.2 
-  ) +
-  
-  geom_point(aes(color = treatment),
-             alpha = 0.5, position = position_dodge(width = 8)) +
-  
-  geom_errorbar(aes(ymax = mean_cwm_value + sd_cwm_value, ymin = mean_cwm_value - sd_cwm_value, color = treatment),
-                , alpha = 0.2, position = position_dodge(width = 8)) + 
-  
-  geom_point(aes(x = date, y = mean_cwm_value, , color = treatment), fill = "white", 
-             shape = 21, size = 2, position = position_dodge(width = 8))+
-  
-  scale_colour_manual(values = c("c" = "#48A597", "w" = "#D94E47", "p" = "#3A7CA5", "wp" = "#6D4C7D")) +
-  
-  scale_fill_manual(values = c("c" = "#48A597", "w" = "#D94E47", "p" = "#3A7CA5", "wp" = "#6D4C7D")) +
-  
-  scale_x_date(
-    date_breaks = "4 weeks", # Specify the interval (e.g., every 2 weeks)
-    date_labels = "%d-%b-%y" # Customize the date format (e.g., "04-May-23")
-  ) +
-  
-  geom_vline(xintercept = as.Date("2023-05-11"), linetype = "dashed", color = "gray40") +
-  
-  theme(axis.text.x = element_text(angle = 45, hjust = 1), legend.position = "none",
-  ) +
-  
-  labs(y = "CWM seed mass", x = NULL) #
-
-# Box plot
-b_seed_mass <- ggplot(subset(cwm_dynamics_db, trait_name == trait_levels[6]), aes(y = cwm_value)) +
-  geom_boxplot(aes(fill = treatment), colour = "black", alpha = 0.5) + # Set the outline color to black
-  scale_fill_manual(values = c("c" = "#48A597", "w" = "#D94E47", "p" = "#3A7CA5", "wp" = "#6D4C7D")) +
-  theme(legend.position = "none",
-        axis.text.x = element_blank(), axis.text.y = element_blank(),
-        panel.background = element_rect(fill = NA, colour = NA), # Transparent background
-        plot.background = element_rect(fill = NA, colour = NA)) + # Transparent plot background+ 
-  labs(y = NULL)
-
-
-
-# Combine plots
-ggcomb_seed_mass <- a_seed_mass +
-  annotation_custom(
-    grob = ggplotGrob(b_seed_mass),
-    xmin = as.Date("2024-06-01"), # Adjust position: left boundary
-    xmax = as.Date("2024-11-05"), # Adjust position: right boundary
-    ymin = 7.5, # Adjust position: bottom boundary
-    ymax = 10 # Adjust position: top boundary
-  )
-
-# Render combined plot
-#ggcomb_seed_mass
-
-}
-
-ggcomb_LDMC
-ggcomb_leafN
-ggcomb_SLA
-ggcomb_LA
-ggcomb_height
-ggcomb_seed_mass
-
-
-
-
-
-
-
-
-
-
-# PCA
-#Necesito bases de dato con col = trait_names y ya
-
-#CWM1 = CWM1 %>% drop_na(CWM_N) #only the CWM trait columns; remove NA in rows 
 
 
 
@@ -955,8 +533,6 @@ cwm_treatment$treatment <- rownames(cwm_treatment); rownames(cwm_treatment) <- N
 #  pivot_longer(cols = c("LDMC", "leafN", "SLA", "LA", "vegetation.height", "seed.mass"),
 #               names_to = "trait_name",
 #               values_to = "cwm_value")
-
-
 
 
 cwm_c <- cwm_treatment %>% 

@@ -55,7 +55,11 @@ RR_treatment_cv <- function(data, variable){
                                  "w_vs_c" = "w",
                                  "p_vs_c" = "p", 
                                  "wp_vs_c" = "wp")) %>% 
-    select(RR_descriptor, RR, se_RR, variable, n)
+    select(RR_descriptor, RR, se_RR, variable, n, n_c) %>% 
+    rename(
+      n_ref = n_c, 
+      n_treat = n
+    )
   
   
   
@@ -84,7 +88,11 @@ RR_treatment_cv <- function(data, variable){
     mutate(
       RR_descriptor = fct_recode(RR_descriptor,
                                  "wp_vs_p" = "wp")) %>% 
-    select(RR_descriptor, RR, se_RR, variable)
+    select(RR_descriptor, RR, se_RR, variable, n_wp, n_p) %>% 
+    rename(
+      n_ref = n_p,
+      n_treat = n_wp
+    )
     
   
 
@@ -113,7 +121,12 @@ RR_treatment_cv <- function(data, variable){
     mutate(
       RR_descriptor = fct_recode(RR_descriptor,
                                  "wp_vs_w" = "wp")) %>% 
-    select(RR_descriptor, RR, se_RR, variable)
+    select(RR_descriptor, RR, se_RR, variable, n_wp, n_w) %>% 
+    rename(
+      n_ref = n_w,
+      n_treat = n_wp
+    )
+  
   
   
 RR_cv <- rbind(rr_cv, rr_cv_wp_vs_p)

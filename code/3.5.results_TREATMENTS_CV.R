@@ -15,29 +15,24 @@ labels <- labels_RR
 
 source("code/meta_function/RR_TREATMENT_CV.R")
 
-
-
 list <- list()
 
   variables <- c("richness", "abundance", "Y_zipf")
   for (i in 1:3){
     RR_treatment_cv(ab_rich_dynamics, variables[i])
-    list[[i]] <- RR_cv %>%
-      select(RR_descriptor, variable, RR, se_RR)
+    list[[i]] <- RR_cv
 
   }
   
 
-  RR_treatment_cv(biomass_imp, "biomass")
-  RR_cv_biomass <- RR_cv
+RR_treatment_cv(biomass_imp, "biomass")
+RR_cv_biomass <- RR_cv
   
-  RR_treatment_cv(biomass_imp012, "biomass")
-  RR_cv_biomass012 <- RR_cv %>% 
+RR_treatment_cv(biomass_imp012, "biomass")
+RR_cv_biomass012 <- RR_cv %>% 
     mutate(variable = fct_recode(variable,
                                  "biomass012" = "biomass"))
     
-  
-  
   
 RR_cv <- do.call(rbind, list) %>% 
   rbind(RR_cv_biomass) %>% 

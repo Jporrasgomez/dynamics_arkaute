@@ -15,22 +15,27 @@ pacman::p_load(dplyr,reshape2,tidyverse, lubridate, ggplot2, ggpubr, gridExtra,
 
 
 source("code/palettes_labels.R")
-source("code/meta_function/meta_function.R")
 
 
 # Richness, abundance and evenness
 
 variables <- c("richness", "abundance", "Y_zipf")
-
 list <- list()
-
 for(i in 1:3){
   
-  meta_function(ab_rich_dynamics, variables[i], "treatment")
-  
-  list[[i]] <- data_meta %>% 
-    select(date, sampling, treatment, mean, sd, cv, variable) %>% 
-    distinct()
+  list[[i]] <- ab_rich_dynamics %>% 
+    select(treatment, plot, sampling, date, .data[[variables[i]]]) %>% 
+    distinct(treatment, plot, sampling, date, .data[[variables[i]]]) %>%
+    group_by(treatment, sampling, date) %>% 
+    mutate(
+      n = n(),
+      mean = mean(.data[[variables[i]]], na.rm = TRUE),
+      sd = sd(.data[[variables[i]]], na.rm = TRUE)
+    ) %>%
+    mutate(
+      cv = sd/mean) %>% 
+    rename(value = .data[[variables[i]]]) %>% 
+    mutate(variable = variables[i])
   
 }
 
@@ -39,25 +44,78 @@ abricheven <- do.call(rbind, list)
 
 #Biomass
 
-{meta_function(biomass_imp012, "biomass", "treatment")
+  biomass012 <- biomass_imp012 %>% 
+    select(treatment, plot, sampling, date, biomass) %>% 
+    distinct(treatment, plot, sampling, date, biomass) %>%
+    group_by(treatment, sampling, date) %>% 
+    mutate(
+      n = n(),
+      mean = mean(biomass, na.rm = TRUE),
+      sd = sd(biomass, na.rm = TRUE)
+    ) %>%
+    mutate(
+      cv = sd/mean) %>% 
+    rename(variable = biomass) %>% 
+    mutate(variable = "biomass012")
   
-  biomass012 <- data_meta %>% 
-    select(date, sampling, treatment, mean, sd, cv, variable) %>% 
-    distinct() %>% 
-    mutate(variable  = fct_recode(variable,
-                        "biomass012" = "biomass"))}
-
-{meta_function(biomass_imp, "biomass", "treatment")
-  
-  biomass <- data_meta %>% 
-    select(date, sampling, treatment, mean, sd, cv, variable) %>% 
-    distinct()  }
+  biomass <- biomass_imp %>% 
+    select(treatment, plot, sampling, date, biomass) %>% 
+    distinct(treatment, plot, sampling, date, biomass) %>%
+    group_by(treatment, sampling, date) %>% 
+    mutate(
+      n = n(),
+      mean = mean(biomass, na.rm = TRUE),
+      sd = sd(biomass, na.rm = TRUE)
+    ) %>%
+    mutate(
+      cv = sd/mean) %>% 
+    rename(variable = biomass) %>% 
+    mutate(variable = "biomass")
 
 
 library(forcats)
 
 data_whole <- rbind(abricheven, biomass) %>% 
-  rbind(biomass012)
+  rbind(biomass012) %>% 
+  select(-value, -plot) %>% 
+  distinct()
+
+# Dynamics
+
+data_whole %>% 
+  mutate(
+    variable = fct_recode(variable,
+                          "Richness" = "richness",
+                          "Cover" = "abundance",
+                          "Evenness" = "Y_zipf",
+                          "Biomass" = "biomass",
+                          "Biomass012" = "biomass012"), 
+    
+    variable = fct_relevel(variable,
+                           "Richness",
+                           "Cover",
+                           "Evenness",
+                           "Biomass",
+                           "Biomass012")) %>% 
+ggplot(aes(x = date, y = cv)) + 
+  facet_grid(variable ~ treatment, scales = "free_y", 
+             labeller = labeller(
+               treatment = as_labeller(labels3))) + 
+  geom_smooth(
+    se = TRUE, aes(color = treatment, fill = treatment),
+    method = "lm", span = 0.6, alpha = 0.2 ) +
+  geom_point(aes(color = treatment), size = 1.2) + 
+  geom_line(aes(color = treatment)) +
+  scale_color_manual(values = palette5) +
+  scale_fill_manual(values = palette5) +
+  geom_vline(xintercept = as.Date("2023-05-11"), linetype = "dashed", color = "gray40") +
+  theme(legend.position = "none", labs( y = "Coefficient of variation"))
+  
+
+
+
+
+# Response ratio
 
 variables <- c("richness", "abundance", "Y_zipf", "biomass", "biomass012")
 
@@ -73,12 +131,15 @@ for(i in seq_along(variables)){
   RR_cv_c  <- data_whole %>% 
     filter(treatment == "c")%>% 
     filter(variable == variables[i]) %>% 
-    select(date, sampling, cv) %>% 
-    rename(cv_c = cv) 
+    rename(cv_c = cv,
+           treatment_c = treatment) %>% 
+    select(treatment_c, sampling, date, cv_c, variable)
   
   RR_cv <- RR_cv %>% 
     left_join(RR_cv_c, by = c("date", "sampling")) %>% 
-    mutate(variable = variables[i])
+    mutate(variable = variables[i]) %>% 
+    select(-treatment_c) %>% 
+    filter(!(sampling == "1" & treatment %in% c("p", "wp")))
   
   list[[i]] <- RR_cv
   
@@ -104,8 +165,8 @@ RR_cv <- do.call(rbind, list) %>%
                            "Cover",
                            "Evenness",
                            "Biomass",
-                           "Biomass012")
-  )
+                           "Biomass012")) %>% 
+  select(-cv, -cv_c)
 
 
 ggplot(RR_cv, aes(x = date, y = RR)) + 
