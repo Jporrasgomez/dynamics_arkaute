@@ -1,0 +1,361 @@
+---
+title: "Functional traits"
+format: html
+editor: visual
+date: today
+execute:
+  warning: false # Oculta advertencias
+  message: false # Oculta mensajes de la consola
+  error: false  
+  fig-width: 8
+  fig-height: 8
+format:
+  html:
+    toc: true
+    toc-depth: 3
+    code-fold: true
+    number-sections: true
+    embed-resources: true
+editor: visual
+bibliography: "C:/Users/javier.porras/Documents/dynamics_arkaute/code/experiment_references.bib"
+---
+
+# Functional traits
+
+Functional traits information was extracted from three online repositories: TRY, BIEN and ROOT. We joined the results into an unique database called "traits". This database contain information of 14 traits on 50 species. In this database only species identified at species level are contained. Species like *Chenopodium sp.* and  *"Amaranthus sp* were removed in order to reduce the noise. We also have removed outliers of the database based on the z-score methodology. 
+
+```{r Opening data}
+
+#| echo: false
+#| warning: false
+
+source(here("code","1.first_script.R"))
+rm(list = setdiff(ls(), "flora_abrich"))
+
+traits <- read.csv(here("data", "traits", "all.indi.used.csv"))
+
+source(here("code", "palettes_labels.R"))
+
+theme_set(theme_bw() +
+            theme(legend.position = "right",
+                  panel.grid = element_blank(),
+                  strip.background = element_blank(),
+                  strip.text = element_text(face = "bold"),
+                  text = element_text(size = 11)))
+
+# I remove 8 dummy rows of flora_abrich that I use for other 
+flora_abrich <- flora_abrich %>% 
+  filter(!is.na(code)) 
+
+traits <- traits %>%
+  mutate(across(where(is.character), as.factor))
+
+species_code <- read.csv("data/species_code.csv") %>% 
+  mutate(species = recode(species, "CAPSELLA BURSA-PASTORIS" = "Capsella bursa-pastoris"))
+  
+
+traits <- traits %>% 
+  mutate(species = recode(species, "Anagallis arvensis" = "Lysimachia arvensis"))%>%
+  filter(species != "Medicago polymorpha") %>% # NO present in the field
+  mutate(species = droplevels(species)) %>% 
+  left_join(species_code, by = "species") %>% 
+   select(c("code", "species", "trait_name", "trait_ID", "database", "trait_value")) %>% 
+  group_by(species, trait_name) %>% 
+  mutate(n_observations = n()) %>% 
+  ungroup() %>% 
+  mutate(
+    code_n_obs = paste(code, n_observations, sep = ", ")
+  )
+
+# Remove species that are "sp". This is: working just with identified species up to species level. 
+flora_abrich <- flora_abrich %>% 
+  filter(!code %in% c("chsp", "amsp", "cisp", "casp"))
+
+traits <- traits %>% 
+  filter(!code %in% c("chsp", "amsp")) #Actually we have no tait info about "cisp" and "casp"
+
+# Remove outliers based on Z-scores
+traits_cleaned <- traits %>%
+  group_by(trait_name, species) %>% 
+  mutate(
+    mean_trait = mean(trait_value, na.rm = TRUE),
+    sd_trait = sd(trait_value, na.rm = TRUE),
+    z_score = (trait_value - mean_trait) / sd_trait
+  ) %>%
+  filter(
+    n_observations <= 5 | abs(z_score) <= 4  # Do not filter outliers for n_observations <= 5
+  ) %>%
+  ungroup() %>%
+  select(-mean_trait, -sd_trait, -z_score)  # Remove temporary columns if not needed
+
+
+```
+
+
+## Mean values of functional traits per species
+
+Since the traits repositories provide multiple values of a same trait for each species, we have to calculate an average value per species. At the moment, we have 15,243 trait values spread between 50 species. There are up to 53 identified species in the field because they were identified at some point. However, we could no track some of them during the whole duration of the experiment due to the abscence of flower or fruit at different moments of the year .That is why these species had to be aggregated into broader groups: *Asteracea* family, *Poaceae* family, *Orchidaceae* family and *Torilis* genus (check on general methods for more information). Therefore, we first calculalate mean values and sd values for these groups, to then merging them with the rest of species. 
+
+
+```{r Mean values}
+
+#| warning: false
+
+########################################
+## CALCULATING MEAN VALUES FOR TRAITS
+#######################################
+
+#Calculating the average traits per taxonomic groups: torilis sp, poaceae, asteraceae and orchidaceae
+
+
+
+sp_poaceae <- c("Avena sterilis", "Bromus hordeaceus", "Bromus sterilis", "Cynosurus echinatus", "Elymus repens", "Hordeum murinum", "Poa annua", "Poa bulbosa", "Lolium perenne", "Gaudinia fragilis")
+traits_poaceae <- traits_cleaned %>% 
+  filter(species %in% sp_poaceae)
+traits_poaceae <- traits_poaceae %>% 
+  group_by(trait_name) %>% 
+  summarize(trait_mean = mean(trait_value, na.rm = T), 
+            trait_sd = sd(trait_value, na.rm = T),
+            n_obs_traits = n())
+traits_poaceae$code <- "poaceae"
+
+sp_asteraceae <- c("Crepis capillaris", "Hypochaeris radicata", "Leontodon hispidus")
+traits_asteraceae <- traits_cleaned %>% 
+  filter(species %in% sp_asteraceae)
+traits_asteraceae <- traits_asteraceae %>% 
+  group_by(trait_name) %>% 
+  summarize(trait_mean = mean(trait_value, na.rm = T), 
+            trait_sd = sd(trait_value, na.rm = T),
+            n_obs_traits = n())
+traits_asteraceae$code <- "asteraceae"
+
+sp_torilis <- c("Torilis nodosa", "Torilis arvensis")
+traits_torilis <- traits_cleaned %>% 
+  filter(species %in% sp_torilis)
+traits_torilis <- traits_torilis %>% 
+  group_by(trait_name) %>% 
+  summarize(trait_mean = mean(trait_value, na.rm = T), 
+            trait_sd = sd(trait_value, na.rm = T),
+            n_obs_traits = n())
+traits_torilis$code <- "tosp"
+
+sp_orchidaceae <- c("Anacamptis pyramidalis", "Ophrys apifera")
+traits_orchidaceae <- traits_cleaned %>% 
+  filter(species %in% sp_orchidaceae)
+traits_orchidaceae <- traits_orchidaceae %>% 
+  group_by(trait_name) %>% 
+  summarize(trait_mean = mean(trait_value, na.rm = T), 
+            trait_sd = sd(trait_value, na.rm = T),
+            n_obs_traits = n())
+traits_orchidaceae$code <- "orchidaceae"
+
+
+sp_all <- c(sp_poaceae, sp_asteraceae, sp_orchidaceae, sp_torilis, "Erophila verna", "Stellaria media",
+            "Lotus corniculatus")
+#I delete all species that are aggregate within taxonomic groups and also
+#Lotus corniculatus, Erophila verna and Sterllaria media because we did not measure them in the field finally.
+
+
+traits_mean <- traits_cleaned %>% 
+  filter(!species %in% sp_all) %>% 
+  group_by(code, species, trait_name, trait_ID, database, n_observations) %>% 
+  summarize(trait_mean = mean(trait_value, na.rm = T), 
+            trait_sd = sd(trait_value, na.rm = T)) %>%
+  rename(n_obs_traits = n_observations)
+
+traits_mean <- bind_rows(traits_mean, traits_poaceae, traits_asteraceae, traits_torilis, traits_orchidaceae)
+```
+
+We do not have trait information for *Myosotis discolor* despite we have been able to identified it across the whole experiment at species level. 
+
+```{r Species for which we do not have trait info }
+#The function checks which species are present in traits_mean$species but not present in flora$species.
+
+setdiff(unique(flora_abrich$code), unique(traits_mean$code))
+
+# I have to check on Myosotis. 
+
+#Changes that have been made: 
+# - Sonchus sp has been substituted by "asteraceae" in the flora_abrich database
+# - For the species Cirsium sp, Myosotis discolor and Cardamine sp we do not have functional traits. 
+# What can I do about Cirsium? it is one of the most abudance species at the end of the samplings. 
+
+
+```
+## Community weighted mean calculation
+
+A way to assess a functional trait in a whole commynity is by calculating its community weighted mean (CWM) (**reference**). TO do that, we have to build and abundance matrix and a trait matrix. 
+
+```{r CWM}
+
+#| warning: false
+#| echo: false
+
+#######################################
+########## CWM analysis RAW ###########
+#######################################
+
+library(FD)
+library(psych)
+
+#Hacer unas data frames como dummy$trait y dummy$abun del paquete FD. necesito una matriz de abundancias de las comunidades. 
+
+# Abundance matrix and traits matrix have to have the same amount of species and in the same order
+```
+
+
+
+```{r CWM: abundance matrix}
+
+#| warning: false
+#| echo: false
+
+
+#### TRAIT MATRIX: 
+
+traits_mean_wide <- traits_mean %>%
+  ungroup() %>%                           # Remove grouping structure
+  select(-trait_sd, -database, -n_obs_traits, -trait_ID, -species) %>%  # Remove unnecessary columns
+  pivot_wider(
+    names_from = trait_name,              # Columns will be based on trait_name levels
+    values_from = trait_mean              # Values will come from trait_mean
+  )
+
+
+
+##|  Treating SLA and LA traits. 
+##| We have 2 traits for SLA: SLA.ex and SLA.inc
+##| We have 3 traits for LA: LA.ex, LA.un and LA.inc. 
+##| They all differ if they include or no the pedunculum of the leaf. 
+##| When there is one trait available for a species, the others are not. So we will keep just one value per SLA and LA and species
+##| 
+
+traits_mean_wide <- traits_mean_wide %>% 
+  mutate(SLA.inc = ifelse(is.na(SLA.inc), SLA.ex, SLA.inc)) %>% 
+  mutate(LA.inc = ifelse(is.na(LA.inc), LA.ex, LA.inc)) %>% 
+  mutate(LA.inc = ifelse(is.na(LA.inc), LA.un, LA.inc)) %>% 
+  mutate(LA.inc = ifelse(is.na(LA.inc), LA, LA.inc)) %>% 
+  select(!c("SLA.ex","LA.ex", "LA.un", "LA")) %>% 
+  rename(SLA = SLA.inc ) %>% 
+  rename(LA = LA.inc)
+
+##  ---REMOVING SPECIES WITH LOW NUMBER OF TRAITS AVAILABLE---
+
+traits_mean_wide %>%
+  mutate(
+    missing_data = rowSums(is.na(.))
+  ) %>%
+  select(code, missing_data) %>%
+  mutate(
+    code = factor(code, levels = code[order(missing_data, decreasing = TRUE)])
+  ) %>%
+  ggplot(aes(x = code, y = missing_data)) +
+  geom_col(fill = "steelblue") +
+  labs(x = "Species code", y = "% Missing traits data", 
+       title = "Number of traits without data per species (n traits = 10)") +
+  geom_hline(yintercept = 5, color = "red", linetype = "dashed", linewidth = 1) +
+  theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1))
+  
+## According to Carmona et al. 2021, we have to remove the species with less than the 50% of the traits. 
+# These are: libi, amsp and rapa. 
+# Before deleting them, we can check the relevance of these species (in checking.results we can do it)
+# rapa is a species with a lot of abundance and n_observations, but not one of the highest
+
+traits_mean_wide <- traits_mean_wide %>% 
+  filter(!code %in% c("libi", "amsp", "rapa")) %>% 
+  droplevels()
+
+## REMOVING TRAITS WITH HIGH NUMBER OF NA
+
+missing_data <- colSums(is.na(traits_mean_wide)) / nrow(traits_mean_wide) * 100
+print(missing_data)
+
+data.frame(
+  variable = names(missing_data),
+  missing_perc = as.numeric(missing_data)
+) %>%
+  mutate(
+    variable = factor(variable, levels = variable[order(missing_perc, decreasing = TRUE)])
+  ) %>% 
+ggplot(aes(x = variable, y = missing_perc)) +
+  geom_col(fill = "seagreen") +
+  geom_hline(yintercept = 50, color = "red", linetype = "dashed", linewidth = 1) +
+  labs(x = "Trait", y = "% Missing data", 
+       title = "Percentage of Missing Trait Data per Variable") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1))
+
+traits_mean_wide <- traits_mean_wide %>% 
+  select(!c("rootN", "RTD", "SRL", "SSD"))
+
+#Now we have 2 traits above 50 % NA, 1 = 50% and 1 around 45%. I would delete them all
+# given that the following one is araound 15%
+
+# We now have only 5 NA in trait leafN 
+
+# Prepare the database for the FD function: 
+
+traits_matrix <- as.data.frame(traits_mean_wide)
+
+rownames(traits_matrix) <- traits_matrix$code
+
+traits_matrix <- traits_matrix %>% 
+  arrange(code)
+
+traits_matrix <- traits_matrix %>% 
+  select(!code)
+
+
+
+# We can try to impute the NAs with missforest,
+# however, the amount of NA is so low that we consider that is not necessary
+
+#library(missForest)
+
+#imputed_data <- missForest(traits_matrix) #default ntrees = 100
+## Access the imputed data
+#imputed_traits <- imputed_data$ximp
+#imputed_data$OOBerror # Very low error. Acceptable imputation!
+#
+#boxplot(traits_mean_wide$leafN)
+#boxplot(imputed_traits$leafN)
+#
+#head(imputed_traits)
+#summary(imputed_traits)
+
+
+
+
+### ABUNDANCE MATRIX 
+
+# We will prepare 2 abundance matrix: 1) for abundance at plot level
+#                                     2) for abundance at treatment level. This is: mean abundance of each species per treatment
+
+# Common step for both abudance matrix: 
+
+flora_abrich <- flora_abrich %>% 
+  filter(!code %in% c("cisp", "casp", "mydi",  #Deleting the species for which we do not have traits
+                      "libi", "amsp", "rapa"))  #Deleting the species for which we had more than 50% of NAs
+
+# Abundance matrix 1: plot level (dynamics)
+
+abundance_matrix_dynamics <- flora_abrich %>% 
+  ungroup() %>% 
+  select(sampling, date, treatment, plot, abundance_s, code) %>% 
+  mutate(
+    com = paste(sampling, treatment, plot, sep = "/")
+  ) %>% 
+  select(com, abundance_s, code) %>% 
+  mutate(abundance_s = abundance_s/100) %>% # abundance = (0,1)
+  pivot_wider(
+    names_from = code, 
+    values_from = abundance_s) %>%
+  select(com, sort(setdiff(names(.), "com"))) %>%
+  column_to_rownames("com") %>% 
+  mutate(across(everything(), ~ replace_na(., 0))) %>%  # NA = 0 
+  as.data.frame() 
+
+
+```
+
+

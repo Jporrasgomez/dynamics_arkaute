@@ -157,7 +157,7 @@ for(i in 1:length(samps)){
 
 
 print(list_sorensen)
-print(list_jaccard)
+
 
 sorensen_df <- bind_rows(list_sorensen_df) %>% 
   filter(!value == "0") %>%
@@ -442,19 +442,6 @@ ggNMDS23_allplots<-
          x = "NMDS2", y = "NMDS3", color = "Treatment")
   # Print the plot
 
-
-
-hist(nmds_df_plot$NMDS1, breaks = 50)
-
-
-ggNMDS2_boxplot_plot <- 
-  ggplot(nmds_df_plot, aes(y = NMDS2, x = treatment)) +
-  geom_boxplot(aes(fill = treatment), color = "black", alpha = 0.5) + # Set the outline color to black
-  scale_fill_manual(values = palette) +
-  theme(legend.position = "none",
-        axis.text.x = element_blank(), axis.text.y = element_blank(),
-        panel.background = element_rect(fill = NA, colour = NA), # Transparent background
-        plot.background = element_rect(fill = NA, colour = NA))
 
 
 

@@ -32,38 +32,34 @@ species_code <- read.csv("data/species_code.csv") %>%
   mutate(species = recode(species, "CAPSELLA BURSA-PASTORIS" = "Capsella bursa-pastoris"))
   
 
-
-
 ## Checking which species are absent
 checking <- anti_join(traits, species_code, by = "species") %>% 
   distinct(species, .keep_all = T) %>% 
   print()#Anagallis arvensis = Lysimachia arvensis
 
 traits <- traits %>% 
-  mutate(species = recode(species, "Anagallis arvensis" = "Lysimachia arvensis"))
-
-traits <- traits %>%
+  mutate(species = recode(species, "Anagallis arvensis" = "Lysimachia arvensis"))%>%
   filter(species != "Medicago polymorpha") %>%
-  mutate(species = droplevels(species))
-
-
-traits <- left_join(traits, species_code, by = "species") 
-
-
- traits <- traits %>% 
-   select(c("code", "species", "trait_name", "trait_ID", "database", "trait_value"))
-
-
-traits <- traits %>% 
+  mutate(species = droplevels(species)) %>% 
+  left_join(species_code, by = "species") %>% 
+   select(c("code", "species", "trait_name", "trait_ID", "database", "trait_value")) %>% 
   group_by(species, trait_name) %>% 
   mutate(n_observations = n()) %>% 
-  ungroup()
+  ungroup() %>% 
+  mutate(
+    code_n_obs = paste(code, n_observations, sep = ", ")
+  )
 
 
 
-#Let's try
+# Removing species that are "sp". This is: working just with identified species up to species level. 
+flora_abrich <- flora_abrich %>%
+  filter(!is.na(code)) %>% 
+  filter(!code %in% c("chsp", "amsp"))
 
-traits$code_n_obs <- paste(traits$code, traits$n_observations, sep = ", ")
+traits <- traits %>% 
+  filter(!code %in% c("chsp", "amsp"))
+
 
 
 # Remove outliers based on Z-scores
@@ -325,7 +321,7 @@ abundance_matrix_dynamics <- flora_abrich %>%
   column_to_rownames("com") %>% 
   mutate(across(everything(), ~ replace_na(., 0))) %>%  # NA = 0 
   as.data.frame() 
-rownames(abundance_matrix_dynamics) <- abundance_matrix_dynamics$com
+
 
 
 
@@ -409,14 +405,14 @@ sampling_dates <- read.csv("data/sampling_dates.csv") %>%
          ) %>% 
   mutate(across(where(is.character), as.factor))
 
-cwm_dynamics <- cwm_dynamics %>% 
+cwm_dynamics_db <- cwm_dynamics %>% 
   merge(sampling_dates)
 
 source("code/meta_function/stats_function.R")
-stats(cwm_dynamics, "SLA", "treatment")
+stats(cwm_dynamics_db, "SLA", "treatment")
 
 
-cwm_dynamics_db <- cwm_dynamics %>% 
+cwm_dynamics_db <- cwm_dynamics_db %>% 
   pivot_longer(cols = c("LDMC", "leafN", "SLA", "LA", "vegetation.height", "seed.mass"),
                names_to = "trait_name",
                values_to = "cwm_value") %>% 
@@ -490,37 +486,23 @@ cwm_dynamics_db %>%
 #Abunance matrix 2: treatment level
 
 
-abundance_ref_treatment <- flora_abrich %>% 
+abundance_matrix_treatment <- flora_abrich %>% 
   ungroup() %>% 
-  select(treatment, abundance_s, code)
-
-abundance_ref_treatment$abundance_s <- abundance_ref_treatment$abundance_s/100
-
-abundance_ref_treatment <- abundance_ref_treatment %>% 
+  select(treatment, abundance_s, code) %>% 
+  mutate(
+    abundance_s = abundance_s/100
+  ) %>% 
   group_by(treatment, code) %>% 
-  summarize(mean_abundance = mean(abundance_s, na.rm = T))
-
-abundance_wide_treatments <- abundance_ref_treatment %>% 
+  summarize(mean_abundance = mean(abundance_s, na.rm = T)) %>% 
   pivot_wider(
     names_from = code, 
     values_from = mean_abundance) %>%
-  select(treatment, sort(setdiff(names(.), "treatment")))
-
-
-# transformation NA into 0 
-codes <- unique(flora_abrich$code)
-for(i in 1:length(codes)){
-  abundance_wide_treatments[[paste0(codes[i])]] <- 
-    ifelse(is.na(abundance_wide_treatments[[paste0(codes[i])]]), 0, abundance_wide_treatments[[paste0(codes[i])]])
-}
-
-
-abundance_matrix_treatment <- as.data.frame(abundance_wide_treatments)
-rownames(abundance_matrix_treatment) <- abundance_matrix_treatment$treatment
-abundance_matrix_treatment <- abundance_matrix_treatment %>% 
-  select(!treatment)
-
-
+  select(treatment, sort(setdiff(names(.), "treatment"))) %>%
+  mutate(across(everything(), ~ replace_na(., 0))) %>% 
+  column_to_rownames("treatment") %>%
+  as.data.frame()
+  
+  
 
 
 #cwm at treatment level 
