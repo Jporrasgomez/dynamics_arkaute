@@ -408,7 +408,7 @@ ggplot(pca_sampling, aes(x = PC1, y = PC2, color = treatment, shape = treatment)
                inherit.aes = FALSE,
                arrow = arrow(length = unit(0.3, "cm")),
                color = "gray30") +
-  geom_text_repel(data = loadings_scaled,
+  geom_text_repel(data = loadings_df,
                   aes(x = PC1, y = PC2, label = trait),
                   inherit.aes = FALSE,
                   color = "gray30",
