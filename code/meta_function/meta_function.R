@@ -6,7 +6,7 @@
 meta_function <- function(data, variable1, variable2){
   
 
- 
+  
   
   data <- data %>% 
     distinct(treatment, plot, sampling, date, .data[[variable1]], .keep_all = TRUE) %>% 

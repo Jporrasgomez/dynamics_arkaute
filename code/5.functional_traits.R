@@ -52,13 +52,13 @@ traits <- traits %>%
 
 
 
-# Removing species that are "sp". This is: working just with identified species up to species level. 
-flora_abrich <- flora_abrich %>%
-  filter(!is.na(code)) %>% 
-  filter(!code %in% c("chsp", "amsp"))
+
+# Remove species that are "sp". This is: working just with identified species up to species level. 
+flora_abrich <- flora_abrich %>% 
+  filter(!code %in% c("chsp", "amsp", "cisp", "casp"))
 
 traits <- traits %>% 
-  filter(!code %in% c("chsp", "amsp"))
+  filter(!code %in% c("chsp", "amsp")) #Actually we have no tait info about "cisp" and "casp"
 
 
 
@@ -84,60 +84,56 @@ outliers <- anti_join(traits, traits_cleaned)
 #######################################
 
 #Calculating the average traits per taxonomic groups: torilis sp, poaceae, asteraceae and orchidaceae
-
+sp_poaceae <- c("Avena sterilis", "Bromus hordeaceus", "Bromus sterilis", "Cynosurus echinatus",
+                "Elymus repens", "Hordeum murinum", "Poa annua", "Poa bulbosa",
+                "Lolium perenne", "Gaudinia fragilis")
 traits_poaceae <- traits_cleaned %>% 
-  filter(species %in% c("Avena sterilis", "Bromus hordeaceus", "Bromus sterilis", "Cynosurus echinatus", "Elymus repens", 
-                        "Hordeum murinum", "Poa annua", "Poa bulbosa", "Lolium perenne", "Gaudinia fragilis"))
-traits_poaceae <- traits_poaceae %>% 
+  filter(species %in% sp_poaceae) %>% 
   group_by(trait_name) %>% 
   summarize(trait_mean = mean(trait_value, na.rm = T), 
             trait_sd = sd(trait_value, na.rm = T),
-            n_obs_traits = n())
-traits_poaceae$code <- "poaceae"
+            n_obs_traits = n()) %>% 
+  mutate(code = "poaceae")
 
 
+sp_asteraceae <- c("Crepis capillaris", "Hypochaeris radicata", "Leontodon hispidus")
 traits_asteraceae <- traits_cleaned %>% 
-  filter(species %in% c("Crepis capillaris", "Hypochaeris radicata", "Leontodon hispidus"))
-traits_asteraceae <- traits_asteraceae %>% 
+  filter(species %in% sp_asteraceae) %>% 
   group_by(trait_name) %>% 
   summarize(trait_mean = mean(trait_value, na.rm = T), 
             trait_sd = sd(trait_value, na.rm = T),
-            n_obs_traits = n())
-traits_asteraceae$code <- "asteraceae"
+            n_obs_traits = n()) %>% 
+  mutate(code = "asteraceae")
 
 
+sp_torilis <- c("Torilis nodosa", "Torilis arvensis")
 traits_torilis <- traits_cleaned %>% 
-  filter(species %in% c("Torilis nodosa", "Torilis arvensis"))
-traits_torilis <- traits_torilis %>% 
+  filter(species %in% sp_torilis) %>% 
   group_by(trait_name) %>% 
   summarize(trait_mean = mean(trait_value, na.rm = T), 
             trait_sd = sd(trait_value, na.rm = T),
-            n_obs_traits = n())
-traits_torilis$code <- "tosp"
+            n_obs_traits = n()) %>% 
+  mutate(code = "tosp")
 
+sp_orchidaceae <- c("Anacamptis pyramidalis", "Ophrys apifera")
 traits_orchidaceae <- traits_cleaned %>% 
-  filter(species %in% c("Anacamptis pyramidalis", "Ophrys apifera"))
-traits_orchidaceae <- traits_orchidaceae %>% 
+  filter(species %in% sp_orchidaceae) %>% 
   group_by(trait_name) %>% 
   summarize(trait_mean = mean(trait_value, na.rm = T), 
             trait_sd = sd(trait_value, na.rm = T),
-            n_obs_traits = n())
-traits_orchidaceae$code <- "orchidaceae"
+            n_obs_traits = n()) %>% 
+  mutate(code = "orchidaceae")
 
+
+sp_all <- c(sp_poaceae, sp_asteraceae, sp_orchidaceae, sp_torilis, "Erophila verna", "Stellaria media",
+            "Lotus corniculatus")
 
 #I delete all species that are aggregate within taxonomic groups and also
 #Lotus corniculatus, Erophila verna and Sterllaria media because we did not measure them in the field finally.
-traits_cleaned <- traits_cleaned %>% 
-  filter(!species %in% c("Avena sterilis", "Bromus hordeaceus", "Bromus sterilis", "Cynosurus echinatus", "Elymus repens", 
-                         "Hordeum murinum", "Poa annua", "Poa bulbosa", "Crepis capillaris", "Hypochaeris radicata", "Leontodon hispidus", 
-                         "Torilis nodosa", "Torilis arvensis", "Lolium perenne", "Lotus corniculatus", "Gaudinia fragilis", "Anacamptis pyramidalis",
-                         "Ophrys apifera", "Erophila verna", "Stellaria media"))
 
-
-
-## Calculating trait mean values for the rest of species
 
 traits_mean <- traits_cleaned %>% 
+  filter(!species %in% sp_all) %>% 
   group_by(code, species, trait_name, trait_ID, database, n_observations) %>% 
   summarize(trait_mean = mean(trait_value, na.rm = T), 
             trait_sd = sd(trait_value, na.rm = T)) %>%
@@ -150,8 +146,7 @@ traits_mean <- bind_rows(traits_mean, traits_poaceae, traits_asteraceae, traits_
 #  print()
 
 
-setdiff(unique(traits_mean$code), unique(flora_abrich$code))
-setdiff(unique(flora_abrich$code), unique(traits_mean$code))
+
 
 #The function checks which species are present in traits_mean$species but not present in flora$species.
 setdiff(unique(traits_mean$code), unique(flora_abrich$code))
@@ -187,7 +182,6 @@ traits_mean_wide <- traits_mean %>%
     names_from = trait_name,              # Columns will be based on trait_name levels
     values_from = trait_mean              # Values will come from trait_mean
   )
-
 
 
 ##|  Treating SLA and LA traits. 
@@ -296,7 +290,7 @@ traits_matrix <- traits_matrix %>%
 ### ABUNDANCE MATRIX 
 
 # We will prepare 2 abundance matrix: 1) for abundance at plot level
-#                                     2) for abundance at treatment level. This is: mean abundance of each species per treatment
+#                                     2) for abundance at sampling level. This is: mean abundance of each species per treatment and sampling
 
 # Common step for both abudance matrix: 
 
@@ -304,7 +298,145 @@ flora_abrich <- flora_abrich %>%
   filter(!code %in% c("cisp", "casp", "mydi",  #Deleting the species for which we do not have traits
                       "libi", "amsp", "rapa"))  #Deleting the species for which we had more than 50% of NAs
 
-# Abundance matrix 1: plot level (dynamics)
+
+
+
+
+#Abundance matrix 1: sampling level
+
+
+abundance_matrix_sampling <- flora_abrich %>% 
+  ungroup() %>% 
+  select(sampling, date, treatment, plot, abundance_s, code) %>% 
+  mutate(
+    abundance_s = abundance_s / 100
+  ) %>% 
+  group_by(treatment, sampling, code) %>% 
+  summarize(mean_abundance = mean(abundance_s, na.rm = TRUE), .groups = "drop") %>% 
+  mutate(
+    com = paste(sampling, treatment, sep = "/")
+  ) %>% 
+  select(com, mean_abundance, code) %>% 
+  pivot_wider(
+    names_from = code, 
+    values_from = mean_abundance) %>%
+  select(com, sort(setdiff(names(.), "com"))) %>%
+  column_to_rownames("com") %>% 
+  mutate(across(everything(), ~ replace_na(., 0))) %>%  # NA = 0 
+  as.data.frame() 
+
+
+cwm_sampling <- functcomp(as.matrix(traits_matrix), as.matrix(abundance_matrix_sampling))
+cwm_sampling$com <- rownames(cwm_sampling); rownames(cwm_sampling) <- NULL
+
+cwm_sampling <- cwm_sampling %>% 
+  mutate(
+    sampling = sapply(strsplit(com, "/"), function(x) x[1]),
+    treatment = sapply(strsplit(com, "/"), function(x) x[2]),
+  ) %>% 
+  select(-com)
+
+
+library(factoextra)
+
+cwm_sampling %>% 
+  select(-treatment, - sampling) %>% 
+  prcomp(center = T, scale. = T) %>% 
+  fviz_pca_biplot(geom = "point", repel = T, title = " ",
+                                     ggthem = theme_test())
+
+### PCA
+##cwm_sampling %>% 
+##  select(-sampling, -treatment) %>% 
+##  prcomp(center = TRUE, scale. = TRUE) %>% 
+##  fviz_pca_biplot(geom.ind = "point",
+##                  habillage = cwm_sampling$treatment,
+##                  addEllipses = TRUE,
+##                  ellipse.level = 0.68,
+##                  palette = palette5,
+##                  repel = TRUE,  # Evita la superposición de etiquetas
+##                  ggtheme = theme_test()) +
+##  scale_shape_manual(values = point_shapes, labels = labels3) +
+##  scale_color_manual(values = palette5, labels = labels3) +
+##  guides(color = guide_legend(title = NULL),    # Leyenda de color
+##         shape = guide_legend(title = NULL),    # Leyenda de forma
+##         fill = "none") +                      # Elimina la leyenda de las elipses (relleno)
+##  theme(legend.position = "bottom",
+##        legend.title = element_blank(),        # Elimina el título de la leyenda
+##        legend.key = element_blank()) +        # Elimina las claves de la leyenda de color/forma
+##  labs(title = "PCA mean abundance values at sampling level")
+ 
+
+# PCA on CWM data (excluding metadata columns)
+pca_sampling0 <- cwm_sampling %>%
+  select(-sampling, -treatment) %>%
+  prcomp(center = TRUE, scale. = TRUE)
+
+# Individual coordinates (scores) + treatment info
+pca_sampling <- as.data.frame(pca_sampling0$x)
+pca_sampling$treatment <- cwm_sampling$treatment
+
+# Loadings (trait vectors)
+loadings_df <- as.data.frame(pca_sampling0$rotation)
+loadings_df$trait <- rownames(loadings_df)
+loadings_df <- loadings_df %>%
+  mutate(PC1 = PC1 * 4, PC2 = PC2 * 4)  # scale factor can be adjusted (lenth of arrows)
+
+# Explained variance
+eig_values <- pca_sampling0$sdev^2
+var_explained <- round(100 * eig_values / sum(eig_values), 1)
+
+# Final PCA plot
+# Añade la columna de sampling
+pca_sampling$sampling <- cwm_sampling$sampling
+
+# Gráfico PCA final con numeración y líneas
+ggplot(pca_sampling, aes(x = PC1, y = PC2, color = treatment, shape = treatment)) +
+  #geom_path(aes(group = treatment), linewidth = 0.5, alpha = 0.2) +  # Conecta puntos del mismo tratamiento
+  geom_point(size = 1.5) +
+  #geom_text_repel(aes(label = sampling, color = treatment), size = 3, max.overlaps = Inf)  +  # Números de sampling
+  stat_ellipse(aes(fill = treatment, color = treatment),
+               alpha = 0.2,
+               geom = "polygon",
+               level = 0.68,
+               type = "norm",
+               linewidth = 0.6) +
+  geom_hline(yintercept = 0, linetype = "dashed", color = "gray50") +
+  geom_vline(xintercept = 0, linetype = "dashed", color = "gray50") +
+  geom_segment(data = loadings_df,
+               aes(x = 0, y = 0, xend = PC1, yend = PC2),
+               inherit.aes = FALSE,
+               arrow = arrow(length = unit(0.3, "cm")),
+               color = "gray30") +
+  geom_text_repel(data = loadings_scaled,
+                  aes(x = PC1, y = PC2, label = trait),
+                  inherit.aes = FALSE,
+                  color = "gray30",
+                  max.overlaps = Inf) +
+  scale_color_manual(values = palette5, labels = labels3) +
+  scale_fill_manual(values = palette5) +
+  scale_shape_manual(values = point_shapes, labels = labels3) +
+  labs(x = paste0("PC1 (", var_explained[1], "%)"),
+       y = paste0("PC2 (", var_explained[2], "%)"),
+       title = "CWM differences (mean abundance) at sampling level") +
+  guides(color = guide_legend(title = NULL),
+         shape = guide_legend(title = NULL),
+         fill = "none") +
+  theme_test() +
+  theme(legend.position = "bottom")
+
+
+
+
+
+
+
+
+
+
+
+
+# Abundance matrix 2: plot level (dynamics)
 
 abundance_matrix_dynamics <- flora_abrich %>% 
   ungroup() %>% 
@@ -323,18 +455,15 @@ abundance_matrix_dynamics <- flora_abrich %>%
   as.data.frame() 
 
 
-
-
-
 # Calculation of cwm with function functcomp
 
 #cwm at plot level (dynamics)
 
-cwm_dynamics <- FD::functcomp(as.matrix(traits_matrix), as.matrix(abundance_matrix_dynamics))
-cwm_dynamics$com <- rownames(abundance_matrix_dynamics); rownames(cwm_dynamics) <- NULL
+cwm_plot <- FD::functcomp(as.matrix(traits_matrix), as.matrix(abundance_matrix_dynamics))
+cwm_plot$com <- rownames(abundance_matrix_dynamics); rownames(cwm_plot) <- NULL
 
 
-cwm_dynamics <- cwm_dynamics %>% 
+cwm_plot <- cwm_plot %>% 
   mutate(
     sampling = sapply(strsplit(com, "/"), function(x) x[1]),
     treatment = sapply(strsplit(com, "/"), function(x) x[2]),
@@ -345,49 +474,72 @@ cwm_dynamics <- cwm_dynamics %>%
 
 library(factoextra)
 
-cwm_alltreatments <- cwm_dynamics %>% 
-  select(-treatment, - sampling, -plot, -vegetation.height)
-pca_alltreatments <- prcomp(cwm_alltreatments, center = T, scale. = T)
-pca_alltreatments <- fviz_pca_biplot(pca_alltreatments, geom = "point", repel = T, title = " ",
-                         ggthem = theme_test())
-pca_alltreatments
+
+cwm_plot %>% 
+  select(-treatment, - sampling, -plot) %>% 
+  prcomp(center = T, scale. = T) %>% 
+  fviz_pca_biplot(geom = "point", repel = T, title = " ",
+                  ggthem = theme_test())
+
+pca_plot0 <- cwm_plot %>%
+  select(-sampling, -treatment, -plot) %>%
+  prcomp(center = TRUE, scale. = TRUE)
+
+# Individual coordinates (scores) + treatment info
+pca_plot <- as.data.frame(pca_plot0$x)
+pca_plot <- pca_plot %>% 
+  mutate(sampling = cwm_plot$sampling, 
+         plot = cwm_plot$plot, 
+         treatment = cwm_plot$treatment)
+
+# Loadings (trait vectors)
+loadings_df_plot <- as.data.frame(pca_plot0$rotation)
+loadings_df_plot$trait <- rownames(loadings_df_plot)
+loadings_df_plot <- loadings_df_plot %>%
+  mutate(PC1 = PC1 * 4, PC2 = PC2 * 4)  # scale factor can be adjusted (lenth of arrows)
+
+# Explained variance
+eig_values <- pca_plot0$sdev^2
+var_explained <- round(100 * eig_values / sum(eig_values), 1)
 
 
-{cwm_c <- cwm_dynamics %>% 
-  filter(treatment %in% "c") %>% 
-  select(-treatment, - sampling, -plot,  -vegetation.height)
-pca_c <- prcomp(cwm_c, center = T, scale. = T)
-pca_c <- fviz_pca_biplot(pca_c, geom = "point", repel = T, title = " ",
-                         ggthem = theme_test())
 
-cwm_w <- cwm_dynamics %>% 
-  filter(treatment %in% "w")%>% 
-  select(-treatment, - sampling, -plot, -vegetation.height)
-pca_w <- prcomp(cwm_w, center = T, scale. = T)
-pca_w <- fviz_pca_biplot(pca_w, geom = "point", repel = T, title = " ",
-                         ggthem = theme_test())
 
-cwm_p <- cwm_dynamics %>% 
-  filter(treatment %in% "p")%>% 
-  select(-treatment, - sampling, -plot, -vegetation.height)
-pca_p <- prcomp(cwm_p, center = T, scale. = T)
-pca_p <- fviz_pca_biplot(pca_p, geom = "point", repel = T, title = " ",
-                         ggthem = theme_test())
 
-cwm_wp <- cwm_dynamics %>% 
-  filter(treatment %in% "wp")%>% 
-  select(-treatment, - sampling, -plot, -vegetation.height)
-pca_wp <- prcomp(cwm_wp, center = T, scale. = T)
-pca_wp <- fviz_pca_biplot(pca_wp, geom = "point", repel = T, title = " ",
-                         ggthem = theme_test())
+# Gráfico PCA final con numeración y líneas
+ggplot(pca_plot, aes(x = PC1, y = PC2, color = treatment, shape = treatment)) +
+  geom_point(size = 1.5) +
+  stat_ellipse(aes(fill = treatment, color = treatment),
+               alpha = 0.2,
+               geom = "polygon",
+               level = 0.68,
+               type = "norm",
+               linewidth = 0.6) +
+  geom_hline(yintercept = 0, linetype = "dashed", color = "gray50") +
+  geom_vline(xintercept = 0, linetype = "dashed", color = "gray50") +
+  geom_segment(data = loadings_df_plot,
+               aes(x = 0, y = 0, xend = PC1, yend = PC2),
+               inherit.aes = FALSE,
+               arrow = arrow(length = unit(0.3, "cm")),
+               color = "gray30") +
+  geom_text_repel(data = loadings_df_plot,
+                  aes(x = PC1, y = PC2, label = trait),
+                  inherit.aes = FALSE,
+                  color = "gray30",
+                  max.overlaps = Inf) +
+  scale_color_manual(values = palette5, labels = labels3) +
+  scale_fill_manual(values = palette5) +
+  scale_shape_manual(values = point_shapes, labels = labels3) +
+  labs(x = paste0("PC1 (", var_explained[1], "%)"),
+       y = paste0("PC2 (", var_explained[2], "%)"),
+       title = "CWM differences (mean abundance) at plot level") +
+  guides(color = guide_legend(title = NULL),
+         shape = guide_legend(title = NULL),
+         fill = "none") +
+  theme_test() +
+  theme(legend.position = "bottom")
 
-ggarrange(
-labels = c("Control", "Warming", "Perturbation", "Warming + perturbation"),
-pca_c,
-pca_w,
-pca_p,
-pca_wp,
-ncol = 2, nrow = 2)}
+
 
 
 
@@ -402,17 +554,17 @@ sampling_dates <- read.csv("data/sampling_dates.csv") %>%
          year = year(date)) %>% 
   select(sampling, date, year 
          #, day, month, one_month_window, omw_date
-         ) %>% 
+  ) %>% 
   mutate(across(where(is.character), as.factor))
 
-cwm_dynamics_db <- cwm_dynamics %>% 
+cwm_plot_db <- cwm_plot %>% 
   merge(sampling_dates)
 
 source("code/meta_function/stats_function.R")
-stats(cwm_dynamics_db, "SLA", "treatment")
+stats(cwm_plot_db, "SLA", "treatment")
 
 
-cwm_dynamics_db <- cwm_dynamics_db %>% 
+cwm_plot_db <- cwm_plot_db %>% 
   pivot_longer(cols = c("LDMC", "leafN", "SLA", "LA", "vegetation.height", "seed.mass"),
                names_to = "trait_name",
                values_to = "cwm_value") %>% 
@@ -429,122 +581,53 @@ cwm_dynamics_db <- cwm_dynamics_db %>%
 library(ggplot2)
 library(grid)
 
-trait_levels <- unique(cwm_dynamics_db$trait_name)
+trait_levels <- unique(cwm_plot_db$trait_name)
 # solo i = 1, i= 5 y i = 6 parecen mostrar algun tipo de diferencias
 
 i = 1
-cwm_dynamics_db %>% 
+cwm_plot_db %>% 
   filter(trait_name == trait_levels[i]) %>% 
-ggplot(aes(x = date, y = cwm_value)) + 
-    
+  ggplot(aes(x = date, y = cwm_value)) + 
+  
   geom_smooth(
     se = TRUE, aes(color = treatment, fill = treatment),
     method = "lm", span = 0.6, alpha = 0.2 
   ) +
-    
+  
   geom_point(aes(color = treatment),
              alpha = 0.5, position = position_dodge(width = 8)) +
-    
+  
   geom_errorbar(aes(ymax = mean_cwm_value + sd_cwm_value, ymin = mean_cwm_value - sd_cwm_value, color = treatment),
                 , alpha = 0.2, position = position_dodge(width = 8)) + 
-    
+  
   geom_point(aes(x = date, y = mean_cwm_value, , color = treatment), fill = "white", 
              shape = 21, size = 2, position = position_dodge(width = 8))+
-    
+  
   scale_colour_manual(values = palette5) +
-    
+  
   scale_fill_manual(values = palette5) +
-    
+  
   scale_x_date(
     date_breaks = "4 weeks", # Specify the interval (e.g., every 2 weeks)
     date_labels = "%d-%b-%y" # Customize the date format (e.g., "04-May-23")
   ) +
-    
+  
   geom_vline(xintercept = as.Date("2023-05-11"), linetype = "dashed", color = "gray40") +
-    
+  
   theme(axis.text.x = element_text(angle = 45, hjust = 1), legend.position = "none",
-        ) +
-    
+  ) +
+  
   labs(y = paste("CWM", trait_levels[i], sep = " "), x = NULL) #
 
-cwm_dynamics_db %>% 
-  filter(trait_name == trait_levels[i]) %>% 
-  ggplot(aes(y = cwm_value)) +
-  geom_boxplot(aes(fill = treatment), colour = "black", alpha = 0.5) + # Set the outline color to black
-  scale_fill_manual(values = palette5) +
-  theme(legend.position = "none",
-        axis.text.x = element_blank(), axis.text.y = element_blank(),
-        panel.background = element_rect(fill = NA, colour = NA), # Transparent background
-        plot.background = element_rect(fill = NA, colour = NA)) + # Transparent plot background+ 
-  labs(y = NULL)
 
 
 
 
 
 
-#Abunance matrix 2: treatment level
 
 
-abundance_matrix_treatment <- flora_abrich %>% 
-  ungroup() %>% 
-  select(treatment, abundance_s, code) %>% 
-  mutate(
-    abundance_s = abundance_s/100
-  ) %>% 
-  group_by(treatment, code) %>% 
-  summarize(mean_abundance = mean(abundance_s, na.rm = T)) %>% 
-  pivot_wider(
-    names_from = code, 
-    values_from = mean_abundance) %>%
-  select(treatment, sort(setdiff(names(.), "treatment"))) %>%
-  mutate(across(everything(), ~ replace_na(., 0))) %>% 
-  column_to_rownames("treatment") %>%
-  as.data.frame()
-  
-  
 
-
-#cwm at treatment level 
-
-cwm_treatment <- functcomp(as.matrix(traits_matrix), as.matrix(abundance_matrix_treatment))
-
-cwm_treatment$treatment <- rownames(cwm_treatment); rownames(cwm_treatment) <- NULL
-
-#cwm_treatment_db <- cwm_treatment %>% 
-#  pivot_longer(cols = c("LDMC", "leafN", "SLA", "LA", "vegetation.height", "seed.mass"),
-#               names_to = "trait_name",
-#               values_to = "cwm_value")
-
-
-cwm_c <- cwm_treatment %>% 
-  filter(treatment %in% "c")
-rownames(cwm_c) <- cwm_c$treatment
-cwm_c <- cwm_c %>% 
-  select(!treatment)
-
-cwm_w <- cwm_treatment %>% 
-  filter(treatment %in% "w")
-rownames(cwm_w) <- cwm_w$treatment
-cwm_w <- cwm_w %>% 
-  select(!treatment)
-
-cwm_p <- cwm_treatment %>% 
-  filter(treatment %in% "p")
-rownames(cwm_p) <- cwm_p$treatment
-cwm_p <- cwm_p %>% 
-  select(!treatment)
-
-cwm_wp <- cwm_treatment %>% 
-  filter(treatment %in% "wp")
-rownames(cwm_wp) <- cwm_wp$treatment
-cwm_wp <- cwm_wp %>% 
-  select(!treatment)
-
-
-rownames(cwm_treatment) <- cwm_treatment$treatment
-cwm_treatment <- cwm_treatment %>% 
-  select(!treatment)
 
 
 

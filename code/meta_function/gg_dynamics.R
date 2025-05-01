@@ -15,7 +15,6 @@ gg_dynamics <- function(data, variable) {
                     text = element_text(size = 11)))
 
   
-  # Definir un diccionario de variables y títulos
   ytitle_dict <- list(
     
     "richness" = "Richness",
@@ -29,7 +28,13 @@ gg_dynamics <- function(data, variable) {
     "NMDS3" = "NMDS3",
     "total_turnover" = "Total turnover", 
     "appearance" = "Turnover: appearance", 
-    "disappearance" = "Turnover: disappearance"
+    "disappearance" = "Turnover: disappearance",
+    "SLA" = "SLA (?)", 
+    "LA" = "LA(?)", 
+    "LDMC" = "LDMC(?)", 
+    "leafN"= "Leaf nitrogen(?)",
+    "seed.mass" = "Seed mass",
+    "vegetation.height" = "Vegetation height"
   )
   
   ytitle <- ytitle_dict[[variable]]
@@ -38,6 +43,7 @@ gg_dynamics <- function(data, variable) {
     stop("Variable must be one of the following: ", paste(names(ytitle_dict), collapse = ", "))
   }
   
+
   
   # plot
 
