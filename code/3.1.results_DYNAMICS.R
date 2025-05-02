@@ -42,8 +42,8 @@ gg_stats_variable
 # Differences at treatment level
 gg_dunn_variable 
 gg_ttest_variable
-gg_RR
-gg_RR_wp
+gg_RR_dynamics
+gg_RR_dynamics_wp
 
 # Dynamics differences
 gg_all1n

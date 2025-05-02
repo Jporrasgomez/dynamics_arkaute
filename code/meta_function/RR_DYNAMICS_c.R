@@ -28,7 +28,13 @@ RR_dynamics_c <- function(data, variable){
     "NMDS3" = "NMDS3",
     "total_turnover" = "Total turnover", 
     "appearance" = "Turnover: appearance", 
-    "disappearance" = "Turnover: disappearance"
+    "disappearance" = "Turnover: disappearance",
+    "SLA" = "SLA (?)", 
+    "LA" = "LA(?)", 
+    "LDMC" = "LDMC(?)", 
+    "leafN"= "Leaf nitrogen(?)",
+    "seed.mass" = "Seed mass",
+    "vegetation.height" = "Vegetation height"
   )
   
   ytitle <- ytitle_dict[[variable]]

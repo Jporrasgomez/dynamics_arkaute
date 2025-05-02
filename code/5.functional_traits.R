@@ -532,7 +532,7 @@ ggplot(pca_plot, aes(x = PC1, y = PC2, color = treatment, shape = treatment)) +
   scale_shape_manual(values = point_shapes, labels = labels3) +
   labs(x = paste0("PC1 (", var_explained[1], "%)"),
        y = paste0("PC2 (", var_explained[2], "%)"),
-       title = "CWM differences (mean abundance) at plot level") +
+       title = "CWM differences: abundance of species at plot level") +
   guides(color = guide_legend(title = NULL),
          shape = guide_legend(title = NULL),
          fill = "none") +
@@ -560,74 +560,116 @@ sampling_dates <- read.csv("data/sampling_dates.csv") %>%
 cwm_plot_db <- cwm_plot %>% 
   merge(sampling_dates)
 
-source("code/meta_function/stats_function.R")
-stats(cwm_plot_db, "SLA", "treatment")
+
+trait_levels <- c("LDMC", "leafN", "SLA", "LA", "vegetation.height", "seed.mass")
+
+source("code/meta_function/meta_function.R")
+source("code/meta_function/RR_TREATMENT_c.R")
+source("code/meta_function/RR_TREATMENT_wp.R")
+
+palette <- palette5
+labels <- labels3
+
+i= 2
+meta_function(cwm_plot_db, trait_levels[i], "treatment")
 
 
-cwm_plot_db <- cwm_plot_db %>% 
-  pivot_longer(cols = c("LDMC", "leafN", "SLA", "LA", "vegetation.height", "seed.mass"),
-               names_to = "trait_name",
-               values_to = "cwm_value") %>% 
-  merge(sampling_dates) %>% 
-  group_by(sampling, treatment, trait_name) %>% 
-  mutate(
-    mean_cwm_value = mean(cwm_value, na.rm = TRUE), 
-    sd_cwm_value = sd(cwm_value, na.rm = TRUE)
-  ) %>% 
-  ungroup()
-#Añadir mean y sd a la base de datos para lugo añadir las barras de eror y añadir lo de dodge point para cambiarlos de lugar. 
+gg_stats_variable
+
+# Differences at treatment level
+gg_dunn_variable 
+gg_ttest_variable
+gg_RR_dynamics <- gg_RR
+gg_RR_wp_dynamics <- gg_RR_wp
+
+# Dynamics differences
+gg_all1n
+gg_facet
+gg_delta_RR
+gg_delta_RR_wp 
+
+# Coefficient of variation
+gg_stats_cv
+gg_dunn_cv
+gg_ttest_cv  
+gg_dynamics_cv
 
 
-library(ggplot2)
-library(grid)
 
-trait_levels <- unique(cwm_plot_db$trait_name)
-# solo i = 1, i= 5 y i = 6 parecen mostrar algun tipo de diferencias
+list_c <- list()
+list_wp <- list()
 
-i = 1
-cwm_plot_db %>% 
-  filter(trait_name == trait_levels[i]) %>% 
-  ggplot(aes(x = date, y = cwm_value)) + 
+for(i in seq_along(trait_levels)){
   
-  geom_smooth(
-    se = TRUE, aes(color = treatment, fill = treatment),
-    method = "lm", span = 0.6, alpha = 0.2 
+RR_treatment_c(cwm_plot_db, trait_levels[i])
+list_c[[i]] <- RR_treatment
+
+RR_treatment_wp(cwm_plot_db, trait_levels[i])
+list_wp[[i]] <- RR_wp_vs_treatment 
+
+}
+
+RR_c <- do.call(rbind, list_c)
+RR_wp <- do.call(rbind, list_wp)
+
+
+
+
+
+z = 1.96
+
+RR_c %>% 
+  ## Multiplying by -1 gamma zipf in order to have positive values and being able to read the plots as
+  ## evenness
+  ggplot(aes(x = variable, y = RR, color = RR_descriptor)) + 
+  geom_errorbar(
+    aes(ymin = RR - z * se_RR,
+        ymax = RR + z * se_RR),
+    linewidth = 0.5,
+    position = position_dodge(width = 0.2),
+    width = 0.1
+  ) +  
+  geom_point(position = position_dodge(width = 0.2)) + 
+  scale_color_manual(values = palette_RR, labels = labels_RR) +
+  scale_x_discrete(
+    limits = trait_levels,
+    labels = c(
+      "LDMC" = "LDMC",
+      "leafN" = "Leaf N",
+      "SLA" = "SLA",
+      "LA" = "LA",
+      "vegetation.height" = "Height",
+      "seed.mass" = "Seed mass"
+    )
   ) +
-  
-  geom_point(aes(color = treatment),
-             alpha = 0.5, position = position_dodge(width = 8)) +
-  
-  geom_errorbar(aes(ymax = mean_cwm_value + sd_cwm_value, ymin = mean_cwm_value - sd_cwm_value, color = treatment),
-                , alpha = 0.2, position = position_dodge(width = 8)) + 
-  
-  geom_point(aes(x = date, y = mean_cwm_value, , color = treatment), fill = "white", 
-             shape = 21, size = 2, position = position_dodge(width = 8))+
-  
-  scale_colour_manual(values = palette5) +
-  
-  scale_fill_manual(values = palette5) +
-  
-  scale_x_date(
-    date_breaks = "4 weeks", # Specify the interval (e.g., every 2 weeks)
-    date_labels = "%d-%b-%y" # Customize the date format (e.g., "04-May-23")
+  geom_hline(yintercept = 0, linetype = "dashed", color = "gray40") +
+  labs(x = NULL, y = "RR of CWM mean values at plot level", color = NULL) +
+  theme(legend.position = "bottom")
+
+RR_wp %>% 
+  ## Multiplying by -1 gamma zipf in order to have positive values and being able to read the plots as
+  ## evenness
+  ggplot(aes(x = variable, y = RR, color = RR_descriptor)) + 
+  geom_errorbar(
+    aes(ymin = RR - z * se_RR,
+        ymax = RR + z * se_RR),
+    linewidth = 0.5,
+    position = position_dodge(width = 0.2),
+    width = 0.1
+  ) +  
+  geom_point(position = position_dodge(width = 0.2)) + 
+  scale_color_manual(values = palette_RR_wp, labels = labels_RR_wp) +
+  scale_x_discrete(
+    limits = trait_levels,
+    labels = c(
+      "LDMC" = "LDMC",
+      "leafN" = "Leaf N",
+      "SLA" = "SLA",
+      "LA" = "LA",
+      "vegetation.height" = "Height",
+      "seed.mass" = "Seed mass"
+    )
   ) +
-  
-  geom_vline(xintercept = as.Date("2023-05-11"), linetype = "dashed", color = "gray40") +
-  
-  theme(axis.text.x = element_text(angle = 45, hjust = 1), legend.position = "none",
-  ) +
-  
-  labs(y = paste("CWM", trait_levels[i], sep = " "), x = NULL) #
-
-
-
-
-
-
-
-
-
-
-
-
-
+  geom_hline(yintercept = 0, linetype = "dashed", color = "gray40") +
+  labs(x = NULL, y = "RR of CWM mean values at plot level", color = NULL) +
+  theme(legend.position = "bottom")

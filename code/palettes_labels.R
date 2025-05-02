@@ -25,7 +25,7 @@ palette_RR <- c("w_vs_c" = "#E0352F", "p_vs_c" = "#0077FF", "wp_vs_c" = "#A238A2
 
 
 palette_wp <- c("w" = "#D08A00", "p" = "#3A3A3A")
-palette_wp_vs_treatment <- c("wp_vs_w" = "#D08A00", "wp_vs_p" = "#3A3A3A")
+palette_RR_wp <- c("wp_vs_w" = "#D08A00", "wp_vs_p" = "#3A3A3A")
 labels_RR_wp <- c("wp_vs_w" = "Global Change vs Warming", "wp_vs_p" = "Global Change vs Perturbation")
 
 
