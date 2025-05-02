@@ -673,3 +673,80 @@ RR_wp %>%
   geom_hline(yintercept = 0, linetype = "dashed", color = "gray40") +
   labs(x = NULL, y = "RR of CWM mean values at plot level", color = NULL) +
   theme(legend.position = "bottom")
+
+
+
+
+list_dyn_c <- list()
+list_dyn_wp <- list()
+
+for(i in seq_along(trait_levels)){
+
+meta_function(cwm_plot_db, trait_levels[i], "treatment")
+list_dyn_c[[i]] <- RR_treatment
+list_dyn_wp[[i]] <- RR_wp_vs_treatment
+
+}
+
+
+RR_dyn_c <- do.call(rbind, list_dyn_c)
+RR_dyn_wp <- do.call(rbind, list_dyn_wp)
+
+
+z = 1.96
+
+RR_dyn_c %>% 
+  mutate(variable = as.factor(variable)) %>% 
+  mutate(
+    variable = fct_recode(variable,
+                          "LDMC" = "LDMC",
+                          "Leaf N" = "leafN",
+                          "SLA" = "SLA",
+                          "LA" = "LA",
+                          "Height" = "vegetation.height",
+                          "Seed mass" = "seed.mass")) %>% 
+      ggplot(aes(x = date, y = delta_RR)) + 
+      
+      facet_grid(variable ~ RR_descriptor, scales = "free_y",
+             labeller = labeller(
+               RR_descriptor = as_labeller(labels_RR))) +  
+      geom_errorbar(aes(ymin = delta_RR - z * se_delta_RR,
+                    ymax = delta_RR + z * se_delta_RR,
+                    color = RR_descriptor), alpha = 0.5) +
+      geom_point(aes(color = RR_descriptor), size = 1.2) + 
+      geom_line(aes(color = RR_descriptor)) +
+      scale_color_manual(values = palette_RR) + 
+      geom_hline(yintercept= 0, linetype = "dashed", color = "gray40") +
+      geom_vline(xintercept = as.Date("2023-05-11"), linetype = "dashed", color = "gray40") +
+      theme(legend.position = "none")
+    
+
+RR_dyn_wp %>% 
+  mutate(variable = as.factor(variable)) %>% 
+  mutate(
+    variable = fct_recode(variable,
+                          "LDMC" = "LDMC",
+                          "Leaf N" = "leafN",
+                          "SLA" = "SLA",
+                          "LA" = "LA",
+                          "Height" = "vegetation.height",
+                          "Seed mass" = "seed.mass")) %>% 
+  ggplot(aes(x = date, y = delta_RR)) + 
+  
+  facet_grid(variable ~ RR_descriptor, scales = "free_y",
+             labeller = labeller(
+               RR_descriptor = as_labeller(labels_RR_wp))) +  
+  geom_errorbar(aes(ymin = delta_RR - z * se_delta_RR,
+                    ymax = delta_RR + z * se_delta_RR,
+                    color = RR_descriptor), alpha = 0.5) +
+  geom_point(aes(color = RR_descriptor), size = 1.2) + 
+  geom_line(aes(color = RR_descriptor)) +
+  scale_color_manual(values = palette_RR_wp) + 
+  geom_hline(yintercept= 0, linetype = "dashed", color = "gray40") +
+  geom_vline(xintercept = as.Date("2023-05-11"), linetype = "dashed", color = "gray40") +
+  theme(legend.position = "none")
+    
+    
+    
+    
+    
