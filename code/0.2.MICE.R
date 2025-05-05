@@ -146,7 +146,7 @@ imputed_db <- complete(biomass_mice_imputed, action = "long")
 ggdensity <- ggplot() +
   geom_density(data = imputed_db, aes(x = nind_m2, color = as.factor(.imp))) +
   geom_density(data = biomass, aes(x = nind_m2), color = "black",
-               size = 0.8, linetype = "dashed") +
+               linewidth = 0.8, linetype = "dashed") +
   labs(title = "Density Plot of Original (Blue) vs Imputed (Colored by .imp)",
        x = "nind_m2",
        y = "Density",
@@ -175,7 +175,7 @@ imput_stability_db <- imputed_db %>%
 
   imput_stability <- ggplot(imput_stability_db, aes(x = CV)) +
   geom_histogram(bins = 30, fill = "steelblue", color = "white", alpha = 0.8) +
-  geom_vline(aes(xintercept = 1), color = "black", linetype = "dashed", size = 1) +
+  geom_vline(aes(xintercept = 1), color = "red3", linetype = "dashed", size = 1) +
   scale_x_continuous(
     expand = expansion(mult = c(0.05, 0.1)),
     breaks = seq(0, max(imputed_db$sd_imputation / imputed_db$nind_m2_imputed, na.rm = TRUE), by = 0.2) # Adjust "by" as needed
