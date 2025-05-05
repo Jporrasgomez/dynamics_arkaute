@@ -149,7 +149,9 @@ f_5_200 <- flora_medium %>%
 
 length(unique(flora_biomass_raw$code))
 
-length(unique(flora_medium$code))}
+length(unique(flora_medium$code))
+
+}
 
 #There is no loss of species by taking out individuals with height > 5 cm 
 
@@ -325,35 +327,35 @@ biomass_noimp012 <- biomass_noimp_clean_012 %>%
 
 
 biomass_imp <- bind_rows(biomass_imp, dummy_rows) %>% 
-  select(year, date, sampling, treatment, plot, code, abundance,
+  select(year, date, sampling, one_month_window, omw_date, treatment, plot, code, abundance,
          richness, biomass_s, biomass_community, abundance_community) %>% 
   mutate(sampling_date = as.factor(format(ymd(date), "%Y-%m-%d"))) %>% 
   rename(biomass = biomass_community)
 
 
 biomass_noimp <- bind_rows(biomass_noimp, dummy_rows) %>% 
-  select(year, date, sampling, treatment, plot, code, abundance,
+  select(year, date, sampling, one_month_window, omw_date, treatment, plot, code, abundance,
          richness, biomass_s, biomass_community, abundance_community) %>% 
   mutate(sampling_date = as.factor(format(ymd(date), "%Y-%m-%d"))) %>% 
   rename(biomass = biomass_community)
 
 
 biomass_imp012 <- bind_rows(biomass_imp012, dummy_rows) %>% 
-  select(year, date, sampling, treatment, plot, code, abundance,
+  select(year, date, sampling, one_month_window, omw_date,  treatment, plot, code, abundance,
          richness, biomass_s, biomass_community, abundance_community) %>% 
   mutate(sampling_date = as.factor(format(ymd(date), "%Y-%m-%d"))) %>% 
   rename(biomass = biomass_community)
 
 
 biomass_noimp012 <- bind_rows(biomass_noimp012, dummy_rows) %>% 
-  select(year, date, sampling, treatment, plot, code, abundance,
+  select(year, date, sampling, one_month_window, omw_date,  treatment, plot, code, abundance,
          richness, biomass_s, biomass_community, abundance_community) %>% 
   mutate(sampling_date = as.factor(format(ymd(date), "%Y-%m-%d"))) %>% 
   rename(biomass = biomass_community)
 
 
 flora_abrich <- bind_rows(flora_abrich, dummy_rows)%>% 
-  select(year, date, sampling, treatment, plot, code, species_level, genus_level, family, abundance,
+  select(year, date, sampling, one_month_window, omw_date,  treatment, plot, code, species_level, genus_level, family, abundance,
          richness, abundance_community) %>% 
   mutate(sampling_date = as.factor(format(ymd(date), "%Y-%m-%d"))) %>% 
   rename(abundance_s = abundance, 

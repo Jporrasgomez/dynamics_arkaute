@@ -111,7 +111,8 @@ for(i in seq_along(plots)){
 library(mice)
 
 biomass_mice <- biomass %>% 
-  select(year, sampling, plot, treatment, code, family, richness, abundance, abundance_community,
+  select(year, sampling, plot, treatment, code,
+         family, richness, abundance, abundance_community,
          height, Ah, Ab, biomass_i, nind_m2) %>% 
   mutate(across(where(is.character), as.factor))
 
@@ -308,7 +309,7 @@ ggLM_test <- ggplot(reliability_LM_test, aes(x = nind_m2_original,
 ## Merging imputation results with biomass database : 
 
 biomass_imp <- biomass %>% 
-  select(year, date, sampling, plot, code, species_level, genus_level, family,
+  select(year, date, sampling, one_month_window, omw_date, plot, code, species_level, genus_level, family,
          abundance, height, Ah, Ab, x, biomass_i, richness, abundance_community, nind_m2) %>% 
   left_join(imputed_db)
 
