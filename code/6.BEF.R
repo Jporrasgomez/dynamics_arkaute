@@ -12,11 +12,6 @@ source("code/plots_functions_flora/plot_BEF.R")
 
 source("code/palettes_labels.R")
 
-ggBEF <- plot_BEF(flora_abrich)
-ggBEF_noOutliers <- plot_BEF(flora1)
-ggBEF_noextOutliers <- plot_BEF(flora3) #Same result as no outliers
-
-
 
 richness_dynamics <- ab_rich_dynamics %>% 
   distinct(treatment, sampling, omw_date, one_month_window, date, plot, richness) %>% 
@@ -80,6 +75,32 @@ BEF_plot <- right_join(richness_plot, biomass_plot)
 BEF_plot012 <- right_join(richness_plot, biomass_plot012)
 
 
+
+BEF_dynamics %>% 
+  ggplot(aes(x = log(mean_richness))) +
+  facet_wrap(~ treatment) +
+  geom_histogram( aes(fill = treatment), binwidth = 0.1, color = "black", alpha = 0.7) +
+  scale_fill_manual(values =  palette5) +
+  labs(
+    x = "Mean Richness",
+    y = "Frecuencia") +
+  theme_minimal() +
+  theme(legend.position = "none") 
+
+
+
+BEF_dynamics %>% 
+  ggplot(aes(x = log(mean_biomass))) +
+  facet_wrap(~ treatment) +
+  geom_histogram( aes(fill = treatment), binwidth = 0.2, color = "black", alpha = 0.7) +
+  scale_fill_manual(values =  palette5) +
+  labs(
+    x = "Mean biomass",
+    y = "Frecuencia") +
+  theme_minimal() +
+  theme(legend.position = "none") 
+
+
   
 ggplot(BEF_dynamics, aes(x = mean_richness, y = mean_biomass)) +
   
@@ -122,8 +143,9 @@ ggplot(BEF_dynamics012, aes(x = mean_richness, y = mean_biomass)) +
 
 
 
-BEF_dynamics %>% 
-  ggplot(aes(x = mean_richness)) +
+
+BEF_plot %>% 
+  ggplot(aes(x = richness)) +
   facet_wrap(~ treatment) +
   geom_histogram( aes(fill = treatment), binwidth = 1, color = "black", alpha = 0.7) +
   scale_fill_manual(values =  palette5) +
@@ -133,8 +155,22 @@ BEF_dynamics %>%
   theme_minimal() +
   theme(legend.position = "none") 
 
-BEF_dynamics %>% 
-  ggplot(aes(x = mean_biomass)) +
+
+BEF_plot %>% 
+  ggplot(aes(x = log(richness))) +
+  facet_wrap(~ treatment) +
+  geom_histogram( aes(fill = treatment), binwidth = 0.1, color = "black", alpha = 0.7) +
+  scale_fill_manual(values =  palette5) +
+  labs(
+    x = "Mean Richness",
+    y = "Frecuencia") +
+  theme_minimal() +
+  theme(legend.position = "none") 
+
+
+
+BEF_plot %>% 
+  ggplot(aes(x = biomass)) +
   facet_wrap(~ treatment) +
   geom_histogram( aes(fill = treatment), binwidth = 100, color = "black", alpha = 0.7) +
   scale_fill_manual(values =  palette5) +
@@ -142,8 +178,18 @@ BEF_dynamics %>%
     x = "Mean biomass",
     y = "Frecuencia") +
   theme_minimal() +
-  theme(legend.position = "none") 
+  theme(legend.position = "none")
 
+BEF_plot %>% 
+  ggplot(aes(x = log(biomass))) +
+  facet_wrap(~ treatment) +
+  geom_histogram( aes(fill = treatment), binwidth = 0.1, color = "black", alpha = 0.7) +
+  scale_fill_manual(values =  palette5) +
+  labs(
+    x = "Mean biomass",
+    y = "Frecuencia") +
+  theme_minimal() +
+  theme(legend.position = "none") 
 
 
 ggplot(BEF_plot, aes(x = richness, y = biomass)) +
