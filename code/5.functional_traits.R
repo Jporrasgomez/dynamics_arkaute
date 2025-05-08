@@ -366,7 +366,7 @@ cwm_sampling %>%
 ##        legend.key = element_blank()) +        # Elimina las claves de la leyenda de color/forma
 ##  labs(title = "PCA mean abundance values at sampling level")
  
-
+{
 # PCA on CWM data (excluding metadata columns)
 pca_sampling0 <- cwm_sampling %>%
   select(-sampling, -treatment) %>%
@@ -391,10 +391,11 @@ var_explained <- round(100 * eig_values / sum(eig_values), 1)
 pca_sampling$sampling <- cwm_sampling$sampling
 
 # Gráfico PCA final con numeración y líneas
+gg_cwm_sampling <- 
 ggplot(pca_sampling, aes(x = PC1, y = PC2, color = treatment, shape = treatment)) +
-  #geom_path(aes(group = treatment), linewidth = 0.5, alpha = 0.2) +  # Conecta puntos del mismo tratamiento
+  geom_path(aes(group = treatment), linewidth = 0.5, alpha = 0.2) +  # Conecta puntos del mismo tratamiento
   geom_point(size = 1.5) +
-  #geom_text_repel(aes(label = sampling, color = treatment), size = 3, max.overlaps = Inf)  +  # Números de sampling
+  geom_text_repel(aes(label = sampling, color = treatment), size = 3, max.overlaps = Inf)  +  # Números de sampling
   stat_ellipse(aes(fill = treatment, color = treatment),
                alpha = 0.2,
                geom = "polygon",
@@ -424,12 +425,10 @@ ggplot(pca_sampling, aes(x = PC1, y = PC2, color = treatment, shape = treatment)
          fill = "none") +
   theme_test() +
   theme(legend.position = "bottom")
+print(gg_cwm_sampling)
+ggsave("results/Plots/protofinal/FT_cwm_sampling.png", plot = gg_cwm_sampling, dpi = 300)
 
-
-
-
-
-
+}
 
 
 
@@ -481,7 +480,8 @@ cwm_plot %>%
   fviz_pca_biplot(geom = "point", repel = T, title = " ",
                   ggthem = theme_test())
 
-pca_plot0 <- cwm_plot %>%
+{
+  pca_plot0 <- cwm_plot %>%
   select(-sampling, -treatment, -plot) %>%
   prcomp(center = TRUE, scale. = TRUE)
 
@@ -507,6 +507,7 @@ var_explained <- round(100 * eig_values / sum(eig_values), 1)
 
 
 # Gráfico PCA final con numeración y líneas
+gg_cwm_plot <- 
 ggplot(pca_plot, aes(x = PC1, y = PC2, color = treatment, shape = treatment)) +
   geom_point(size = 1.5) +
   stat_ellipse(aes(fill = treatment, color = treatment),
@@ -538,9 +539,10 @@ ggplot(pca_plot, aes(x = PC1, y = PC2, color = treatment, shape = treatment)) +
          fill = "none") +
   theme_test() +
   theme(legend.position = "bottom")
+print(gg_cwm_plot)
+ggsave("results/Plots/protofinal/FT_cwm_plot.png", plot = gg_cwm_plot, dpi = 300)
 
-
-
+}
 
 
 # Plotting cwm dynamics
@@ -570,31 +572,6 @@ source("code/meta_function/RR_TREATMENT_wp.R")
 palette <- palette5
 labels <- labels3
 
-i= 2
-meta_function(cwm_plot_db, trait_levels[i], "treatment")
-
-
-gg_stats_variable
-
-# Differences at treatment level
-gg_dunn_variable 
-gg_ttest_variable
-gg_RR_dynamics <- gg_RR
-gg_RR_wp_dynamics <- gg_RR_wp
-
-# Dynamics differences
-gg_all1n
-gg_facet
-gg_delta_RR
-gg_delta_RR_wp 
-
-# Coefficient of variation
-gg_stats_cv
-gg_dunn_cv
-gg_ttest_cv  
-gg_dynamics_cv
-
-
 
 list_c <- list()
 list_wp <- list()
@@ -618,6 +595,7 @@ RR_wp <- do.call(rbind, list_wp)
 
 z = 1.96
 
+{gg_RR_cwm <- 
 RR_c %>% 
   ## Multiplying by -1 gamma zipf in order to have positive values and being able to read the plots as
   ## evenness
@@ -645,7 +623,11 @@ RR_c %>%
   geom_hline(yintercept = 0, linetype = "dashed", color = "gray40") +
   labs(x = NULL, y = "RR of CWM mean values at plot level", color = NULL) +
   theme(legend.position = "bottom")
+print(gg_RR_cwm)
+ggsave("results/Plots/protofinal/FT_cwm_treatment_effects.png", plot = gg_RR_cwm, dpi = 300)}
 
+
+{gg_RR_cwm_wp <- 
 RR_wp %>% 
   ## Multiplying by -1 gamma zipf in order to have positive values and being able to read the plots as
   ## evenness
@@ -673,6 +655,8 @@ RR_wp %>%
   geom_hline(yintercept = 0, linetype = "dashed", color = "gray40") +
   labs(x = NULL, y = "RR of CWM mean values at plot level", color = NULL) +
   theme(legend.position = "bottom")
+print(gg_RR_cwm_wp)
+ggsave("results/Plots/protofinal/FT_cwm_globalchange_effects.png", plot = gg_RR_cwm_wp, dpi = 300)}
 
 
 
@@ -695,6 +679,7 @@ RR_dyn_wp <- do.call(rbind, list_dyn_wp)
 
 z = 1.96
 
+{gg_cwm_dynamics <- 
 RR_dyn_c %>% 
   mutate(variable = as.factor(variable)) %>% 
   mutate(
@@ -719,8 +704,11 @@ RR_dyn_c %>%
       geom_hline(yintercept= 0, linetype = "dashed", color = "gray40") +
       geom_vline(xintercept = as.Date("2023-05-11"), linetype = "dashed", color = "gray40") +
       theme(legend.position = "none")
-    
+print(gg_cwm_dynamics)
+ggsave("results/Plots/protofinal/FT_cwm_dynamics.png", plot = gg_cwm_dynamics, dpi = 300)}
 
+
+{gg_cwm_dynamics_wp <- 
 RR_dyn_wp %>% 
   mutate(variable = as.factor(variable)) %>% 
   mutate(
@@ -745,7 +733,8 @@ RR_dyn_wp %>%
   geom_hline(yintercept= 0, linetype = "dashed", color = "gray40") +
   geom_vline(xintercept = as.Date("2023-05-11"), linetype = "dashed", color = "gray40") +
   theme(legend.position = "none")
-    
+print(gg_cwm_dynamics_wp)
+ggsave("results/Plots/protofinal/FT_cwm_globalchange_dynamics.png", plot = gg_cwm_dynamics_wp, dpi = 300)}
     
     
     

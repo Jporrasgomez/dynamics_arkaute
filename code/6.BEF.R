@@ -27,18 +27,6 @@ richness_dynamics <- ab_rich_dynamics %>%
   distinct()
 
 
-biomass_dynamics012 <- biomass_imp012 %>% 
-  distinct(treatment, sampling, omw_date, one_month_window, date, plot, biomass) %>% 
-  group_by(treatment, sampling, date) %>% 
-  mutate(
-    n = n(),
-    mean_biomass = mean(biomass, na.rm = T),
-    sd_biomass = sd(biomass, na.rm = T)
-  ) %>% 
-  ungroup() %>% 
-  select(treatment, sampling, omw_date, one_month_window, date, n,
-         mean_biomass, sd_biomass)%>% 
-  distinct()
 
 biomass_dynamics <- biomass_imp %>% 
   distinct(treatment, sampling, omw_date, one_month_window, date, biomass) %>% 
@@ -54,9 +42,6 @@ biomass_dynamics <- biomass_imp %>%
   distinct()
 
 
-
-BEF_dynamics012 <- merge(richness_dynamics, biomass_dynamics012)
-
 BEF_dynamics <- merge(richness_dynamics, biomass_dynamics)
 
 
@@ -64,22 +49,22 @@ BEF_dynamics <- merge(richness_dynamics, biomass_dynamics)
 richness_plot <- ab_rich_dynamics %>% 
   distinct(treatment, sampling, omw_date, one_month_window, date, plot, richness) 
 
-biomass_plot012 <- biomass_imp012 %>% 
-  distinct(treatment, sampling, omw_date, one_month_window, date, plot, biomass)
 
 biomass_plot <- biomass_imp %>% 
   distinct(treatment, sampling, omw_date, one_month_window, date, plot, biomass)
 
 
 BEF_plot <- right_join(richness_plot, biomass_plot)
-BEF_plot012 <- right_join(richness_plot, biomass_plot012)
+
+
+
 
 
 
 BEF_dynamics %>% 
-  ggplot(aes(x = log(mean_richness))) +
+  ggplot(aes(x = mean_richness)) +
   facet_wrap(~ treatment) +
-  geom_histogram( aes(fill = treatment), binwidth = 0.1, color = "black", alpha = 0.7) +
+  geom_histogram( aes(fill = treatment), binwidth = 1, color = "black", alpha = 0.7) +
   scale_fill_manual(values =  palette5) +
   labs(
     x = "Mean Richness",
@@ -88,11 +73,25 @@ BEF_dynamics %>%
   theme(legend.position = "none") 
 
 
+BEF_dynamics %>% 
+  ggplot(aes(x = log(mean_richness))) +
+  facet_wrap(~ treatment) +
+  geom_histogram( aes(fill = treatment), binwidth = 0.1, color = "black", alpha = 0.7) +
+  scale_fill_manual(values =  palette5) +
+  labs(
+    x = "Log (Mean Richness)",
+    y = "Frecuencia") +
+  theme_minimal() +
+  theme(legend.position = "none") 
+
+
+
+
 
 BEF_dynamics %>% 
-  ggplot(aes(x = log(mean_biomass))) +
+  ggplot(aes(x = mean_biomass)) +
   facet_wrap(~ treatment) +
-  geom_histogram( aes(fill = treatment), binwidth = 0.2, color = "black", alpha = 0.7) +
+  geom_histogram( aes(fill = treatment), binwidth = 100, color = "black", alpha = 0.7) +
   scale_fill_manual(values =  palette5) +
   labs(
     x = "Mean biomass",
@@ -101,7 +100,19 @@ BEF_dynamics %>%
   theme(legend.position = "none") 
 
 
-  
+BEF_dynamics %>% 
+  ggplot(aes(x = log10(mean_biomass))) +
+  facet_wrap(~ treatment) +
+  geom_histogram( aes(fill = treatment), binwidth = 0.2, color = "black", alpha = 0.7) +
+  scale_fill_manual(values =  palette5) +
+  labs(
+    x = "log(Mean biomass)",
+    y = "Frecuencia") +
+  theme_minimal() +
+  theme(legend.position = "none") 
+
+
+{gg_BEF_sampling <-  
 ggplot(BEF_dynamics, aes(x = mean_richness, y = mean_biomass)) +
   
   facet_grid(~ treatment, labeller = labeller(treatment = labels3)) +
@@ -119,27 +130,10 @@ ggplot(BEF_dynamics, aes(x = mean_richness, y = mean_biomass)) +
     parse = TRUE
   ) +
   
-  labs(x = "Richness", y = "Biomass")
-
-
-ggplot(BEF_dynamics012, aes(x = mean_richness, y = mean_biomass)) +
-  
-  facet_grid(~ treatment, labeller = labeller(treatment = labels3)) +
-  
-  geom_point(aes(color = treatment)) +
-  
-  geom_smooth(method = "lm", aes(color = treatment, fill = treatment), alpha = 0.3) +
-  
-  scale_colour_manual(values = palette5) +
-  scale_fill_manual(values = palette5) +
-  
-  stat_poly_eq(
-    aes(label = after_stat(paste(eq.label, rr.label, p.value.label, sep = "~~~"))),
-    formula = y ~ x,
-    parse = TRUE
-  ) +
-  
-  labs(x = "Richness", y = "Biomass")
+  labs(x = "Richness", y = "Biomass") + 
+  theme(legend.position = "NULL")
+print(gg_BEF_sampling)
+ggsave("results/Plots/protofinal/BEF_sampling.png", plot = gg_BEF_sampling, dpi = 300)}
 
 
 
@@ -192,6 +186,8 @@ BEF_plot %>%
   theme(legend.position = "none") 
 
 
+
+{gg_BEF_plot <- 
 ggplot(BEF_plot, aes(x = richness, y = biomass)) +
   
   facet_grid(~ treatment, labeller = labeller(treatment = labels3)) +
@@ -210,27 +206,8 @@ ggplot(BEF_plot, aes(x = richness, y = biomass)) +
   ) +
   
   labs(x = "Richness", y = "Biomass")
-
-
-ggplot(BEF_plot012, aes(x = richness, y = biomass)) +
-  
-  facet_grid(~ treatment, labeller = labeller(treatment = labels3)) +
-  
-  geom_point(aes(color = treatment), alpha = 0.6) +
-  
-  geom_smooth(method = "lm", aes(color = treatment, fill = treatment), alpha = 0.3) +
-  
-  scale_colour_manual(values = palette5) +
-  scale_fill_manual(values = palette5) +
-  
-  stat_poly_eq(
-    aes(label = after_stat(paste(eq.label, rr.label, p.value.label, sep = "~~~"))),
-    formula = y ~ x,
-    parse = TRUE
-  ) +
-  
-  labs(x = "Richness", y = "Biomass with samplings 0, 1 and 2")
-
+print(gg_BEF_plot)
+ggsave("results/Plots/protofinal/BEF_plot.png", plot = gg_BEF_plot, dpi = 300)}
 
 
 
@@ -247,67 +224,74 @@ BEF_plot <- BEF_plot %>%
   mutate(omw_date = fct_reorder(omw_date, min_date)) %>% 
   select(-min_date)
 
-BEF_plot012 <- BEF_plot012 %>%
-  group_by(omw_date) %>%
-  mutate(min_date = min(date)) %>%
-  ungroup() %>%
-  mutate(omw_date = fct_reorder(omw_date, min_date)) %>% 
-  select(-min_date)
 
+treats <- unique(BEF_plot$treatment)
+list_BEF <- list()
 
-BEF_plot %>% 
-  filter(treatment == "wp") %>% 
-ggplot(aes(x = richness, y = biomass))+
+for(i in seq_along(treats)){
   
-  facet_wrap(~ omw_date, nrow = 4, ncol = 4) +
+  list_BEF[[i]] <- 
+  BEF_plot %>% 
+    filter(treatment == treats[i]) %>% 
+    ggplot(aes(x = richness, y = biomass))+
+    
+    facet_wrap(~ omw_date, nrow = 4, ncol = 4) +
+    
+    geom_point(aes(color = treatment)) +
+    
+    geom_smooth(method = "lm", aes( color = treatment, fill = treatment), alpha = 0.4) +
+    
+    # Linear model: Equation
+    stat_poly_eq(
+      aes(label = after_stat(eq.label)),
+      formula = y ~ x,
+      parse = TRUE,
+      color = "black",
+      label.x = 0.1,  # Adjust position on x-axis
+      label.y = 0.95  # Set y position high for the equation
+    ) +
+    
+    # Linear model: R-squared
+    stat_poly_eq(
+      aes(label = after_stat(rr.label)),
+      formula = y ~ x,
+      parse = TRUE,
+      color = "black",
+      label.x = 0.1,  
+      label.y = 0.85  # Slightly lower y position for R-squared
+    ) +
+    
+    # Linear model: p-value
+    stat_poly_eq(
+      aes(label = after_stat(p.value.label)),
+      formula = y ~ x,
+      parse = TRUE,
+      color = "black",
+      label.x = 0.1,
+      label.y = 0.7  # Lower y position for p-value
+    ) + 
+    
+    scale_colour_manual(values = palette5) +
+    
+    scale_fill_manual(values =  palette5) +
+    
+    labs( x = "Richness", y = "Biomass") + 
+    theme(legend.position = "NULL")
   
-  geom_point(aes(color = treatment)) +
-  
-  geom_smooth(method = "lm", aes( color = treatment, fill = treatment), alpha = 0.4) +
-  
-  # Linear model: Equation
-  stat_poly_eq(
-    aes(label = after_stat(eq.label)),
-    formula = y ~ x,
-    parse = TRUE,
-    color = "black",
-    label.x = 0.1,  # Adjust position on x-axis
-    label.y = 0.95  # Set y position high for the equation
-  ) +
-  
-  # Linear model: R-squared
-  stat_poly_eq(
-    aes(label = after_stat(rr.label)),
-    formula = y ~ x,
-    parse = TRUE,
-    color = "black",
-    label.x = 0.1,  
-    label.y = 0.85  # Slightly lower y position for R-squared
-  ) +
-  
-  # Linear model: p-value
-  stat_poly_eq(
-    aes(label = after_stat(p.value.label)),
-    formula = y ~ x,
-    parse = TRUE,
-    color = "black",
-    label.x = 0.1,
-    label.y = 0.7  # Lower y position for p-value
-  ) + 
-
-  scale_colour_manual(values = palette5) +
-  
-  scale_fill_manual(values =  palette5) +
-  
-  labs( x = "Richness", y = "Biomass")
+  }
 
 
+print(list_BEF[[1]])
+ggsave("results/Plots/protofinal/BEF_samplings_slopes_W.png", plot = list_BEF[[1]], dpi = 300)
 
+print(list_BEF[[2]])
+ggsave("results/Plots/protofinal/BEF_samplings_slopes_C.png", plot = list_BEF[[2]], dpi = 300)
 
+print(list_BEF[[3]])
+ggsave("results/Plots/protofinal/BEF_samplings_slopes_P.png", plot = list_BEF[[3]], dpi = 300)
 
-# glms
-
-
+print(list_BEF[[4]])
+ggsave("results/Plots/protofinal/BEF_samplings_slopes_WP.png", plot = list_BEF[[4]], dpi = 300)
 
 
 
@@ -366,7 +350,7 @@ for (i in 1:length(dates)) {
 }
 
 
-
+{gg_BEF_slopes <- 
 BEF_lm_data %>% 
   mutate(date = ymd(date)) %>% 
   filter(!is.na(slope)) %>% 
@@ -389,7 +373,10 @@ BEF_lm_data %>%
   theme(
     axis.text.x = element_text(angle = 45, hjust = 1)
   ) + 
-  labs( x = NULL, y = "Slope of lm(biomas ~ richness)", title = "Labels: R2, p-value")
+  labs( x = NULL, y = "Slope of lm(biomas ~ richness)", title = "Labels: R2, p-value") + 
+  theme(legend.position =  "NULL")
+print(gg_BEF_slopes)
+ggsave("results/Plots/protofinal/BEF_slopes.png", plot = gg_BEF_slopes, dpi = 300)}
 
 
 #** Con 012 la tendencia es exactamente la misma

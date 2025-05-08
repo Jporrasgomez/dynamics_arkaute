@@ -222,6 +222,7 @@ ggplot(rad_treat_db, aes(x = rank, y = abundance_s)) +
 
 # We choose ZIPF
 
+{gg_rads_treatment <- 
 ggplot(rad_treat_db, aes(x = rank, y = abundance_s, color = treatment)) +
   facet_wrap(~treatment, labeller = labeller(treatment = labels3)) + 
   geom_point() +
@@ -231,6 +232,10 @@ ggplot(rad_treat_db, aes(x = rank, y = abundance_s, color = treatment)) +
   geom_text(aes(x = max(rank) * 0.7, y = max(abundance_s) * 0.9, 
                 label = paste("Zipf gamma:", round(zipf_gamma, 4))), size = 3.2)+
   theme(legend.position = "none")
+print(gg_rads_treatment)
+ggsave("results/Plots/protofinal/RADs_treatment.png", plot = gg_rads_treatment, dpi = 300)}
+
+
 
 ggplot(rad_treat_db, aes(x = rank, y = abundance_s, color = treatment)) +
   geom_point(size = 1.5) +
@@ -359,7 +364,8 @@ rad_plot <- do.call(rbind, rad_plot_list) %>%
   mutate(plot_treat = paste0(treatment, "-", plot))  
   #mutate(zipf_gamma = ifelse(0, is.na, zipf_gamma))
 
-{i = 1
+{i = 10
+gg_rad_eg <- 
 rad_plot %>% 
   filter(sampling == samps[i]) %>% 
   ggplot(aes(x = rank, y = abundance_s, color = treatment)) +
@@ -369,8 +375,9 @@ rad_plot %>%
   scale_color_manual(values = palette5)+
   labs(x = "Rank", y = "Mean abundance", title = paste0("RAD per plot at sampling ", samps[i])) +
   geom_text(aes(x = max(rank) * 0.7, y = max(abundance_s) * 0.9, 
-                label = paste("Zipf gamma:", round(zipf_gamma, 4))), size = 3.2)}
-
+                label = paste("Zipf gamma:", round(zipf_gamma, 4))), size = 3.2)
+print(gg_rad_eg)
+ggsave("results/Plots/protofinal/RAD_sampling_eg.png", plot = gg_rad_eg, dpi = 300)}
 
 
 

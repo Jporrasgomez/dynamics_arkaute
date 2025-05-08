@@ -61,9 +61,9 @@ gg_dynamics_cv <<- gg_dynamics_cv
 source("code/meta_function/RR_DYNAMICS_c.R")
 
 RR_dynamics_c(data, variable1)
-gg_RR_variable <<- gg_RR
-gg_delta_RR_variable <<- gg_delta_RR
-gg_sigma_RR_variable <<- gg_sigma_RR
+gg_RR_dynamics <<- gg_RR
+gg_delta_RR_dynamics <<- gg_delta_RR
+gg_sigma_RR_dynamics <<- gg_sigma_RR
 RR_treatment <<- RR_treatment
 
 
@@ -71,9 +71,9 @@ source("code/meta_function/RR_DYNAMICS_wp.R")
 
 
 RR_dynamics_wp(data, variable1)
-gg_RR_wp <<- gg_RR_wp
-gg_delta_RR_wp <<- gg_delta_RR_wp
-gg_sigma_RR_wp <<- gg_sigma_RR_wp
+gg_RR_dynamics_wp <<- gg_RR_wp
+gg_delta_RR_dynamics_wp <<- gg_delta_RR_wp
+gg_sigma_RR_dynamics_wp <<- gg_sigma_RR_wp
 RR_wp_vs_treatment <<-  RR_wp_vs_treatment
 
 

@@ -27,6 +27,8 @@ palette_RR <- c("w_vs_c" = "#E0352F", "p_vs_c" = "#0077FF", "wp_vs_c" = "#A238A2
 palette_wp <- c("w" = "#D08A00", "p" = "#3A3A3A")
 palette_RR_wp <- c("wp_vs_w" = "#D08A00", "wp_vs_p" = "#3A3A3A")
 labels_RR_wp <- c("wp_vs_w" = "Global Change vs Warming", "wp_vs_p" = "Global Change vs Perturbation")
+labels_RR_wp2 <- c("wp_vs_w" = "Perturbation effect", "wp_vs_p" = "Warming effect")
+
 
 
 palette3 <- c("c" = "#1F8A8C", "w" = "#D93232", "p" = "#F4A300", "wp" = "#3A3A3A")
@@ -76,7 +78,7 @@ palette8 <- c("c" = "#00C4A7", "w" = "#A238A2", "p" = "#F4A300", "wp" = "#3A3A3A
 ##                     "biomass" = "Biomass")
 ##
 ##
-##labels_RR_wp2 <- c("wp_vs_w" = "Perturbation effect", "wp_vs_p" = "Warming effect")
+##
 ##
 ##
 point_shapes <- c("c" = 16, "w" = 17, "p" = 15, "wp" = 18)

@@ -173,11 +173,12 @@ sorensen_df <- bind_rows(list_sorensen_df) %>%
          comparison = ifelse(comparison == "w-c", "c-w", comparison),
          comparison = ifelse(comparison == "wp-c", "c-wp", comparison))
 
-
+{gg_sorensen <- 
 sorensen_df %>% 
   filter(comparison %in% c("c-p", "c-w", "c-wp")) %>% 
 ggplot(aes(x = sampling, y = value, color = comparison, group = comparison)) + 
-  facet_wrap(~ comparison) + 
+  facet_wrap(~ comparison, labeller = labeller(
+    RR_descriptor = as_labeller(labels_RR))) + 
   geom_point() + 
   geom_line() +
   geom_smooth(
@@ -185,8 +186,15 @@ ggplot(aes(x = sampling, y = value, color = comparison, group = comparison)) +
     method = "lm", span = 0.6, alpha = 0.2 ) + 
   scale_color_manual(values = c("c-p" = "#0077FF", "c-w" = "#E0352F", "c-wp" = "#A238A2")) +
   scale_fill_manual(values = c("c-p" = "#0077FF", "c-w" = "#E0352F", "c-wp" = "#A238A2")) +
-  labs( y = "Beta-diversity Sorensen")
+  labs( y = "Beta-diversity Sorensen") + 
+  scale_x_discrete(breaks = function(x) x[seq(1, length(x), by = 2)]) + 
+  labs(x = "Sampling") + 
+  theme(legend.position = "bottom")
+print(gg_sorensen)
+ggsave("results/Plots/protofinal/sorensen_c.png", plot = gg_sorensen, dpi = 300)}
 
+
+{gg_sorensen_wp <- 
 sorensen_df %>% 
   filter(comparison %in% c("p-wp", "w-wp")) %>% 
   ggplot(aes(x = sampling, y = value, color = comparison, group = comparison)) + 
@@ -198,7 +206,13 @@ sorensen_df %>%
     method = "lm", span = 0.6, alpha = 0.2 ) + 
   scale_color_manual(values = c("w-wp" = "#D08A00", "p-wp" = "#3A3A3A")) +
   scale_fill_manual(values = c("w-wp" = "#D08A00", "p-wp" = "#3A3A3A")) +
-  labs( y = "Beta-diversity Sorensen")
+  labs( y = "Beta-diversity Sorensen") + 
+  scale_x_discrete(breaks = function(x) x[seq(1, length(x), by = 2)]) + 
+  labs(x = "Sampling") + 
+  theme(legend.position = "bottom")
+print(gg_sorensen_wp)
+ggsave("results/Plots/protofinal/sorensen_wp.png", plot = gg_sorensen_wp, dpi = 300)}
+
 
 
 
@@ -234,7 +248,8 @@ nmds_df_sampling <- nmds_df_sampling %>% arrange(sampling)
 
 # Plot NMDS results using ggplot
 
-ggnmds_alltreatments <- ggplot(nmds_df_sampling, aes(x = NMDS1, y = NMDS2, color = treatment)) +
+{ggnmds_alltreatments <- 
+  ggplot(nmds_df_sampling, aes(x = NMDS1, y = NMDS2, color = treatment)) +
     stat_ellipse(geom = "polygon", aes(fill = treatment),
                  alpha = 0.1, show.legend = FALSE, level = 0.9) + 
     geom_point(size = 1.5, aes(shape = treatment), show.legend =T) +
@@ -249,6 +264,11 @@ ggnmds_alltreatments <- ggplot(nmds_df_sampling, aes(x = NMDS1, y = NMDS2, color
          subtitle = paste0("Stress = ", round(nmds_bc_sampling$stress, 3)),
          x = "NMDS1", y = "NMDS2", color = " ") +
     theme(legend.position = "bottom")
+
+print(ggnmds_alltreatments)
+ggsave("results/Plots/protofinal/species_composition_sampling.png", plot = ggnmds_alltreatments, dpi = 300)}
+
+
   # Print the plot
 
 
@@ -393,21 +413,24 @@ print(explained_NMDS3 <- (cor3^2 / (cor1^2 + cor2^2 + cor3^2)) * 100)
 
 
 
-ggNMDS12_allplots <-
+{ggNMDS12_allplots <-
   ggplot(nmds_df_plot, aes(x = NMDS1, y = NMDS2, color = treatment)) +
-    stat_ellipse(geom = "polygon", aes(fill = treatment),
-                 alpha = 0.1, show.legend = FALSE, level = 0.9) + 
-    geom_point(size = 1.5, aes(shape= treatment)) +
-    #geom_text_repel(aes(label = paste0(sampling, "," ,plot)), max.overlaps = 100, size = 3, show.legend = F) +
-    geom_hline(yintercept = 0, color = "gray52", linetype = "dashed") +
-    #geom_path(aes(group = treatment), linetype = "dotted", alpha = 0.8) +
-    geom_vline(xintercept = 0, color = "gray52", linetype = "dashed") +
-    scale_colour_manual(values = palette) +
-    scale_fill_manual(values = palette) +
-    labs(title = "NMDS Bray-Curtis: abundance of species at plot level",
-         subtitle = paste0("Stress = ", round(nmds_bc_plot$stress, 3)),
-         x = "NMDS1", y = "NMDS2", color = "Treatment")
-  # Print the plot
+  stat_ellipse(geom = "polygon", aes(fill = treatment),
+               alpha = 0.1, show.legend = FALSE, level = 0.9) + 
+  geom_point(size = 1.5, aes(shape= treatment)) +
+  geom_hline(yintercept = 0, color = "gray52", linetype = "dashed") +
+  geom_vline(xintercept = 0, color = "gray52", linetype = "dashed") +
+  scale_colour_manual(values = palette) +
+  scale_fill_manual(values = palette) +
+  labs(
+    title = "NMDS Bray-Curtis: abundance of species at plot level",
+    subtitle = paste0("Stress = ", round(nmds_bc_plot$stress, 3)),
+    x = "NMDS1", y = "NMDS2", color = "Treatment"
+  ) +
+  theme(axis.title.x = element_text(size = 12, face = "bold", color = "black", margin = margin(t = 10)))
+print(ggNMDS12_allplots)
+ggsave("results/Plots/protofinal/species_composition_plot.png", plot = ggNMDS12_allplots, dpi = 300)}
+
 
 ggNMDS13_allplots <-
   ggplot(nmds_df_plot, aes(x = NMDS1, y = NMDS3, color = treatment)) +
@@ -501,7 +524,8 @@ nmds_df_1x1sampling <- left_join(nmds_df_1x1sampling, stress_values, by = "sampl
 
 # Create NMDS plot with stress values in facet labels
 
-gg_samplings <- 
+
+{gg_samplings <- 
 ggplot(nmds_df_1x1sampling, aes(x = NMDS1, y = NMDS2, color = treatment, fill = treatment)) +
   #facet_wrap(~ paste0(sampling, " (Stress = ", stress, ")"), ncol = 5, nrow = 5) +
   facet_wrap(~ sampling, ncol = 5, nrow = 5, scales = "free") + 
@@ -525,32 +549,7 @@ ggplot(nmds_df_1x1sampling, aes(x = NMDS1, y = NMDS2, color = treatment, fill = 
   ) + 
   labs(color = "Treatment")
 
+print(gg_samplings)
+ggsave("results/Plots/protofinal/species_composition_allsamplings.png", plot = gg_samplings, dpi = 300)}
 
-nmds_df_plot_matrixxsampling <- nmds_df_1x1sampling
-
-min(nmds_df_plot_matrixxsampling$NMDS1)
-min(nmds_df_plot_matrixxsampling$NMDS2)
-
-nmds_df_plot_matrixxsampling <- nmds_df_plot_matrixxsampling %>%
-  mutate(NMDS1 = NMDS1 + abs(min(nmds_df_plot_matrixxsampling$NMDS1)) + 1,
-         NMDS2 = NMDS2 + abs(min(nmds_df_plot_matrixxsampling$NMDS2)) + 1)
-
-nmds_df_plot_matrixxsampling %>%
-  write.csv("data/nmds_df_plot_matrixxsampling.csv", row.names = F)
-
-source("code/meta_function/meta_function.R")
-
-meta_function(nmds_df_plot_matrixxsampling, "NMDS1", "treatment")
-
-gg_all1n
-gg_delta_RR
-
-source("code/meta_function/RR_TREATMENT_c.R")
-RR_treatment_c(nmds_df_plot_matrixxsampling, "NMDS1")
-gg_RR
-
-
-source("code/meta_function/RR_TREATMENT_wp.R")
-RR_treatment_wp(nmds_df_plot_matrixxsampling, "NMDS1")
-gg_RR_wp
 

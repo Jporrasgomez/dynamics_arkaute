@@ -177,8 +177,8 @@ RR_dynamics_wp <- function(data, variable){
                       color = RR_descriptor), alpha = 0.5) +
     geom_point(aes(color = RR_descriptor)) + 
     geom_line(aes(color = RR_descriptor)) +
-    scale_color_manual(values = palette_wp_vs_treatment) +
-    scale_fill_manual(values = palette_wp_vs_treatment) +
+    scale_color_manual(values = palette_RR_wp) +
+    scale_fill_manual(values = palette_RR_wp) +
     geom_hline( yintercept= 0, linetype = "dashed", color = "gray40") +
     geom_vline(xintercept = as.Date("2023-05-11"), linetype = "dashed", color = "gray40") +
     labs(x = NULL, y = paste0("RR ", ytitle)) +
@@ -195,8 +195,8 @@ RR_dynamics_wp <- function(data, variable){
                       color = RR_descriptor), alpha = 0.5) +
     geom_point(aes(color = RR_descriptor)) + 
     geom_line(aes(color = RR_descriptor)) +
-    scale_color_manual(values = palette_wp_vs_treatment) +
-    scale_fill_manual(values = palette_wp_vs_treatment) +
+    scale_color_manual(values = palette_RR_wp) +
+    scale_fill_manual(values = palette_RR_wp) +
     geom_hline( yintercept= 0, linetype = "dashed", color = "gray40") +
     geom_vline(xintercept = as.Date("2023-05-11"), linetype = "dashed", color = "gray40") +
     labs(x = NULL, y = paste0("delta-RR ", ytitle)) +
@@ -213,8 +213,8 @@ RR_dynamics_wp <- function(data, variable){
                       color = RR_descriptor), alpha = 0.5) +
     geom_point(aes(color = RR_descriptor)) + 
     geom_line(aes(color = RR_descriptor)) +
-    scale_color_manual(values = palette_wp_vs_treatment) +
-    scale_fill_manual(values = palette_wp_vs_treatment) +
+    scale_color_manual(values = palette_RR_wp) +
+    scale_fill_manual(values = palette_RR_wp) +
     geom_hline( yintercept= 0, linetype = "dashed", color = "gray40") +
     geom_vline(xintercept = as.Date("2023-05-11"), linetype = "dashed", color = "gray40") +
     labs(x = NULL, y = paste0("sigma-RR ", ytitle)) +

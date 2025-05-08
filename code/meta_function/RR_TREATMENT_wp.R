@@ -129,7 +129,7 @@ RR_treatment_wp <- function(data, variable){
                       color = RR_descriptor)) +
     geom_point(aes(color = RR_descriptor)) + 
     geom_line(aes(color = RR_descriptor, group = 1)) +  # 🔹 Agrupar para evitar la advertencia
-    scale_color_manual(values = palette_wp_vs_treatment) +
+    scale_color_manual(values = palette_RR_wp) +
     scale_x_discrete(labels = labels_RR_wp) +
     geom_hline(yintercept = 0, linetype = "dashed", color = "gray40") +
     labs(x = NULL, y = paste0("RR ", ytitle)) +
