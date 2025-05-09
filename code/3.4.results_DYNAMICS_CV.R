@@ -104,8 +104,6 @@ sp_comp_RR <- do.call(rbind, list_RR)
   
 
 
-
-
 library(forcats)
 
 data_whole <- rbind(abricheven_cv, biomass_cv) %>% 
@@ -116,6 +114,7 @@ data_whole <- rbind(abricheven_cv, biomass_cv) %>%
   distinct() 
 # Dynamics
 
+{gg_cv_dynamics <- 
 data_whole %>%
   filter(variable %in% c("richness", "abundance", "Y_zipf", "biomass", "biomass012")) %>% 
   mutate(
@@ -146,9 +145,12 @@ ggplot(aes(x = date, y = cv)) +
   geom_vline(xintercept = as.Date("2023-05-11"), linetype = "dashed", color = "gray40") +
   theme(legend.position = "none") + 
   labs( y = "Coefficient of variation", x = "Date")
+print(gg_cv_dynamics)
+#ggsave("results/Plots/protofinal/cv_dynamics.png", plot = gg_cv_dynamics, dpi = 300)
+}
   
 
-
+{gg_cv_dynamics2 <- 
 data_whole %>%
   filter(variable %in% c("NMDS1", "NMDS2", "LA", "SLA", "LDMC", "vegetation.height", "seed.mass", 
                          "leafN")) %>% 
@@ -186,6 +188,9 @@ data_whole %>%
   geom_vline(xintercept = as.Date("2023-05-11"), linetype = "dashed", color = "gray40") +
   theme(legend.position = "none") + 
   labs( y = "Coefficient of variation", x = "Date")
+print(gg_cv_dynamics2)
+#ggsave("results/Plots/protofinal/cv_dynamics2.png", plot = gg_cv_dynamics2, dpi = 300)
+}
 
 
 
@@ -196,10 +201,11 @@ data_whole_RR <-  rbind(abricheven_RR_cv, biomass_RR_cv) %>%
   rbind(biomass012_RR_cv) %>% 
   rbind(sp_comp_RR) %>% 
   rbind(traits_RR) %>% 
-  select(-cv, -cv_c)
+  select(-cv, -cv_c, -cv_wp)
 
-
+{gg_RR_cv_dynamics <- 
 data_whole_RR %>% 
+  filter(RR_descriptor %in% c("w_vs_c", "p_vs_c", "wp_vs_c")) %>% 
   filter(variable %in% c("richness", "abundance", "Y_zipf", "biomass", "biomass012")) %>% 
   mutate(
     variable = fct_recode(variable,
@@ -231,10 +237,15 @@ ggplot(aes(x = date, y = RR)) +
   geom_vline(xintercept = as.Date("2023-05-11"), linetype = "dashed", color = "gray40") +
   theme(legend.position = "none") + 
   labs( y = "RR_cv", x = "Date")
+print(gg_RR_cv_dynamics)
+#ggsave("results/Plots/protofinal/RR_cv_dynamics.png", plot = gg_RR_cv_dynamics, dpi = 300)
+}
 
 
 
+{gg_RR_cv_dynamics2 <-
 data_whole_RR %>% 
+  filter(RR_descriptor %in% c("w_vs_c", "p_vs_c", "wp_vs_c")) %>% 
   filter(variable %in% c("NMDS1", "NMDS2", "LA", "SLA", "LDMC", "vegetation.height", "seed.mass", 
                          "leafN")) %>% 
   mutate(
@@ -273,9 +284,100 @@ data_whole_RR %>%
   geom_vline(xintercept = as.Date("2023-05-11"), linetype = "dashed", color = "gray40") +
   theme(legend.position = "none") + 
   labs( y = "RR_cv", x = "Date")
-  
-  
+print(gg_RR_cv_dynamics2)
+#ggsave("results/Plots/protofinal/RR_cv_dynamics2.png", plot = gg_RR_cv_dynamics2, dpi = 300)
+}
 
+
+
+
+
+
+
+{gg_RR_cv_dynamics_GC <- 
+    data_whole_RR %>% 
+    filter(RR_descriptor %in% c("wp_vs_p", "wp_vs_w")) %>% 
+    filter(variable %in% c("richness", "abundance", "Y_zipf", "biomass", "biomass012")) %>% 
+    mutate(
+      variable = fct_recode(variable,
+                            "Richness" = "richness",
+                            "Cover" = "abundance",
+                            "Evenness" = "Y_zipf",
+                            "Biomass" = "biomass",
+                            "Biomass012" = "biomass012"), 
+      
+      variable = fct_relevel(variable,
+                             "Richness",
+                             "Cover",
+                             "Evenness",
+                             "Biomass",
+                             "Biomass012")) %>% 
+    
+    ggplot(aes(x = date, y = RR)) + 
+    facet_grid(variable ~ RR_descriptor, scales = "free_y", 
+               labeller = labeller(
+                 RR_descriptor = as_labeller(labels_RR_wp2))) + 
+    geom_smooth(
+      se = TRUE, aes(color = RR_descriptor, fill = RR_descriptor),
+      method = "lm", span = 0.6, alpha = 0.2 ) +
+    geom_point(aes(color = RR_descriptor), size = 1.2) + 
+    geom_line(aes(color = RR_descriptor), alpha = 0.2) +
+    scale_color_manual(values = palette_RR_wp) +
+    scale_fill_manual(values = palette_RR_wp) +
+    geom_hline(yintercept= 0, linetype = "dashed", color = "gray40") +
+    geom_vline(xintercept = as.Date("2023-05-11"), linetype = "dashed", color = "gray40") +
+    theme(legend.position = "none") + 
+    labs( y = "RR_cv", x = "Date")
+  print(gg_RR_cv_dynamics_GC)
+  ggsave("results/Plots/protofinal/gg_RR_cv_dynamics_GC.png", plot = gg_RR_cv_dynamics_GC, dpi = 300)
+  }
+
+
+
+{gg_RR_cv_dynamics_GC2 <-
+    data_whole_RR %>% 
+    filter(RR_descriptor %in% c("wp_vs_p", "wp_vs_w")) %>%
+    filter(variable %in% c("NMDS1", "NMDS2", "LA", "SLA", "LDMC", "vegetation.height", "seed.mass", 
+                           "leafN")) %>% 
+    mutate(
+      variable = fct_recode(variable,
+                            "Sp.Comp.(NMDS1)" = "NMDS1",
+                            "Sp.Comp.(NMDS2)" = "NMDS2",
+                            "LA" = "LA",
+                            "SLA" = "SLA",
+                            "LDMC" = "LDMC",
+                            "Height" = "vegetation.height",
+                            "Seed mass" = "seed.mass", 
+                            "Leaf N" = "leafN"), 
+      
+      variable = fct_relevel(variable,
+                             "Sp.Comp.(NMDS1)",
+                             "Sp.Comp.(NMDS2)",
+                             "LA",
+                             "SLA",
+                             "LDMC",
+                             "Height",
+                             "Seed mass", 
+                             "Leaf N")) %>% 
+    
+    ggplot(aes(x = date, y = RR)) + 
+    facet_grid(variable ~ RR_descriptor, scales = "free_y", 
+               labeller = labeller(
+                 RR_descriptor = as_labeller(labels_RR_wp2))) + 
+    geom_smooth(
+      se = TRUE, aes(color = RR_descriptor, fill = RR_descriptor),
+      method = "lm", span = 0.6, alpha = 0.2 ) +
+    geom_point(aes(color = RR_descriptor), size = 1.2) + 
+    geom_line(aes(color = RR_descriptor), alpha = 0.2) +
+    scale_color_manual(values = palette_RR_wp) +
+    scale_fill_manual(values = palette_RR_wp) +
+    geom_hline(yintercept= 0, linetype = "dashed", color = "gray40") +
+    geom_vline(xintercept = as.Date("2023-05-11"), linetype = "dashed", color = "gray40") +
+    theme(legend.position = "none") + 
+    labs( y = "RR_cv", x = "Date")
+  print(gg_RR_cv_dynamics_GC2)
+  ggsave("results/Plots/protofinal/gg_RR_cv_dynamics_GC2.png", plot = gg_RR_cv_dynamics_GC2, dpi = 300)
+}
 
 
 
