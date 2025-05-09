@@ -1,5 +1,6 @@
 
 
+
 rm(list = ls(all.names = TRUE))  #Se limpia el environment
 pacman::p_unload(pacman::p_loaded(), character.only = TRUE) #se quitan todos los paquetes (limpiamos R)
 pacman::p_load(dplyr,reshape2,tidyverse, lubridate, ggplot2, ggpubr, ggpmisc, gridExtra, MetBrewer) #Cargamos los paquetes que necesitamos
@@ -133,8 +134,8 @@ ggplot(BEF_dynamics, aes(x = mean_richness, y = mean_biomass)) +
   labs(x = "Richness", y = "Biomass") + 
   theme(legend.position = "NULL")
 print(gg_BEF_sampling)
-ggsave("results/Plots/protofinal/BEF_sampling.png", plot = gg_BEF_sampling, dpi = 300)}
-
+#ggsave("results/Plots/protofinal/BEF_sampling.png", plot = gg_BEF_sampling, dpi = 300)
+}
 
 
 
@@ -207,7 +208,8 @@ ggplot(BEF_plot, aes(x = richness, y = biomass)) +
   
   labs(x = "Richness", y = "Biomass")
 print(gg_BEF_plot)
-ggsave("results/Plots/protofinal/BEF_plot.png", plot = gg_BEF_plot, dpi = 300)}
+#ggsave("results/Plots/protofinal/BEF_plot.png", plot = gg_BEF_plot, dpi = 300)
+}
 
 
 
@@ -282,16 +284,16 @@ for(i in seq_along(treats)){
 
 
 print(list_BEF[[1]])
-ggsave("results/Plots/protofinal/BEF_samplings_slopes_W.png", plot = list_BEF[[1]], dpi = 300)
+#ggsave("results/Plots/protofinal/BEF_samplings_slopes_W.png", plot = list_BEF[[1]], dpi = 300)
 
 print(list_BEF[[2]])
-ggsave("results/Plots/protofinal/BEF_samplings_slopes_C.png", plot = list_BEF[[2]], dpi = 300)
+#ggsave("results/Plots/protofinal/BEF_samplings_slopes_C.png", plot = list_BEF[[2]], dpi = 300)
 
 print(list_BEF[[3]])
-ggsave("results/Plots/protofinal/BEF_samplings_slopes_P.png", plot = list_BEF[[3]], dpi = 300)
+#ggsave("results/Plots/protofinal/BEF_samplings_slopes_P.png", plot = list_BEF[[3]], dpi = 300)
 
 print(list_BEF[[4]])
-ggsave("results/Plots/protofinal/BEF_samplings_slopes_WP.png", plot = list_BEF[[4]], dpi = 300)
+#ggsave("results/Plots/protofinal/BEF_samplings_slopes_WP.png", plot = list_BEF[[4]], dpi = 300)
 
 
 
@@ -376,7 +378,8 @@ BEF_lm_data %>%
   labs( x = NULL, y = "Slope of lm(biomas ~ richness)", title = "Labels: R2, p-value") + 
   theme(legend.position =  "NULL")
 print(gg_BEF_slopes)
-ggsave("results/Plots/protofinal/BEF_slopes.png", plot = gg_BEF_slopes, dpi = 300)}
+#ggsave("results/Plots/protofinal/BEF_slopes.png", plot = gg_BEF_slopes, dpi = 300)
+}
 
 
 #** Con 012 la tendencia es exactamente la misma
@@ -406,6 +409,7 @@ ggsave("results/Plots/protofinal/BEF_slopes.png", plot = gg_BEF_slopes, dpi = 30
 linear_glm <- glm(mean_biomass ~ mean_richness, data = BEF_dynamics)
 quadratic_glm <- glm(mean_biomass ~ mean_richness + I(mean_richness^2), data = BEF_dynamics)
 
+
 # get stats summaries
 summary(linear_glm)
 summary(quadratic_glm)
@@ -420,11 +424,11 @@ coef(quadratic_glm)
 colors <- c("deepskyblue3", "coral3")
 
 
-datas <- list(BEF_dynamics, BEF_dynamics012, BEF_plot, BEF_plot012)
+datas <- list(BEF_dynamics, BEF_plot)
 
-{i = 3
+{i = 1
   datas[[i]] %>% 
-    ggplot(aes(x = richness, y = biomass)) +
+    ggplot(aes(x = mean_richness, y = mean_biomass)) +
     
     facet_grid(~ treatment, labeller = labeller(treatment = labels3)) +
     
