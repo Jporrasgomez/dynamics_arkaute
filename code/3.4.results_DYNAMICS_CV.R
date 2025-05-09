@@ -7,8 +7,21 @@ pacman::p_unload(pacman::p_loaded(), character.only = TRUE) #se quitan todos los
 
 source("code/1.first_script.R")
 
+nmds_df_plot <- read.csv("data/nmds_df_plot.csv") %>% 
+  mutate(treatment = as.factor(treatment),
+         plot = as.factor(plot),
+         sampling = as.factor(sampling),
+         date = ymd(date))
 
-rm(list = setdiff(ls(), c("ab_rich_dynamics", "biomass_imp", "biomass_imp012")))
+cwm_plot_db <- read.csv("data/cwm_plot_db.csv") %>% 
+  mutate(treatment = as.factor(treatment),
+         plot = as.factor(plot),
+         sampling = as.factor(sampling),
+         date = ymd(date))
+
+
+rm(list = setdiff(ls(), c("ab_rich_dynamics", "biomass_imp", "biomass_imp012", "nmds_df_plot",
+                          "cwm_plot_db")))
 
 pacman::p_load(dplyr,reshape2,tidyverse, lubridate, ggplot2, ggpubr, gridExtra,
                car, ggsignif, dunn.test, rstatix) #Cargamos los paquetes que necesitamos
@@ -19,70 +32,92 @@ source("code/palettes_labels.R")
 
 # Richness, abundance and evenness
 
-variables <- c("richness", "abundance", "Y_zipf")
+source("code/meta_function/cv_results_DYNAMICS.R")
+
+
+
+
+{variables <- c("richness", "abundance", "Y_zipf")
 list <- list()
+list_RR <- list()
 for(i in 1:3){
   
-  list[[i]] <- ab_rich_dynamics %>% 
-    select(treatment, plot, sampling, date, .data[[variables[i]]]) %>% 
-    distinct(treatment, plot, sampling, date, .data[[variables[i]]]) %>%
-    group_by(treatment, sampling, date) %>% 
-    mutate(
-      n = n(),
-      mean = mean(.data[[variables[i]]], na.rm = TRUE),
-      sd = sd(.data[[variables[i]]], na.rm = TRUE)
-    ) %>%
-    mutate(
-      cv = sd/mean) %>% 
-    rename(value = .data[[variables[i]]]) %>% 
-    mutate(variable = variables[i])
-  
+results_cv(ab_rich_dynamics, variables[i])
+  list[[i]] <- cv_db
+  list_RR[[i]] <- RR_cv
 }
 
-abricheven <- do.call(rbind, list)
+abricheven_cv <- do.call(rbind, list)
+abricheven_RR_cv <- do.call(rbind, list_RR)
+}
 
 
 #Biomass
 
-  biomass012 <- biomass_imp012 %>% 
-    select(treatment, plot, sampling, date, biomass) %>% 
-    distinct(treatment, plot, sampling, date, biomass) %>%
-    group_by(treatment, sampling, date) %>% 
-    mutate(
-      n = n(),
-      mean = mean(biomass, na.rm = TRUE),
-      sd = sd(biomass, na.rm = TRUE)
-    ) %>%
-    mutate(
-      cv = sd/mean) %>% 
-    rename(variable = biomass) %>% 
-    mutate(variable = "biomass012")
+{results_cv(biomass_imp, "biomass")
+biomass_cv <- cv_db
+biomass_RR_cv <- RR_cv
+
+results_cv(biomass_imp012, "biomass")
+biomass012_cv <- cv_db %>% 
+  mutate(
+  variable = fct_recode(variable,
+                        "biomass012" = "biomass"))
+biomass012_RR_cv <- RR_cv %>% 
+  mutate(
+    variable = fct_recode(variable,
+                          "biomass012" = "biomass"))}
   
-  biomass <- biomass_imp %>% 
-    select(treatment, plot, sampling, date, biomass) %>% 
-    distinct(treatment, plot, sampling, date, biomass) %>%
-    group_by(treatment, sampling, date) %>% 
-    mutate(
-      n = n(),
-      mean = mean(biomass, na.rm = TRUE),
-      sd = sd(biomass, na.rm = TRUE)
-    ) %>%
-    mutate(
-      cv = sd/mean) %>% 
-    rename(variable = biomass) %>% 
-    mutate(variable = "biomass")
+  
+  # Sp composition
+  
+{variables <- c("NMDS1", "NMDS2")
+  list <- list()
+  list_RR <- list()
+  
+  for(i in 1:2){
+    results_cv(nmds_df_plot, variables[i])
+    list[[i]] <- cv_db
+    list_RR[[i]] <- RR_cv
+  }
+    
+  
+sp_comp_cv <- do.call(rbind, list)
+sp_comp_RR <- do.call(rbind, list_RR)
+    }
+  
+  
+  
+{variables <- c("LA", "LDMC", "leafN", "seed.mass", "SLA", "vegetation.height")
+    list <- list()
+    list_RR <- list()
+    for(i in 1:6){
+      results_cv(cwm_plot_db, variables[i])
+      list[[i]] <- cv_db
+      list_RR[[i]] <- RR_cv
+
+    }
+    
+    traits_cv <- do.call(rbind, list)
+    traits_RR <- do.call(rbind, list_RR)
+  }
+  
+
+
 
 
 library(forcats)
 
-data_whole <- rbind(abricheven, biomass) %>% 
-  rbind(biomass012) %>% 
+data_whole <- rbind(abricheven_cv, biomass_cv) %>% 
+  rbind(biomass012_cv) %>% 
+  rbind(sp_comp_cv) %>% 
+  rbind(traits_cv) %>% 
   select(-value, -plot) %>% 
-  distinct()
-
+  distinct() 
 # Dynamics
 
-data_whole %>% 
+data_whole %>%
+  filter(variable %in% c("richness", "abundance", "Y_zipf", "biomass", "biomass012")) %>% 
   mutate(
     variable = fct_recode(variable,
                           "Richness" = "richness",
@@ -105,53 +140,67 @@ ggplot(aes(x = date, y = cv)) +
     se = TRUE, aes(color = treatment, fill = treatment),
     method = "lm", span = 0.6, alpha = 0.2 ) +
   geom_point(aes(color = treatment), size = 1.2) + 
-  geom_line(aes(color = treatment)) +
+  geom_line(aes(color = treatment), alpha = 0.2) +
   scale_color_manual(values = palette5) +
   scale_fill_manual(values = palette5) +
   geom_vline(xintercept = as.Date("2023-05-11"), linetype = "dashed", color = "gray40") +
-  theme(legend.position = "none", labs( y = "Coefficient of variation"))
+  theme(legend.position = "none") + 
+  labs( y = "Coefficient of variation", x = "Date")
   
 
+
+data_whole %>%
+  filter(variable %in% c("NMDS1", "NMDS2", "LA", "SLA", "LDMC", "vegetation.height", "seed.mass", 
+                         "leafN")) %>% 
+  mutate(
+    variable = fct_recode(variable,
+                          "Sp.Comp.(NMDS1)" = "NMDS1",
+                          "Sp.Comp.(NMDS2)" = "NMDS2",
+                          "LA" = "LA",
+                          "SLA" = "SLA",
+                          "LDMC" = "LDMC",
+                          "Height" = "vegetation.height",
+                          "Seed mass" = "seed.mass", 
+                          "Leaf N" = "leafN"), 
+    
+    variable = fct_relevel(variable,
+                           "Sp.Comp.(NMDS1)",
+                           "Sp.Comp.(NMDS2)",
+                           "LA",
+                           "SLA",
+                           "LDMC",
+                           "Height",
+                           "Seed mass", 
+                           "Leaf N")) %>% 
+  ggplot(aes(x = date, y = cv)) + 
+  facet_grid(variable ~ treatment, scales = "free_y", 
+             labeller = labeller(
+               treatment = as_labeller(labels3))) + 
+  geom_smooth(
+    se = TRUE, aes(color = treatment, fill = treatment),
+    method = "lm", span = 0.6, alpha = 0.2 ) +
+  geom_point(aes(color = treatment), size = 1.2) + 
+  geom_line(aes(color = treatment), alpha = 0.2, group  = 1) +
+  scale_color_manual(values = palette5) +
+  scale_fill_manual(values = palette5) +
+  geom_vline(xintercept = as.Date("2023-05-11"), linetype = "dashed", color = "gray40") +
+  theme(legend.position = "none") + 
+  labs( y = "Coefficient of variation", x = "Date")
 
 
 
 # Response ratio
 
-variables <- c("richness", "abundance", "Y_zipf", "biomass", "biomass012")
 
-list <- list()
+data_whole_RR <-  rbind(abricheven_RR_cv, biomass_RR_cv) %>% 
+  rbind(biomass012_RR_cv) %>% 
+  rbind(sp_comp_RR) %>% 
+  rbind(traits_RR) %>% 
+  select(-cv, -cv_c)
 
-for(i in seq_along(variables)){
-  
-  RR_cv <- data_whole %>% 
-    filter(!treatment == "c") %>% 
-    filter(variable == variables[i]) %>% 
-    select(date, sampling, treatment, cv)
-  
-  RR_cv_c  <- data_whole %>% 
-    filter(treatment == "c")%>% 
-    filter(variable == variables[i]) %>% 
-    rename(cv_c = cv,
-           treatment_c = treatment) %>% 
-    select(treatment_c, sampling, date, cv_c, variable)
-  
-  RR_cv <- RR_cv %>% 
-    left_join(RR_cv_c, by = c("date", "sampling")) %>% 
-    mutate(variable = variables[i]) %>% 
-    select(-treatment_c) %>% 
-    filter(!(sampling == "1" & treatment %in% c("p", "wp")))
-  
-  list[[i]] <- RR_cv
-  
-}
 
-RR_cv <- do.call(rbind, list) %>% 
-  mutate(treatment  = fct_recode(treatment,
-                                "w_vs_c" = "w",
-                                "p_vs_c" = "p", 
-                                "wp_vs_c" = "wp")) %>% 
-  rename(RR_descriptor = treatment) %>% 
-  mutate(RR = log(cv / cv_c)) %>% 
+data_whole_RR %>% 
+  filter(variable %in% c("richness", "abundance", "Y_zipf", "biomass", "biomass012")) %>% 
   mutate(
     variable = fct_recode(variable,
                           "Richness" = "richness",
@@ -166,10 +215,8 @@ RR_cv <- do.call(rbind, list) %>%
                            "Evenness",
                            "Biomass",
                            "Biomass012")) %>% 
-  select(-cv, -cv_c)
 
-
-ggplot(RR_cv, aes(x = date, y = RR)) + 
+ggplot(aes(x = date, y = RR)) + 
   facet_grid(variable ~ RR_descriptor, scales = "free_y", 
              labeller = labeller(
                RR_descriptor = as_labeller(labels_RR))) + 
@@ -177,12 +224,55 @@ ggplot(RR_cv, aes(x = date, y = RR)) +
     se = TRUE, aes(color = RR_descriptor, fill = RR_descriptor),
     method = "lm", span = 0.6, alpha = 0.2 ) +
   geom_point(aes(color = RR_descriptor), size = 1.2) + 
-  geom_line(aes(color = RR_descriptor)) +
+  geom_line(aes(color = RR_descriptor), alpha = 0.2) +
   scale_color_manual(values = palette_RR) +
   scale_fill_manual(values = palette_RR) +
   geom_hline(yintercept= 0, linetype = "dashed", color = "gray40") +
   geom_vline(xintercept = as.Date("2023-05-11"), linetype = "dashed", color = "gray40") +
-  theme(legend.position = "none", labs( y = "RR_cv"))
+  theme(legend.position = "none") + 
+  labs( y = "RR_cv", x = "Date")
+
+
+
+data_whole_RR %>% 
+  filter(variable %in% c("NMDS1", "NMDS2", "LA", "SLA", "LDMC", "vegetation.height", "seed.mass", 
+                         "leafN")) %>% 
+  mutate(
+    variable = fct_recode(variable,
+                          "Sp.Comp.(NMDS1)" = "NMDS1",
+                          "Sp.Comp.(NMDS2)" = "NMDS2",
+                          "LA" = "LA",
+                          "SLA" = "SLA",
+                          "LDMC" = "LDMC",
+                          "Height" = "vegetation.height",
+                          "Seed mass" = "seed.mass", 
+                          "Leaf N" = "leafN"), 
+    
+    variable = fct_relevel(variable,
+                           "Sp.Comp.(NMDS1)",
+                           "Sp.Comp.(NMDS2)",
+                           "LA",
+                           "SLA",
+                           "LDMC",
+                           "Height",
+                           "Seed mass", 
+                           "Leaf N")) %>% 
+  
+  ggplot(aes(x = date, y = RR)) + 
+  facet_grid(variable ~ RR_descriptor, scales = "free_y", 
+             labeller = labeller(
+               RR_descriptor = as_labeller(labels_RR))) + 
+  geom_smooth(
+    se = TRUE, aes(color = RR_descriptor, fill = RR_descriptor),
+    method = "lm", span = 0.6, alpha = 0.2 ) +
+  geom_point(aes(color = RR_descriptor), size = 1.2) + 
+  geom_line(aes(color = RR_descriptor), alpha = 0.2) +
+  scale_color_manual(values = palette_RR) +
+  scale_fill_manual(values = palette_RR) +
+  geom_hline(yintercept= 0, linetype = "dashed", color = "gray40") +
+  geom_vline(xintercept = as.Date("2023-05-11"), linetype = "dashed", color = "gray40") +
+  theme(legend.position = "none") + 
+  labs( y = "RR_cv", x = "Date")
   
   
 

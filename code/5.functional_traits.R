@@ -426,7 +426,7 @@ ggplot(pca_sampling, aes(x = PC1, y = PC2, color = treatment, shape = treatment)
   theme_test() +
   theme(legend.position = "bottom")
 print(gg_cwm_sampling)
-ggsave("results/Plots/protofinal/FT_cwm_sampling.png", plot = gg_cwm_sampling, dpi = 300)
+#ggsave("results/Plots/protofinal/FT_cwm_sampling.png", plot = gg_cwm_sampling, dpi = 300)
 
 }
 
@@ -540,7 +540,7 @@ ggplot(pca_plot, aes(x = PC1, y = PC2, color = treatment, shape = treatment)) +
   theme_test() +
   theme(legend.position = "bottom")
 print(gg_cwm_plot)
-ggsave("results/Plots/protofinal/FT_cwm_plot.png", plot = gg_cwm_plot, dpi = 300)
+#ggsave("results/Plots/protofinal/FT_cwm_plot.png", plot = gg_cwm_plot, dpi = 300)
 
 }
 
@@ -559,8 +559,14 @@ sampling_dates <- read.csv("data/sampling_dates.csv") %>%
   ) %>% 
   mutate(across(where(is.character), as.factor))
 
+pca_cwm_plot <- pca_plot %>%
+  merge(sampling_dates)
+pca_cwm_plot %>%  write.csv("data/pca_cwm_plot.csv")
+
 cwm_plot_db <- cwm_plot %>% 
   merge(sampling_dates)
+
+cwm_plot_db %>%  write.csv("data/cwm_plot_db.csv")
 
 
 trait_levels <- c("LDMC", "leafN", "SLA", "LA", "vegetation.height", "seed.mass")
