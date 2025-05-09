@@ -321,9 +321,11 @@ for (i in 1:length(dates)) {
     
     
     lm_i <- lm(biomass ~ richness, data = BEF_plot_i)
+    if (inherits(lm_i, "try-error")) next  # evita romper el bucle si lm falla
+    
     shapiro_i <- shapiro.test(residuals(lm_i))
     
-    # Extract coefficients, R^2, and p-value
+    # Extraer estadísticas del modelo
     lm_i_summary <- summary(lm_i)
     lm_i_tidy <- tidy(lm_i)
     lm_i_glance <- glance(lm_i)
@@ -334,18 +336,17 @@ for (i in 1:length(dates)) {
     p_value_i <- lm_i_tidy$p.value[2]
     n_observations_i <- nrow(BEF_plot_i)
     
-
-    counter = counter + 1
+    counter <- counter + 1
     
-    BEF_lm_data$omw_date[counter] <- paste(dates[i])
-    BEF_lm_data$date[counter] <- paste(unique(BEF_plot_i$date))
-    BEF_lm_data$treatment[counter] <- paste(treats[j])
+    BEF_lm_data$omw_date[counter] <- as.character(dates[i])
+    BEF_lm_data$date[counter] <- as.character(min(BEF_plot_i$date, na.rm = TRUE))
+    BEF_lm_data$treatment[counter] <- as.character(treats[j])
     BEF_lm_data$intercept[counter] <- round(intercept_i, 2)
     BEF_lm_data$slope[counter] <- round(slope_i, 2)
     BEF_lm_data$r_squared[counter] <- round(r_squared_i, 2)
     BEF_lm_data$p_value[counter] <- round(p_value_i, 4)
     BEF_lm_data$n_points_lm[counter] <- n_observations_i
-    BEF_lm_data$shapiro_pvalue[counter] <- shapiro_i$p.value
+    BEF_lm_data$shapiro_pvalue[counter] <- round(shapiro_i$p.value, 4)
     
   }
   
@@ -369,6 +370,7 @@ BEF_lm_data %>%
     segment.size = 0.5, 
     max.overlaps = 15# Line thickness
   ) +
+  geom_hline(yintercept = 0, linetype = "dashed", color = "black", linewidth = 0.5) +
   scale_color_manual(values = palette5) +
   scale_fill_manual(values = palette5) +
   scale_x_date(date_breaks = "2 months", date_labels = "%b %Y") +  # Ajusta según tus datos
@@ -378,7 +380,7 @@ BEF_lm_data %>%
   labs( x = NULL, y = "Slope of lm(biomas ~ richness)", title = "Labels: R2, p-value") + 
   theme(legend.position =  "NULL")
 print(gg_BEF_slopes)
-#ggsave("results/Plots/protofinal/BEF_slopes.png", plot = gg_BEF_slopes, dpi = 300)
+ggsave("results/Plots/protofinal/BEF_slopes.png", plot = gg_BEF_slopes, dpi = 300)
 }
 
 
