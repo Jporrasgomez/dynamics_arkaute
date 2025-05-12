@@ -28,6 +28,20 @@ richness_dynamics <- ab_rich_dynamics %>%
   distinct()
 
 
+evenness_dynamics <- ab_rich_dynamics %>% 
+  distinct(treatment, sampling, omw_date, one_month_window, date, plot, Y_zipf) %>% 
+  group_by(treatment, sampling, date) %>% 
+  mutate(
+    n = n(),
+    mean_evenness = mean(Y_zipf, na.rm = T),
+    sd_evenness = sd(Y_zipf, na.rm = T)
+  ) %>% 
+  ungroup() %>% 
+  select(treatment, sampling, omw_date, one_month_window, date, n,
+         mean_evenness, sd_evenness) %>% 
+  distinct()
+
+
 
 biomass_dynamics <- biomass_imp %>% 
   distinct(treatment, sampling, omw_date, one_month_window, date, biomass) %>% 
@@ -44,11 +58,15 @@ biomass_dynamics <- biomass_imp %>%
 
 
 BEF_dynamics <- merge(richness_dynamics, biomass_dynamics)
+BEF_dynamics_even <- merge(evenness_dynamics, biomass_dynamics)
 
 
 
 richness_plot <- ab_rich_dynamics %>% 
   distinct(treatment, sampling, omw_date, one_month_window, date, plot, richness) 
+
+evenness_plot <- ab_rich_dynamics %>% 
+  distinct(treatment, sampling, omw_date, one_month_window, date, plot, Y_zipf) 
 
 
 biomass_plot <- biomass_imp %>% 
@@ -56,6 +74,7 @@ biomass_plot <- biomass_imp %>%
 
 
 BEF_plot <- right_join(richness_plot, biomass_plot)
+BEF_plot_even <- right_join(evenness_plot, biomass_plot)
 
 
 
@@ -74,8 +93,8 @@ BEF_dynamics %>%
   theme(legend.position = "none") 
 
 
-BEF_dynamics %>% 
-  ggplot(aes(x = log(mean_richness))) +
+BEF_dynamics_even %>% 
+  ggplot(aes(x = mean_evenness)) +
   facet_wrap(~ treatment) +
   geom_histogram( aes(fill = treatment), binwidth = 0.1, color = "black", alpha = 0.7) +
   scale_fill_manual(values =  palette5) +
@@ -84,8 +103,6 @@ BEF_dynamics %>%
     y = "Frecuencia") +
   theme_minimal() +
   theme(legend.position = "none") 
-
-
 
 
 
@@ -101,16 +118,6 @@ BEF_dynamics %>%
   theme(legend.position = "none") 
 
 
-BEF_dynamics %>% 
-  ggplot(aes(x = log10(mean_biomass))) +
-  facet_wrap(~ treatment) +
-  geom_histogram( aes(fill = treatment), binwidth = 0.2, color = "black", alpha = 0.7) +
-  scale_fill_manual(values =  palette5) +
-  labs(
-    x = "log(Mean biomass)",
-    y = "Frecuencia") +
-  theme_minimal() +
-  theme(legend.position = "none") 
 
 
 {gg_BEF_sampling <-  
@@ -135,6 +142,32 @@ ggplot(BEF_dynamics, aes(x = mean_richness, y = mean_biomass)) +
   theme(legend.position = "NULL")
 print(gg_BEF_sampling)
 #ggsave("results/Plots/protofinal/BEF_sampling.png", plot = gg_BEF_sampling, dpi = 300)
+}
+
+
+
+{#gg_BEF_sampling <-  
+    ggplot(BEF_dynamics_even, aes(x = log(abs(mean_evenness)), y = log(mean_biomass))) +
+    
+    facet_grid(~ treatment, labeller = labeller(treatment = labels3)) +
+    
+    geom_point(aes(color = treatment)) +
+    
+    geom_smooth(method = "lm", aes(color = treatment, fill = treatment), alpha = 0.3) +
+    
+    scale_colour_manual(values = palette5) +
+    scale_fill_manual(values = palette5) +
+    
+    stat_poly_eq(
+      aes(label = after_stat(paste(eq.label, rr.label, p.value.label, sep = "~~~"))),
+      formula = y ~ x,
+      parse = TRUE
+    ) +
+    
+    labs(x = "Ln(Evenness)", y = "Ln(Biomass)") + 
+    theme(legend.position = "NULL")
+  #print(gg_BEF_sampling)
+  #ggsave("results/Plots/protofinal/BEF_sampling.png", plot = gg_BEF_sampling, dpi = 300)
 }
 
 
@@ -210,6 +243,32 @@ ggplot(BEF_plot, aes(x = richness, y = biomass)) +
 print(gg_BEF_plot)
 #ggsave("results/Plots/protofinal/BEF_plot.png", plot = gg_BEF_plot, dpi = 300)
 }
+
+
+
+
+#{gg_BEF_plot <- 
+    ggplot(BEF_plot_even, aes(x = Y_zipf, y = biomass)) +
+    
+    facet_grid(~ treatment, labeller = labeller(treatment = labels3)) +
+    
+    geom_point(aes(color = treatment), alpha = 0.6) +
+    
+    geom_smooth(method = "lm", aes(color = treatment, fill = treatment), alpha = 0.3) +
+    
+    scale_colour_manual(values = palette5) +
+    scale_fill_manual(values = palette5) +
+    
+    stat_poly_eq(
+      aes(label = after_stat(paste(eq.label, rr.label, p.value.label, sep = "~~~"))),
+      formula = y ~ x,
+      parse = TRUE
+    ) +
+    
+    labs(x = "Richness", y = "Biomass")
+  print(gg_BEF_plot)
+  #ggsave("results/Plots/protofinal/BEF_plot.png", plot = gg_BEF_plot, dpi = 300)
+#}
 
 
 
@@ -426,11 +485,11 @@ coef(quadratic_glm)
 colors <- c("deepskyblue3", "coral3")
 
 
-datas <- list(BEF_dynamics, BEF_plot)
+datas <- list(BEF_dynamics, BEF_plot, BEF_dynamics_even, BEF_plot_even)
 
-{i = 1
+{i = 4
   datas[[i]] %>% 
-    ggplot(aes(x = mean_richness, y = mean_biomass)) +
+    ggplot(aes(x = Y_zipf, y = biomass)) +
     
     facet_grid(~ treatment, labeller = labeller(treatment = labels3)) +
     
