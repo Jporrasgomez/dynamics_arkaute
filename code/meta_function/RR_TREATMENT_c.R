@@ -48,7 +48,9 @@ ytitle_dict <- list(
   "LDMC" = "LDMC(?)", 
   "leafN"= "Leaf nitrogen(?)",
   "seed.mass" = "Seed mass",
-  "vegetation.height" = "Vegetation height"
+  "vegetation.height" = "Vegetation height",
+  "PC1" = "Functional diversity(PC1)",
+  "PC2" = "Functional diverisity (PC2)"
 )
 
 ytitle <- ytitle_dict[[variable]]

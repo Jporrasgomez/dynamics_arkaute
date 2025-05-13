@@ -6,9 +6,10 @@ source("code/1.first_script.R")
 
 #turnover_db <- read.csv("data/turnover_db.csv")
 nmds_df_plot <- read.csv("data/nmds_df_plot.csv")
+pca_cwm_plot <- read.csv("data/pca_cwm_plot.csv")
 
 rm(list = setdiff(ls(), c("ab_rich_dynamics", "biomass_imp", "biomass_imp012",
-                          "turnover_db", "nmds_df_plot")))
+                          "turnover_db", "nmds_df_plot", "pca_cwm_plot")))
                           
 source("code/palettes_labels.R")                          
 palette <- palette5
@@ -123,8 +124,47 @@ RR_NMDS_c <- reduce(list_NMDS_c, bind_rows)
 RR_NMDS_wp <- reduce(list_NMDS_wp, bind_rows)
 
 
-RR_c <- bind_rows(RR_c, RR_NMDS_c)
-RR_wp <- bind_rows(RR_wp, RR_NMDS_wp)
+
+
+{list_traits_c <- list()
+  list_traits_wp <- list()
+  gglist_traits_c <- list()
+  gglist_traits_wp <- list()
+  traits <- c("PC1", "PC2")
+  for (i in 1:2){
+    RR_treatment_c(pca_cwm_plot, traits[i])
+    list_traits_c[[i]] <- RR_treatment %>%
+      select(RR_descriptor, variable, starts_with("RR"), starts_with("se_RR"))
+    gglist_traits_c[[i]] <- gg_RR
+    
+    RR_treatment_wp(pca_cwm_plot, traits[i])
+    list_traits_wp[[i]] <- RR_wp_vs_treatment %>%
+      select(RR_descriptor, variable, starts_with("RR"), starts_with("se_RR"))
+    gglist_traits_wp[[i]] <- gg_RR_wp
+    
+  }}
+
+gglist_traits_c[[1]]
+gglist_traits_c[[2]]
+
+gglist_traits_wp[[1]]
+gglist_traits_wp[[2]]
+
+
+RR_traits_c <- do.call(rbind, list_traits_c)
+RR_traits_wp <- do.call(rbind, list_traits_wp)
+
+
+
+
+RR_c <- bind_rows(RR_c, RR_NMDS_c) %>% 
+  rbind(RR_traits_c)
+
+RR_wp <- bind_rows(RR_wp, RR_NMDS_wp) %>% 
+  rbind(RR_traits_wp)
+
+RR_whole <- rbind(RR_c, RR_wp)
+
 
 
 #{list_turnover_c <- list()
@@ -161,6 +201,27 @@ RR_wp <- bind_rows(RR_wp, RR_NMDS_wp)
 #
 #RR_wp <- bind_rows(RR_wp, RR_turnover_wp)
 
+limits_variables <- c(
+  "richness",
+  "abundance",
+  "Y_zipf",
+  #"biomass",
+  "biomass012",
+  "NMDS1",
+  "NMDS2",
+  "PC1",
+  "PC2")
+labels_variables <- c(
+  "richness" = "Richness",
+  "abundance" = "Cover",
+  "Y_zipf" = "Evenness",
+  #"biomass" = "Biomass",
+  "biomass012" = "Biomass",
+  "NMDS1" = "SC1",
+  "NMDS2" = "SC2",
+  "PC1" = "FD1", 
+  "PC2" = "FD2")
+
 
 
 
@@ -169,6 +230,7 @@ z = 1.96
 
 {gg_RR_c <- 
   RR_c %>% 
+    filter(!variable == "biomass") %>% 
   mutate(
     RR = if_else(variable == "Y_zipf", -1 * RR, RR), 
     se_RR = if_else(variable == "Y_zipf", -1 * se_RR, se_RR)) %>% 
@@ -185,16 +247,9 @@ z = 1.96
   geom_point(position = position_dodge(width = 0.2)) + 
   scale_color_manual(values = palette_RR, labels = labels_RR) +
   scale_x_discrete(
-    limits = c("richness", "abundance", "Y_zipf", "biomass", "biomass012",
-               "NMDS1", "NMDS2"),
-    labels = c(
-      "richness" = "Richness",
-      "abundance" = "Cover",
-      "Y_zipf" = "Evenness",
-      "biomass" = "Biomass",
-      "biomass012" = "Biomass012",
-      "NMDS1" = "Sp.Comp.(NMDS1)",
-      "NMDS2" = "Sp.Comp.(NMDS2")) +
+    limits = limits_variables,
+    
+    labels = labels_variables) +
   
   geom_hline(yintercept = 0, linetype = "dashed", color = "gray40") +
   labs(x = NULL, y = "RR of mean values at plot level", color = NULL) +
@@ -202,12 +257,15 @@ z = 1.96
 
 print(gg_RR_c)
 
-ggsave("results/Plots/protofinal/treatment_effects.png", plot = gg_RR_c, dpi = 300)}
+ggsave("results/Plots/protofinal/treatment_effects.png", plot = gg_RR_c, dpi = 300)
+}
 
 
 
 {gg_RR_wp <- 
 RR_wp %>%
+    filter(!variable == "biomass") %>% 
+    filter(RR_descriptor == "wp_vs_p") %>% 
   mutate(
     RR = if_else(variable == "Y_zipf", -1 * RR, RR),
     se_RR = if_else(variable == "Y_zipf", -1 * se_RR, se_RR)) %>% 
@@ -222,17 +280,10 @@ ggplot(aes(x = variable, y = RR, color = RR_descriptor)) +
                 width = 0.1) +  
   geom_point(aes(color = RR_descriptor), position = position_dodge(width = 0.2)) + 
   scale_color_manual(values = palette_RR_wp, labels = labels_RR_wp2) +
-  scale_x_discrete(
-    limits = c("richness", "abundance", "Y_zipf", "biomass", "biomass012",
-               "NMDS1", "NMDS2"),
-    labels = c(
-      "richness" = "Richness",
-      "abundance" = "Cover",
-      "Y_zipf" = "Evenness",
-      "biomass" = "Biomass",
-      "biomass012" = "Biomass012",
-      "NMDS1" = "Sp.Comp.(NMDS1)",
-      "NMDS2" = "Sp.Comp.(NMDS2")) + 
+    scale_x_discrete(
+      limits = limits_variables,
+      
+      labels = labels_variables) +
   
   geom_hline(yintercept = 0, linetype = "dashed", color = "gray40") +
   labs(x = NULL, y = "RR of mean values at plot level", color = NULL) +
@@ -248,8 +299,36 @@ ggplot(aes(x = variable, y = RR, color = RR_descriptor)) +
 
 print(gg_RR_wp)
 
-ggsave("results/Plots/protofinal/globalchange_effects.png", plot = gg_RR_wp, dpi = 300)}
+ggsave("results/Plots/protofinal/globalchange_effects.png", plot = gg_RR_wp, dpi = 300)
+}
 
+ 
+  RR_whole %>% 
+  filter(!variable == "biomass") %>% 
+  filter(RR_descriptor == "wp_vs_p") %>% 
+  mutate(
+    RR = if_else(variable == "Y_zipf", -1 * RR, RR), 
+    se_RR = if_else(variable == "Y_zipf", -1 * se_RR, se_RR)) %>% 
+  ## Multiplying by -1 gamma zipf in order to have positive values and being able to read the plots as
+  ## evenness
+  ggplot(aes(x = variable, y = RR, color = RR_descriptor)) + 
+  geom_errorbar(
+    aes(ymin = RR - z * se_RR,
+        ymax = RR + z * se_RR),
+    linewidth = 0.5,
+    position = position_dodge(width = 0.2),
+    width = 0.1
+  ) +  
+  geom_point(position = position_dodge(width = 0.2)) + 
+  scale_color_manual(values = palette_RR_wp, labels = labels_RR_wp2) +
+  scale_x_discrete(
+    limits = limits_variables,
+    
+    labels = labels_variables) +
+  
+  geom_hline(yintercept = 0, linetype = "dashed", color = "gray40") +
+  labs(x = NULL, y = "RR of mean values at plot level", color = NULL) +
+  theme(legend.position = "bottom")
 
 
 ## Unir por RR_descriptor?

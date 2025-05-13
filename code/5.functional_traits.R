@@ -545,7 +545,6 @@ print(gg_cwm_plot)
 }
 
 
-# Plotting cwm dynamics
 
 
 sampling_dates <- read.csv("data/sampling_dates.csv") %>% 
@@ -559,8 +558,14 @@ sampling_dates <- read.csv("data/sampling_dates.csv") %>%
   ) %>% 
   mutate(across(where(is.character), as.factor))
 
+
 pca_cwm_plot <- pca_plot %>%
   merge(sampling_dates)
+
+pca_cwm_plot$PC1 <- pca_cwm_plot$PC1 + abs(min(pca_cwm_plot$PC1)) + 1
+pca_cwm_plot$PC2 <- pca_cwm_plot$PC2 + abs(min(pca_cwm_plot$PC2)) + 1
+        
+
 pca_cwm_plot %>%  write.csv("data/pca_cwm_plot.csv")
 
 cwm_plot_db <- cwm_plot %>% 

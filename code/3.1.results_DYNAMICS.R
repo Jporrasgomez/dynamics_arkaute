@@ -9,9 +9,10 @@ source("code/1.first_script.R")
 
 #turnover_db <- read.csv("data/turnover_db.csv")
 nmds_df_plot <- read.csv("data/nmds_df_plot.csv")
+pca_cwm_plot <- read.csv("data/pca_cwm_plot.csv")
 
 rm(list = setdiff(ls(), c("ab_rich_dynamics", "biomass_imp", "biomass_imp012",
-                          "turnover_db", "nmds_df_plot")))
+                          "turnover_db", "nmds_df_plot", "pca_cwm_plot")))
 
 pacman::p_load(dplyr,reshape2,tidyverse, lubridate, ggplot2, ggpubr, gridExtra,
                car, ggsignif, dunn.test, rstatix) #Cargamos los paquetes que necesitamos
@@ -147,16 +148,44 @@ RR_nmds1_wp <- RR_wp_vs_treatment %>%
   RR_nmds2_wp <- RR_wp_vs_treatment %>% 
     select(date, RR_descriptor, sampling, variable, delta_RR, se_delta_RR)}
 
+
 RR_nmds <- rbind(RR_nmds1, RR_nmds2)
 RR_nmds_wp <- rbind(RR_nmds1_wp, RR_nmds2_wp)
 
 
+{meta_function(pca_cwm_plot, "PC1", "treatment")
+  RR_PC1 <- RR_treatment %>% 
+    select(date, RR_descriptor, sampling, variable, delta_RR, se_delta_RR)
+  
+  RR_PC1_wp <- RR_wp_vs_treatment %>% 
+    select(date, RR_descriptor, sampling, variable, delta_RR, se_delta_RR)}
+
+{meta_function(pca_cwm_plot, "PC2", "treatment")
+  RR_PC2 <- RR_treatment %>% 
+    select(date, RR_descriptor, sampling, variable, delta_RR, se_delta_RR)
+  
+  RR_PC2_wp <- RR_wp_vs_treatment %>% 
+    select(date, RR_descriptor, sampling, variable, delta_RR, se_delta_RR)}
+
+RR_traits <- rbind(RR_PC1, RR_PC2)
+RR_traits_wp <- rbind(RR_PC1_wp, RR_PC2_wp)
+
+
+
+
 library(forcats)
 
-RR_whole <- rbind(RR_abricheven, RR_biomass) %>% 
-  rbind(RR_biomass012) %>% 
+RR_whole <- rbind(RR_abricheven, RR_biomass012) %>% 
+  #rbind(RR_biomass) %>% 
   #rbind(RR_turnover) %>% 
   rbind(RR_nmds) %>% 
+  rbind(RR_traits) %>% 
+  rbind(RR_abricheven_wp) %>% 
+  #rbind(RR_biomass_wp) %>% 
+  rbind(RR_biomass012_wp) %>% 
+  #rbind(RR_turnover_wp) %>%
+  rbind(RR_nmds_wp) %>% 
+  rbind(RR_traits_wp) %>% 
   mutate(variable = as.factor(variable)) %>% 
   mutate(
     delta_RR = if_else(variable == "Y_zipf", -1 * delta_RR, delta_RR),
@@ -166,51 +195,29 @@ RR_whole <- rbind(RR_abricheven, RR_biomass) %>%
                           "Richness" = "richness",
                           "Cover" = "abundance",
                           "Evenness" = "Y_zipf",
-                          "Biomass" = "biomass",
+                          #"Biomass" = "biomass",
                           "Biomass012" = "biomass012",
                           "Sp.comp. (NMDS1)" = "NMDS1",
-                          "Sp.comp.(NMDS2)" = "NMDS2"),
+                          "Sp.comp.(NMDS2)" = "NMDS2",
+                          "Functional div.1" = "PC1", 
+                          "Functional div.2" = "PC2"),
+                        
     variable = fct_relevel(variable,
                            "Richness",
                            "Cover",
                            "Evenness",
-                           "Biomass",
+                           #"Biomass",
                            "Biomass012",
                            "Sp.comp. (NMDS1)",
-                           "Sp.comp.(NMDS2)"))
-    
-
-
-RR_whole_wp <- rbind(RR_abricheven_wp, RR_biomass_wp) %>% 
-  rbind(RR_biomass012_wp) %>% 
-  #rbind(RR_turnover_wp) %>%
-  rbind(RR_nmds_wp) %>% 
-  mutate(variable = as.factor(variable)) %>% 
-    mutate(
-      delta_RR = if_else(variable == "Y_zipf", -1 * delta_RR, delta_RR),
-      delta_se_RR = if_else(variable == "Y_zipf", -1 * se_delta_RR, se_delta_RR),
-      
-      variable = fct_recode(variable,
-                            "Richness" = "richness",
-                            "Cover" = "abundance",
-                            "Evenness" = "Y_zipf",
-                            "Biomass" = "biomass",
-                            "Biomass012" = "biomass012",
-                            "Sp.comp. (NMDS1)" = "NMDS1",
-                            "Sp.comp.(NMDS2)" = "NMDS2"),
-      variable = fct_relevel(variable,
-                             "Richness",
-                             "Cover",
-                             "Evenness",
-                             "Biomass",
-                             "Biomass012",
-                             "Sp.comp. (NMDS1)",
-                             "Sp.comp.(NMDS2)"))
-
+                           "Sp.comp.(NMDS2)",
+                           "Functional div.1", 
+                           "Functional div.2"))
+ 
 z = 1.96
 
-{gg_dynamics <- 
-ggplot(RR_whole, aes(x = date, y = delta_RR)) + 
+{gg_dynamics <- RR_whole %>% 
+    filter(RR_descriptor %in% c("w_vs_c", "p_vs_c", "wp_vs_c")) %>% 
+ggplot(aes(x = date, y = delta_RR)) + 
   facet_grid(variable ~ RR_descriptor, scales = "free_y",
              labeller = labeller(
                RR_descriptor = as_labeller(labels_RR), 
@@ -226,11 +233,13 @@ ggplot(RR_whole, aes(x = date, y = delta_RR)) +
   geom_vline(xintercept = as.Date("2023-05-11"), linetype = "dashed", color = "gray40") +
   theme(legend.position = "none")
 print(gg_dynamics)
-ggsave("results/Plots/protofinal/dynamics.png", plot = gg_dynamics, dpi = 300)}
+#ggsave("results/Plots/protofinal/dynamics.png", plot = gg_dynamics, dpi = 300)
+}
 
 
-{gg_dynamics_wp <- 
-ggplot(RR_whole_wp, aes(x = date, y = delta_RR)) + 
+{gg_dynamics_wp <- RR_whole %>% 
+    filter(RR_descriptor %in% c("wp_vs_p", "wp_vs_w")) %>% 
+ggplot(aes(x = date, y = delta_RR)) + 
   facet_grid(variable ~ RR_descriptor, scales = "free_y",
              labeller = labeller(
                RR_descriptor = as_labeller(labels_RR_wp2), 
@@ -246,7 +255,8 @@ ggplot(RR_whole_wp, aes(x = date, y = delta_RR)) +
   geom_vline(xintercept = as.Date("2023-05-11"), linetype = "dashed", color = "gray40") +
   theme(legend.position = "none")
 print(gg_dynamics_wp)
-ggsave("results/Plots/protofinal/globalchange_dynamics.png", plot = gg_dynamics_wp, dpi = 300)}
+#ggsave("results/Plots/protofinal/globalchange_dynamics.png", plot = gg_dynamics_wp, dpi = 300)
+}
 
 
 
