@@ -23,7 +23,7 @@ richness_dynamics <- ab_rich_dynamics %>%
   group_by(treatment, sampling, date) %>% 
   mutate(
     n = n(),
-    mean_richness = mean(richness, na.rm = T),
+    mean_richness = median(richness, na.rm = T),
     sd_richness = sd(richness, na.rm = T)
   ) %>% 
   ungroup() %>% 
@@ -38,7 +38,7 @@ biomass_dynamics <- biomass_imp %>%
   group_by(treatment, sampling, date) %>% 
   mutate(
     n = n(),
-    mean_biomass = mean(biomass, na.rm = T),
+    mean_biomass = median(biomass, na.rm = T),
     sd_biomass = sd(biomass, na.rm = T)
   ) %>% 
   ungroup() %>% 
@@ -58,8 +58,13 @@ richness_plot <- ab_rich_dynamics %>%
 biomass_plot <- biomass_imp %>% 
   distinct(treatment, sampling, omw_date, one_month_window, date, plot, biomass)
 
+evenness_plot <- ab_rich_dynamics %>% 
+  distinct(treatment, sampling, omw_date, one_month_window, date, plot, Y_zipf) 
+
 
 BEF_plot <- right_join(richness_plot, biomass_plot)
+BEF_plot <- right_join(BEF_plot, evenness_plot)
+
 
 
 # In this script we want to adjust BEF relationships to a power equation model
@@ -150,7 +155,7 @@ BEF_plot %>%
 
 
 {gg_logBEF_plot <- 
-    ggplot(BEF_plot, aes(x = log(richness), y = log(biomass))) +
+    ggplot(BEF_plot, aes(x = log(abs(Y_zipf)), y = log(biomass))) +
     
     facet_grid(~ treatment, labeller = labeller(treatment = labels3), scales = "free") +
     
@@ -167,10 +172,10 @@ BEF_plot %>%
       parse = TRUE
     ) +
     
-    labs(x = "Richness", y = "Biomass") +
+    labs(x = "Ln(Evenness)", y = "Ln(Biomass)") +
     theme(legend.position = "NULL")
   print(gg_logBEF_plot)
-  ggsave("results/Plots/protofinal/logBEF_plot.png", plot = gg_logBEF_plot, dpi = 300)
+  #ggsave("results/Plots/protofinal/logBEF_plot.png", plot = gg_logBEF_plot, dpi = 300)
   }
 
 

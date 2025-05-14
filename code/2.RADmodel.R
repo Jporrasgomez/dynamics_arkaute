@@ -2,9 +2,9 @@
 
 
 
-source("code/1.first_script.R")
+rm(list = ls(all.names = TRUE))
 
-rm(list = setdiff(ls(), c("flora_abrich")))
+flora_abrich <- read.csv("data/flora_abrich.csv")
 
 source("code/palettes_labels.R")
 
@@ -384,7 +384,7 @@ ggsave("results/Plots/protofinal/RAD_sampling_eg.png", plot = gg_rad_eg, dpi = 3
 
 # Means
 
-radcoeff_df <- rad_plot %>% 
+radcoeff_db_plot <- rad_plot %>% 
   distinct(plot, sampling, treatment, zipf_gamma) %>% 
   select(plot, sampling, treatment, zipf_gamma) %>% 
   rename(Y_zipf = zipf_gamma)
@@ -418,10 +418,20 @@ radcoeff_df <- rad_plot %>%
  
 
 
-radcoeff_df <- bind_rows(radcoeff_df, dummy_rows) }
+radcoeff_db_plot <- bind_rows(radcoeff_db_plot, dummy_rows) }
 
 
-radcoeff_df %>% write.csv("data/radcoeff_df.csv", row.names = FALSE)
+sampling_dates <- read.csv("data/sampling_dates.csv") %>% 
+  mutate(sampling = as.factor(sampling),
+         date = ymd(date), 
+         year = year(date)) %>% 
+  select(sampling, date, year, one_month_window, omw_date) %>% 
+  mutate(across(where(is.character), as.factor))
+
+radcoeff_db_plot <- radcoeff_db_plot %>% 
+  left_join(sampling_dates)
+
+radcoeff_db_plot %>% write.csv("data/radcoeff_db_plot.csv", row.names = FALSE)
 
 rm(flora_rad)
 rm(flora_rad)

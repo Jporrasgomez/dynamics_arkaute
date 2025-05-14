@@ -7,8 +7,6 @@
 
 
 
-
-
 rm(list = ls(all.names = TRUE))
 pacman::p_load(dplyr, reshape2, tidyverse, lubridate, ggplot2, ggpubr, rpivotTable, ggrepel, here)
 
@@ -58,6 +56,9 @@ theme_set(theme_bw() +
   # WE WORK WITH IDENTIFIED SPECIES!!
   
   flora_rare <- merge(flora_rare, species_code, by = "code") 
+  
+  
+  # Modification of 0.1 cm in order to avoid caliber error. 
   
   flora_rare <- flora_rare %>%
     mutate(Dm = coalesce(ifelse(Dm < 0.1, 0.1, Dm), Dm))
@@ -255,7 +256,7 @@ source("code/0.2.MICE.R")
 source("code/0.3.lm_biomass012.R")
 
 flora_medium012 <- left_join(flora_medium, lm_data_filtered) %>%
-  filter(sampling %in% c("0", "1", "2")) %>% 
+  filter(sampling %in% c("0", "1", "2")) %>%  # I COULD PUT HERE SAMPLING 12
   mutate(year = year(date)) %>% 
   mutate(abundance = ifelse(abundance < 1, 1, abundance)) %>% 
   mutate(biomass_s = exp(intercept + slope * log(abundance)) * smearing_factor)
@@ -268,25 +269,22 @@ biomass_noimp_clean_012 <- bind_rows(biomass_noimp_clean, flora_medium012)
 #Calculation of total biomasss (community biomass) by summing all biomass at species level per square meter
 # I will keep the flora_biomass not cleaned in order to compare results with and without outliers
 
-biomass_imp <- biomass_imp_clean %>% 
-  group_by(plot, sampling, treatment) %>% 
-  mutate(biomass_community =  sum(biomass_s, na.rm = TRUE)) %>%
-  ungroup() 
 
-biomass_noimp <- biomass_noimp_clean %>% 
-  group_by(plot, sampling, treatment) %>% 
-  mutate(biomass_community =  sum(biomass_s, na.rm = TRUE)) %>%
-  ungroup() 
+{data_list <- list(biomass_imp_clean, biomass_noimp_clean, biomass_imp_clean_012, biomass_noimp_clean_012)
+result_list <- list()
+for (i in 1:4) {
+  result_list[[i]] <- data_list[[i]] %>%
+    group_by(plot, sampling, treatment) %>%
+    mutate(biomass_community = sum(biomass_s, na.rm = TRUE)) %>%
+    ungroup()
+}
 
-biomass_imp012 <- biomass_imp_clean_012 %>% 
-  group_by(plot, sampling, treatment) %>% 
-  mutate(biomass_community =  sum(biomass_s, na.rm = TRUE)) %>%
-  ungroup() 
+biomass_imp <- result_list[[1]]
+biomass_noimp <- result_list[[2]]
+biomass_imp012 <- result_list[[3]]
+biomass_noimp012 <- result_list[[4]]}
 
-biomass_noimp012 <- biomass_noimp_clean_012 %>% 
-  group_by(plot, sampling, treatment) %>% 
-  mutate(biomass_community =  sum(biomass_s, na.rm = TRUE)) %>%
-  ungroup()
+
 
 
 #Adding dummy rows for p and wp in sampling 1
@@ -325,41 +323,48 @@ biomass_noimp012 <- biomass_noimp_clean_012 %>%
 ### Final databases: ##########
 
 
-
-biomass_imp <- bind_rows(biomass_imp, dummy_rows) %>% 
-  select(year, date, sampling, one_month_window, omw_date, treatment, plot, code, abundance,
-         richness, biomass_s, biomass_community, abundance_community) %>% 
-  mutate(sampling_date = as.factor(format(ymd(date), "%Y-%m-%d"))) %>% 
-  rename(biomass = biomass_community)
-
-
-biomass_noimp <- bind_rows(biomass_noimp, dummy_rows) %>% 
-  select(year, date, sampling, one_month_window, omw_date, treatment, plot, code, abundance,
-         richness, biomass_s, biomass_community, abundance_community) %>% 
-  mutate(sampling_date = as.factor(format(ymd(date), "%Y-%m-%d"))) %>% 
-  rename(biomass = biomass_community)
+{data_list <- list(biomass_imp, biomass_noimp, biomass_imp012, biomass_noimp012)
+result_list <- list()
+for (i in 1:4) {
+  result_list[[i]] <- bind_rows(data_list[[i]], dummy_rows) %>% 
+    select(year, date, sampling, one_month_window, omw_date, treatment, plot, code, 
+           abundance, richness, biomass_s, biomass_community, abundance_community) %>% 
+    mutate(sampling_date = as.factor(format(ymd(date), "%Y-%m-%d"))) %>% 
+    rename(biomass = biomass_community)
+}
 
 
-biomass_imp012 <- bind_rows(biomass_imp012, dummy_rows) %>% 
-  select(year, date, sampling, one_month_window, omw_date,  treatment, plot, code, abundance,
-         richness, biomass_s, biomass_community, abundance_community) %>% 
-  mutate(sampling_date = as.factor(format(ymd(date), "%Y-%m-%d"))) %>% 
-  rename(biomass = biomass_community)
+biomass_imp <- result_list[[1]]
+biomass_noimp <- result_list[[2]]
+biomass_imp012 <- result_list[[3]]
+biomass_noimp012 <- result_list[[4]]}
 
 
-biomass_noimp012 <- bind_rows(biomass_noimp012, dummy_rows) %>% 
-  select(year, date, sampling, one_month_window, omw_date,  treatment, plot, code, abundance,
-         richness, biomass_s, biomass_community, abundance_community) %>% 
-  mutate(sampling_date = as.factor(format(ymd(date), "%Y-%m-%d"))) %>% 
-  rename(biomass = biomass_community)
-
-
+# Data for analysis that require abundance at species level like RADs
 flora_abrich <- bind_rows(flora_abrich, dummy_rows)%>% 
   select(year, date, sampling, one_month_window, omw_date,  treatment, plot, code, species_level, genus_level, family, abundance,
          richness, abundance_community) %>% 
   mutate(sampling_date = as.factor(format(ymd(date), "%Y-%m-%d"))) %>% 
   rename(abundance_s = abundance, 
          abundance = abundance_community)
+
+
+flora_abrich %>%  write.csv("data/flora_abrich.csv")
+
+abrich_db_plot <- flora_abrich %>% 
+  distinct(treatment, plot, sampling, date, omw_date, one_month_window, richness, abundance)
+
+biomass_db_plot <- biomass_imp %>% 
+  distinct(treatment, plot, sampling, date, omw_date, one_month_window, biomass)
+
+biomass012_db_plot <- biomass_imp012 %>% 
+  distinct(treatment, plot, sampling, date, omw_date, one_month_window, biomass) %>% 
+  rename(biomass012 = biomass)
+
+
+abrich_db_plot %>%  write.csv("data/abrich_db_plot.csv", row.names = F)
+biomass_db_plot %>%  write.csv("data/biomass_db_plot.csv", row.names = F)
+biomass012_db_plot %>%  write.csv("data/biomass012_db_plot.csv", row.names = F)
 
 
 
@@ -375,3 +380,4 @@ ab_rich_dynamics <- full_join(flora_abrich, radcoeff_df)
 rm(list = setdiff(ls(), c("flora_abrich", "biomass_imp", "biomass_noimp", "biomass_imp012", 
                           "biomass_noimp012", "ab_rich_dynamics"
 )))
+

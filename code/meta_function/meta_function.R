@@ -11,6 +11,7 @@ meta_function <- function(data, variable1, variable2){
   data <- data %>% 
     distinct(treatment, plot, sampling, date, .data[[variable1]], .keep_all = TRUE) %>% 
     group_by(treatment, sampling, date) %>% 
+    filter(!is.na(.data[[variable1]])) %>% 
     mutate(
       n = n(),
       mean = mean(.data[[variable1]], na.rm = TRUE),

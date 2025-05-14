@@ -1,4 +1,8 @@
 
+
+# Este script no sirve para mucho ya
+
+
 ## CALCULAT indices BETA
 
 

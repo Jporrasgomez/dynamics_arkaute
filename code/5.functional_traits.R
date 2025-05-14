@@ -9,8 +9,7 @@ pacman::p_load(dplyr, tidyr, tidyverse, ggplot2, BIEN, ape, maps, sf, rtry, ggre
 
 #Outliers of TRAITS"
 
-source("code/1.first_script.R")  
-rm(list = setdiff(ls(), "flora_abrich"))
+flora_abrich <- read.csv("data/flora_abrich.csv")
 traits <- read.csv('data/traits/all.indi.used.csv')
 source("code/palettes_labels.R")
 
@@ -566,7 +565,7 @@ pca_cwm_plot$PC1 <- pca_cwm_plot$PC1 + abs(min(pca_cwm_plot$PC1)) + 1
 pca_cwm_plot$PC2 <- pca_cwm_plot$PC2 + abs(min(pca_cwm_plot$PC2)) + 1
         
 
-pca_cwm_plot %>%  write.csv("data/pca_cwm_plot.csv")
+pca_cwm_plot %>%  write.csv("data/pca_cwm_plot.csv", row.names = F)
 
 cwm_plot_db <- cwm_plot %>% 
   merge(sampling_dates)

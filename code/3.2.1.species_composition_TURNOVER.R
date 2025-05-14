@@ -7,10 +7,11 @@
 
 
 
-#rm(list = ls(all.names = TRUE))
+rm(list = ls(all.names = TRUE))
 pacman::p_load(dplyr, tidyverse, DT, viridis, ggrepel, codyn, vegan, eulerr, ggplot2, ggthemes, ggpubr, ggforce )#
-source("code/1.first_script.R")
+#source("code/1.first_script.R")
 #rm(list = setdiff(ls(), c("flora_abrich", "biomass_imp", "biomass_noimp")))
+flora_abrich <- read.csv("data/flora_abrich.csv")
 
 source("code/palettes_labels.R")
 palette <- palette5

@@ -184,16 +184,6 @@ BEF_plot %>%
   theme(legend.position = "none") 
 
 
-BEF_plot %>% 
-  ggplot(aes(x = log(richness))) +
-  facet_wrap(~ treatment) +
-  geom_histogram( aes(fill = treatment), binwidth = 0.1, color = "black", alpha = 0.7) +
-  scale_fill_manual(values =  palette5) +
-  labs(
-    x = "Mean Richness",
-    y = "Frecuencia") +
-  theme_minimal() +
-  theme(legend.position = "none") 
 
 
 
