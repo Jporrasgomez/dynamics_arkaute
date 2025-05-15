@@ -33,22 +33,56 @@ stats <- function(data, response_variable, explanatory_variable) {
   # Normality tests
   print(unique(data$variable))
   print("Normality tests: if p-value < 0.05 the response variable does not follow normal distribution")
-  print("Shapiro-Wilk test for normality:")
-  print(shapiro.test(data[[response_variable]]))
   
-  print("Kolmogorov-Smirnov test:")
-  print(ks.test(data[[response_variable]], "pnorm", mean = data$mean, sd = data$sd))
+  #Shapiro test
+  print("Shapiro-Wilk test for normality:")
+  shapiro_result <- shapiro.test(data[[response_variable]])
+  print(shapiro_result)
+  shapiro_pvalue <- shapiro_result$p.value
+  
+  #print("Kolmogorov-Smirnov test:")
+  #print(ks.test(data[[response_variable]], "pnorm", mean = data$mean, sd = data$sd))
   
   print("Anderson-Darling test:")
   library(nortest)
-  print(ad.test(data[[response_variable]]))
+  ad_result <- ad.test(data[[response_variable]])
+  print(ad_result)
+  anderson_darling_pvalue <- ad_result$p.value
   
   
   # To check homoscedasticity (homogeneity of variance)
   print("Levene's Test for homoscedasticity:")
-  print(car::leveneTest(data[[response_variable]] ~ data[[explanatory_variable]], data = data))
+  levene_result <- car::leveneTest(data[[response_variable]] ~ data[[explanatory_variable]], data = data)
+  print(levene_result)
+  # El p-valor está en la primera fila y columna "Pr(>F)"
+  levene_pvalue <- levene_result$`Pr(>F)`[1]
+  
+  
+  normality_df <- matrix(ncol = 2, nrow = 3)
+  colnames(normality_df) <- c("normality_test", "p_value")
+  normality_df[1,1] <- "Shapiro-Wilk"
+  normality_df[2,1] <- "Anderson-Darling"
+  normality_df[3,1] <- "Levene's(homoscedasticity)"
+  
+  normality_df[1,2] <- round(shapiro_pvalue, 6)
+  normality_df[2,2] <- round(anderson_darling_pvalue, 6)
+  normality_df[3,2] <- round(levene_pvalue , 6)
+  
+  normality_df <- as.data.frame(normality_df) %>% 
+    mutate(normality_test = as.factor(normality_test),
+           p_value = as.numeric(p_value))
+  
+  gg_normality_tests <- 
+    ggplot(normality_df, aes(x = normality_test, y = p_value)) + 
+    geom_point() + 
+    geom_hline(yintercept = 0.05, linetype = "dashed", color = "blue") + 
+    labs(title = variable_name)
+  
+  gg_normality_tests <<- gg_normality_tests
   
   print("If there is no normality: ")
+  
+  
   # Kruskal-Wallis test for differences between groups
   print("Kruskal-Wallis Test:")
   print(kruskal.test(data[[response_variable]] ~ data[[explanatory_variable]], data = data))

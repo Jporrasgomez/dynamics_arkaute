@@ -44,7 +44,7 @@ source("code/meta_function/RR_TREATMENT_wp.R")
 
 variables <- c("richness", "abundance", "Y_zipf", "biomass", "biomass012", "NMDS1", "NMDS2", "PC1", "PC2")
                  # 1         # 2         # 3         # 4          # 5       # 6      # 7      # 8    # 9      
-{i = 5
+{i = 1
 meta_function(arkaute, variables[i], "treatment")
 RR_treatment_c(arkaute, variables[i])
 RR_treatment_wp(arkaute, variables[i])
