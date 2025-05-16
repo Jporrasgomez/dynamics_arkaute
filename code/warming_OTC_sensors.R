@@ -75,38 +75,35 @@ for (i in seq_along(file_code_values)) {
 for (i in seq_along(plots_list)) {
   item <- plots_list[[i]]
   colnames(item) <- c("n", "date_time", "time_zone", "T_ground", "T_bottom", "T_top", "soil_moisture", "a", "b", "c", "ttreat")
-  item <- item %>% select(date_time, T_ground, T_bottom, T_top, soil_moisture, ttreat)
   
-  item$datetimenew <- 
-    lubridate::parse_date_time(stringr::str_replace(item$date_time, "\\.", "/"), orders = "%Y/%m/%d %H:%M")
-  item$datetimenew <- item$datetimenew + 3600  #Adding 1 hour because sensors come with 1 hour difference, 2 for summer. So it will still be 1 hour difference for summer but none for winter. 
- 
-  item$date <- format(as.Date(item$datetimenew), "%Y/%m/%d")
-  item$year <- year(item$date)
-  item$month <- month(item$date, label = TRUE)
-  item$day <- day(item$date)
-  item$time <- format(as.POSIXct(item$datetimenew), "%H:%M")
-  item$hour <- as.numeric(format(as.POSIXct(item$datetimenew), "%H"))
+  plots_list[[i]] <- item %>% 
+    select(date_time, T_ground, T_bottom, T_top, soil_moisture, ttreat) %>% 
+    mutate(
+      datetimenew = lubridate::parse_date_time(stringr::str_replace(date_time, "\\.", "/"), orders = "%Y/%m/%d %H:%M")
+    ) %>% 
+    mutate(
+      date = format(as.Date(datetimenew), "%Y/%m/%d"),
+      time = format(as.POSIXct(datetimenew), "%H:%M"),
+      hour = as.numeric(format(as.POSIXct(datetimenew), "%H"))
+    ) %>% 
+    mutate(
+      year = year(date),
+      month = month(date, label = TRUE), 
+      day = day(date)
+      
+    ) %>% 
+    select(-date_time) %>% 
+    filter(date >= "2023/01/01") %>% 
+    mutate(plot = names(plots_list)[i]) %>% 
+    mutate(plot_type = gsub("[0-9]", "",plot)) %>% 
+    
+    mutate(vwc =-0.0000000134 * soil_moisture^2 + 0.000249622 * soil_moisture - 0.157889) # transforming soil_moisture in 
   
-  
-  
-  item <- subset(item, date >= "2023/01/01")
-  
-  item$date_time <- NULL
-  
-  item$plot <- names(plots_list)[i]
-  item$plot_type <- gsub("[0-9]", "", item$plot)
-  
-  plots_list[[i]] <- item
-  
-  rm(item)
-  
+    # volumetric water content(%). Kopecký et al. 2021: Topographic Wetness Index calculation guidelines based on measured soil
+    # moisture and plant species composition. Suplemetary materials, Apendix A. 
 }
 
 
-
-#View(plots_list[[2]])
-#View(plots_list[[4]])
 
 
 # Data characteristics and histograms----------------
@@ -142,6 +139,10 @@ for (i in seq_along(plots_list)) {
   hist(x$soil_moisture, main = names(plots_list)[i])
 }
 
+for (i in seq_along(plots_list)) {
+  x <- plots_list[[i]]
+  hist(x$vwc, main = names(plots_list)[i])
+}
 
 
 
@@ -150,32 +151,48 @@ for (i in seq_along(plots_list)) {
 
 control_list <- c(plots_list["c2"],  plots_list["p3"], plots_list["p6"], plots_list["c7"]
                   , plots_list["p10"], plots_list["c11"], plots_list["c14"], plots_list["p15"])
-controls<- data.frame()
 
-for (i in seq_along(control_list)) {
-  x <- control_list[[i]]
-  controls <- rbind(controls, x)
-}
-
+controls <- do.call(rbind, control_list)
 
 w_list <- c(plots_list["w1"],  plots_list["wp4"], plots_list["wp5"], plots_list["w8"]
               , plots_list["w9"], plots_list["wp12"], plots_list["wp13"], plots_list["w16"])
-ws<- data.frame()
 
-for (i in seq_along(w_list)) {
-  x <- w_list[[i]]
-  ws <- rbind(ws, x)
-}
+ws <- do.call(rbind, w_list)
+
 
 all_plots <- merge(controls, ws, all = TRUE)
 all_plots$ttreat <- as.factor(all_plots$ttreat)
 
 
-all_plots_growth <- subset(all_plots, month %in% c("Apr", "May", "Jun", "Jul", "Aug", "Sep"))
+
+
+all_plots_growth <- all_plots %>% 
+  filter(month %in% c("Apr", "May", "Jun", "Jul", "Aug", "Sep"))
 
 all_plots_growth_daylight <- all_plots %>% 
   filter(month %in% c("Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct")) %>% 
   filter(hour %in% c(8:20))
+
+
+
+all_plots %>% 
+ggplot(aes(x = datetimenew)) + 
+  facet_wrap(~plot, nrow = 4, ncol = 4, scales = "free") +
+  geom_line(aes(y = T_top), group = 1, color = "darkred") +
+  geom_line(aes(y = T_bottom), group = 1, color = "blue3") +
+  geom_line(aes(y = T_ground), group = 1, color = "green2") +
+  geom_line(aes(y = vwc * 100), group = 1, color = "black") +
+  geom_vline(xintercept = as.Date("2023-05-11"), linetype = "dashed", color = "gray40") +
+  scale_y_continuous(name = "Temperature (°C)", sec.axis = sec_axis(~. *1, name = "Volumetric water content (%)")) +
+  theme_bw() +
+  labs(x = " ", y = "Temperature (°C)") +
+  ggtitle(as.character(item$plot)) +
+  theme(
+    plot.title = element_text(color = "black", size = 12, face = "bold.italic"),
+    axis.title.x = element_text(color = "black", size = 12, face = "bold"),
+    axis.title.y = element_text(color = "#993333", size = 12, face = "bold"),
+    axis.title.y.right = element_text(color = "black", size = 12, face = "bold")
+  )
 
 # Visualization individual plots------------
 
