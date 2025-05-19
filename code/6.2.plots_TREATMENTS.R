@@ -7,7 +7,17 @@ library(tidyverse)
 library(ggplot2) 
 
 
-arkaute <- read.csv("data/arkaute.csv")
+arkaute <- read.csv("data/arkaute.csv") %>% 
+  mutate(
+    year = as.factor(year),
+    date = ymd(date),
+    omw_date = as.factor(omw_date),
+    one_month_window = as.factor(one_month_window),
+    sampling = as.factor(sampling),
+    plot = as.factor(plot),
+    treatment = as.factor(treatment)) %>% 
+  filter(sampling != "0")
+
                           
 source("code/palettes_labels.R")                          
 palette <- palette5
@@ -38,9 +48,9 @@ gglist_wp <- list()
     gglist_wp[[i]] <- gg_RR_wp
   }
   
-i = 6
-gglist_c[[i]]
-gglist_wp[[i]]
+#i = 6
+#gglist_c[[i]]
+#gglist_wp[[i]]
 
 RR_c <- do.call(rbind, list_c)
 RR_wp <- do.call(rbind, list_wp)
@@ -103,7 +113,7 @@ z = 1.96
 
 print(gg_RR_c)
 
-ggsave("results/Plots/protofinal/treatment_effects.png", plot = gg_RR_c, dpi = 300)
+ggsave("results/Plots/protofinal/1.treatment_effects.png", plot = gg_RR_c, dpi = 300)
 }
 
 
@@ -145,7 +155,7 @@ ggplot(aes(x = variable, y = RR, color = RR_descriptor)) +
 
 print(gg_RR_wp)
 
-ggsave("results/Plots/protofinal/globalchange_effects.png", plot = gg_RR_wp, dpi = 300)
+ggsave("results/Plots/protofinal/2.globalchange_effects.png", plot = gg_RR_wp, dpi = 300)
 }
 
  

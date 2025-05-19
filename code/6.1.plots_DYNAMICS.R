@@ -27,7 +27,7 @@ arkaute <- read.csv("data/arkaute.csv") %>%
     one_month_window = as.factor(one_month_window),
     sampling = as.factor(sampling),
     plot = as.factor(plot),
-    treatment = as.factor(treatment))
+    treatment = as.factor(treatment)) 
   
 
 source("code/palettes_labels.R")
@@ -44,31 +44,31 @@ source("code/meta_function/RR_TREATMENT_wp.R")
 
 variables <- c("richness", "abundance", "Y_zipf", "biomass", "biomass012", "NMDS1", "NMDS2", "PC1", "PC2")
                  # 1         # 2         # 3         # 4          # 5       # 6      # 7      # 8    # 9      
-{i = 1
-meta_function(arkaute, variables[i], "treatment")
-RR_treatment_c(arkaute, variables[i])
-RR_treatment_wp(arkaute, variables[i])
-}
-
-gg_stats_variable
-
-# Differences at treatment level
-gg_dunn_variable 
-gg_ttest_variable
-gg_RR_dynamics
-gg_RR_dynamics_wp
-
-# Dynamics differences
-gg_all1n
-gg_facet
-gg_delta_RR
-gg_delta_RR_wp 
-
-# Coefficient of variation
-gg_stats_cv
-gg_dunn_cv
-gg_ttest_cv  
-gg_dynamics_cv
+####{i = 1
+####meta_function(arkaute, variables[i], "treatment")
+####RR_treatment_c(arkaute, variables[i])
+####RR_treatment_wp(arkaute, variables[i])
+####}
+####
+####gg_stats_variable
+####
+##### Differences at treatment level
+####gg_dunn_variable 
+####gg_ttest_variable
+####gg_RR_dynamics
+####gg_RR_dynamics_wp
+####
+##### Dynamics differences
+####gg_all1n
+####gg_facet
+####gg_delta_RR
+####gg_delta_RR_wp 
+####
+##### Coefficient of variation
+####gg_stats_cv
+####gg_dunn_cv
+####gg_ttest_cv  
+####gg_dynamics_cv
 
 
 
@@ -142,7 +142,7 @@ ggplot(aes(x = date, y = delta_RR)) +
   geom_vline(xintercept = as.Date("2023-05-11"), linetype = "dashed", color = "gray40") +
   theme(legend.position = "none")
 print(gg_dynamics)
-ggsave("results/Plots/protofinal/2.dynamics.png", plot = gg_dynamics, dpi = 300)
+#ggsave("results/Plots/protofinal/2.dynamics.png", plot = gg_dynamics, dpi = 300)
 }
 
 
@@ -164,7 +164,7 @@ ggplot(aes(x = date, y = delta_RR)) +
   geom_vline(xintercept = as.Date("2023-05-11"), linetype = "dashed", color = "gray40") +
   theme(legend.position = "none")
 print(gg_dynamics_wp)
-ggsave("results/Plots/protofinal/3.globalchange_dynamics.png", plot = gg_dynamics_wp, dpi = 300)
+#ggsave("results/Plots/protofinal/3.globalchange_dynamics.png", plot = gg_dynamics_wp, dpi = 300)
 }
 
 

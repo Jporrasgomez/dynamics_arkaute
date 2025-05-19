@@ -4,7 +4,7 @@
 rm(list = ls(all.names = TRUE))
 
 pacman::p_load(dplyr,reshape2,tidyverse, lubridate, ggplot2, ggpubr, gridExtra,
-              car, ggsignif, dunn.test, rstatix, piecewiseSEM, nlme)
+              car, ggsignif, dunn.test, rstatix)
 
 
 theme_set(theme_bw() +
