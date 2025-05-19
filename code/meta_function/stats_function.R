@@ -58,19 +58,22 @@ stats <- function(data, response_variable, explanatory_variable) {
   levene_pvalue <- levene_result$`Pr(>F)`[1]
   
   
-  normality_df <- matrix(ncol = 2, nrow = 3)
-  colnames(normality_df) <- c("normality_test", "p_value")
-  normality_df[1,1] <- "Shapiro-Wilk"
-  normality_df[2,1] <- "Anderson-Darling"
-  normality_df[3,1] <- "Levene's(homoscedasticity)"
+  normality_df <- matrix(ncol = 3, nrow = 3)
+  colnames(normality_df) <- c("variable", "normality_test", "p_value")
+  normality_df[1,2] <- "Shapiro-Wilk"
+  normality_df[2,2] <- "Anderson-Darling"
+  normality_df[3,2] <- "Levene's(homoscedasticity)"
   
-  normality_df[1,2] <- round(shapiro_pvalue, 6)
-  normality_df[2,2] <- round(anderson_darling_pvalue, 6)
-  normality_df[3,2] <- round(levene_pvalue , 6)
+  normality_df[1,3] <- round(shapiro_pvalue, 6)
+  normality_df[2,3] <- round(anderson_darling_pvalue, 6)
+  normality_df[3,3] <- round(levene_pvalue , 6)
+  normality_df[(1:3),1] <- paste(variable_name)
   
   normality_df <- as.data.frame(normality_df) %>% 
     mutate(normality_test = as.factor(normality_test),
            p_value = as.numeric(p_value))
+  
+  normality_df <<- normality_df
   
   gg_normality_tests <- 
     ggplot(normality_df, aes(x = normality_test, y = p_value)) + 
