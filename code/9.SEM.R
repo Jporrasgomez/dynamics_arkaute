@@ -31,7 +31,6 @@ variables <- unique(arkaute_long$variable)
 explanatory_var <- c("year", "date", "omw_date", "one_month_window", "sampling", "plot", "treatment")
 
 
-
 data <- arkaute_norm
 
 
@@ -74,7 +73,29 @@ corrplot(cor(data_list[[i]][,variables], use="pairwise.complete.obs"), method = 
 
 
 
-# Model
+
+# Model1: NMDS1, PC1 and abundance
+
+{
+  mod1 = lme(biomass ~ richness + Y_zipf + PC1 + abundance, random = ~ 1 | plot,  data_list[[i]])
+  mod2 = lme(PC1 ~ richness + NMDS1, random = ~ 1 | plot, data_list[[i]])
+  mod3 = lme(NMDS1 ~ richness + abundance, random = ~ 1 | plot, data_list[[i]])
+  mod4 = lme(Y_zipf ~ richness + abundance, random = ~ 1 | plot, data_list[[i]])
+  
+  global_model <- psem(
+    mod1,
+    mod2,
+    mod3,
+    mod4
+  )
+  
+  summary(global_model)
+  
+  plot(global_model, title = paste0(unique(data_list[[i]]$treat_label)))
+}
+
+
+# Model2: NMDS2, PC2 and abundance
 
 {
 mod1 = lme(biomass ~ richness + Y_zipf + PC2 + abundance, random = ~ 1 | plot,  data_list[[i]])
@@ -92,6 +113,69 @@ global_model <- psem(
 summary(global_model)
 
 plot(global_model, title = paste0(unique(data_list[[i]]$treat_label)))
+}
+
+
+#Model3: NMDS1, PC2 and  abundance
+
+{
+  mod1 = lme(biomass ~ richness + Y_zipf + PC2, random = ~ 1 | plot,  data_list[[i]])
+  mod2 = lme(PC2 ~ richness + NMDS1, random = ~ 1 | plot, data_list[[i]])
+  mod3 = lme(NMDS1 ~ richness, random = ~ 1 | plot, data_list[[i]])
+  mod4 = lme(Y_zipf ~ richness, random = ~ 1 | plot, data_list[[i]])
+  
+  global_model <- psem(
+    mod1,
+    mod2,
+    mod3,
+    mod4
+  )
+  
+  summary(global_model)
+  
+  plot(global_model, title = paste0(unique(data_list[[i]]$treat_label)))
+}
+
+
+#Model4: NMDS1, PC1 and no abundance
+
+{
+  mod1 = lme(biomass ~ richness + Y_zipf + PC1, random = ~ 1 | plot,  data_list[[i]])
+  mod2 = lme(PC1 ~ richness + NMDS1, random = ~ 1 | plot, data_list[[i]])
+  mod3 = lme(NMDS1 ~ richness, random = ~ 1 | plot, data_list[[i]])
+  mod4 = lme(Y_zipf ~ richness, random = ~ 1 | plot, data_list[[i]])
+  
+  global_model <- psem(
+    mod1,
+    mod2,
+    mod3,
+    mod4
+  )
+  
+  summary(global_model)
+  
+  plot(global_model, title = paste0(unique(data_list[[i]]$treat_label)))
+}
+
+
+#Model5: NMDS2, PC2 and no abundance
+
+{
+  mod1 = lme(biomass ~ richness + Y_zipf + PC2, random = ~ 1 | plot,  data_list[[i]])
+  mod2 = lme(PC2 ~ richness + NMDS2, random = ~ 1 | plot, data_list[[i]])
+  mod3 = lme(NMDS2 ~ richness, random = ~ 1 | plot, data_list[[i]])
+  mod4 = lme(Y_zipf ~ richness, random = ~ 1 | plot, data_list[[i]])
+  
+  global_model <- psem(
+    mod1,
+    mod2,
+    mod3,
+    mod4
+  )
+  
+  summary(global_model)
+  
+  plot(global_model, title = paste0(unique(data_list[[i]]$treat_label)))
 }
 
 
