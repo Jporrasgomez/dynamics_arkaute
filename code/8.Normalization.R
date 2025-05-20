@@ -40,6 +40,7 @@ arkaute_long <- arkaute %>%
 source("code/meta_function/stats_function.R")
 
 variables <- unique(arkaute_long$variable)
+explanatory_var <- c("year", "date", "omw_date", "one_month_window", "sampling", "plot", "treatment")
 
 
 gglist_hist <- list()
@@ -121,68 +122,69 @@ normality_treat_df %>%
 
 library(bestNormalize) # Automatic best normalization
 
+# This takes a while: 
 
-results <- matrix(ncol = 7, nrow = length(variables) * length(treats) * 10)
-colnames(results) <- c("variable", "treatment", "n", "shapiro_pre",
-                       "transformation", "shapiro_post", "n_transformation")
-results <- as.data.frame(results, stringsAsFactors = FALSE)
-
-counter <- 0
-
-for (j in seq_along(treats)) {
-  for (i in seq_along(variables)) {
-    
-    # Filtrar los datos
-    z <- arkaute_long %>%
-      filter(variable == variables[i],
-             treatment == treats[j])
-    
-    x_clean <- na.omit(z$value)
-    n_samples <- length(x_clean)
-    
-    # Calcular una única vez el p-valor original
-    shapiro_pre_pval <- tryCatch(shapiro.test(x_clean)$p.value, error = function(e) NA)
-    
-    for (k in 1:15) {
-      counter <- counter + 1
-      
-      # Normalización
-      bn <- bestNormalize(x_clean)
-      x_best <- predict(bn)
-      shapiro_post_pval <- tryCatch(shapiro.test(x_best)$p.value, error = function(e) NA)
-      
-      # Guardar resultados
-      results[counter, ] <- list(
-        variable = variables[i],
-        treatment = paste0(unique(z$treatment)),
-        n = n_samples,
-        shapiro_pre = shapiro_pre_pval,
-        transformation = class(bn$chosen_transform)[1],
-        shapiro_post = shapiro_post_pval,
-        n_transformation = k
-      )
-    }
-    
-    print(paste("Done:", variables[i], "in", treats[j]))
-  }
-}
-
-
-shapiro_check <- results %>%
-  group_by(variable, treatment) %>%
-  summarize(
-    any_above_0_05 = any(as.numeric(shapiro_post) > 0.05, na.rm = TRUE),
-    .groups = "drop"
-  )
-
-possible_transformations <- results %>%
-  mutate(shapiro_post = as.numeric(shapiro_post)) %>%
-  group_by(variable, treatment) %>%
-  slice_max(shapiro_post, n = 1, with_ties = FALSE) %>%  
-  ungroup()
-
-
-  
+##results <- matrix(ncol = 7, nrow = length(variables) * length(treats) * 10)
+##colnames(results) <- c("variable", "treatment", "n", "shapiro_pre",
+##                       "transformation", "shapiro_post", "n_transformation")
+##results <- as.data.frame(results, stringsAsFactors = FALSE)
+##
+##counter <- 0
+##
+##for (j in seq_along(treats)) {
+##  for (i in seq_along(variables)) {
+##    
+##    # Filtrar los datos
+##    z <- arkaute_long %>%
+##      filter(variable == variables[i],
+##             treatment == treats[j])
+##    
+##    x_clean <- na.omit(z$value)
+##    n_samples <- length(x_clean)
+##    
+##    # Calcular una única vez el p-valor original
+##    shapiro_pre_pval <- tryCatch(shapiro.test(x_clean)$p.value, error = function(e) NA)
+##    
+##    for (k in 1:15) {
+##      counter <- counter + 1
+##      
+##      # Normalización
+##      bn <- bestNormalize(x_clean)
+##      x_best <- predict(bn)
+##      shapiro_post_pval <- tryCatch(shapiro.test(x_best)$p.value, error = function(e) NA)
+##      
+##      # Guardar resultados
+##      results[counter, ] <- list(
+##        variable = variables[i],
+##        treatment = paste0(unique(z$treatment)),
+##        n = n_samples,
+##        shapiro_pre = shapiro_pre_pval,
+##        transformation = class(bn$chosen_transform)[1],
+##        shapiro_post = shapiro_post_pval,
+##        n_transformation = k
+##      )
+##    }
+##    
+##    print(paste("Done:", variables[i], "in", treats[j]))
+##  }
+##}
+##
+##
+##shapiro_check <- results %>%
+##  group_by(variable, treatment) %>%
+##  summarize(
+##    any_above_0_05 = any(as.numeric(shapiro_post) > 0.05, na.rm = TRUE),
+##    .groups = "drop"
+##  )
+##
+##possible_transformations <- results %>%
+##  mutate(shapiro_post = as.numeric(shapiro_post)) %>%
+##  group_by(variable, treatment) %>%
+##  slice_max(shapiro_post, n = 1, with_ties = FALSE) %>%  
+##  ungroup()
+##
+##
+##  
 
 ###### 3. Normalization of variables ###########
 
@@ -261,7 +263,7 @@ gglist_tests <- list()
 for(i in seq_along(variables)){
   
   z <- arkaute_norm %>% 
-    select(explanatory_var, variables[i]) %>% 
+    select(treatment, plot, sampling, variables[i]) %>% 
     rename(value = variables[i]) %>% 
     mutate(variable = variables[i]) %>% 
     mutate(value = value)
@@ -316,5 +318,5 @@ normality_treat_df %>%
   labs(x = "Shapiro p-value after transformation")
 
 
-arkaute_norm %>%  write.csv("data/arkaute_norm.csv")
+arkaute_norm %>%  write.csv("data/arkaute_norm.csv", row.names = F)
 
