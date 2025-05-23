@@ -1,6 +1,29 @@
 
 
+# To do's
+# multigroups function 
+
+##  data(meadows)
+##  
+##  jutila <- psem(
+##    lm(rich ~ elev + mass, data = meadows),
+##    lm(mass ~ elev, data = meadows)
+##  )
+##  
+##  jutila.multigroup <- multigroup(jutila, group = "grazed")
+##  
+##  jutila.multigroup
+##  
+
+
+
+
+
+
 rm(list = ls(all.names = TRUE))
+
+
+
 
 library(piecewiseSEM)
 library(nlme)
@@ -62,6 +85,11 @@ data_list <- list(data_c, data_w, data_p, data_wp)
                     # 1     # 2     # 3      # 4 
 
 # First data exploration: correlations, multi-collinearities
+
+
+
+
+
 
 {i = 4
 

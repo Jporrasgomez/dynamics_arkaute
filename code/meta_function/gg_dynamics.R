@@ -116,14 +116,14 @@ gg_dynamics <- function(data, variable) {
                                   color = treatment),
                  alpha = 0.2, position = position_dodge(width = 8))+
       
-      geom_line(group = "treatment", aes(x = date, y = mean, color = treatment)) +
+      geom_line(group = "treatment", aes(x = date, y = mean, color = treatment), linewidth = 1) +
       
       
       geom_point(aes(x = date, y = mean,
                      color = treatment), fill = "white", position = position_dodge(width = 0.5), size = 2.1, shape = 21) +
       
       scale_colour_manual(values = palette)+
-      scale_fill_manual(values = palette)+
+      #scale_fill_manual(values = palette)+
       
       geom_vline(xintercept = as.Date("2023-05-11"), linetype = "dashed", color = "gray40") +
       

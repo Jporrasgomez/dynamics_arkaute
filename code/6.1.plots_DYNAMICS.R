@@ -5,15 +5,6 @@
 rm(list = ls(all.names = TRUE))  #Se limpia el environment
 pacman::p_unload(pacman::p_loaded(), character.only = TRUE) #se quitan todos los paquetes (limpiamos R)
 
-##source("code/1.first_script.R")
-##
-###turnover_db <- read.csv("data/turnover_db.csv")
-##nmds_df_plot <- read.csv("data/nmds_df_plot.csv")
-##pca_cwm_plot <- read.csv("data/pca_cwm_plot.csv")
-##
-##rm(list = setdiff(ls(), c("ab_rich_dynamics", "biomass_imp", "biomass_imp012",
- #                         "turnover_db", "nmds_df_plot", "pca_cwm_plot")))
-
 
 pacman::p_load(dplyr,reshape2,tidyverse, lubridate, ggplot2, ggpubr, gridExtra,
                car, ggsignif, dunn.test, rstatix) #Cargamos los paquetes que necesitamos
@@ -27,8 +18,20 @@ arkaute <- read.csv("data/arkaute.csv") %>%
     one_month_window = as.factor(one_month_window),
     sampling = as.factor(sampling),
     plot = as.factor(plot),
-    treatment = as.factor(treatment)) 
+    treatment = as.factor(treatment))
+
+arkaute_no0 <- arkaute %>% 
+  filter(sampling != "0")
   
+arkaute_norm <- read.csv("data/arkaute_norm.csv") %>% 
+  mutate(
+    year = as.factor(year),
+    date = ymd(date),
+    omw_date = as.factor(omw_date),
+    one_month_window = as.factor(one_month_window),
+    sampling = as.factor(sampling),
+    plot = as.factor(plot),
+    treatment = as.factor(treatment))
 
 source("code/palettes_labels.R")
 
@@ -40,35 +43,38 @@ source("code/meta_function/meta_function.R")
 source("code/meta_function/RR_TREATMENT_c.R")
 source("code/meta_function/RR_TREATMENT_wp.R")
 
+data_list <- list(arkaute_no0, arkaute_norm)
+
 # Richness, abundance and evenness
 
 variables <- c("richness", "abundance", "Y_zipf", "biomass", "biomass012", "NMDS1", "NMDS2", "PC1", "PC2")
                  # 1         # 2         # 3         # 4          # 5       # 6      # 7      # 8    # 9      
-####{i = 1
-####meta_function(arkaute, variables[i], "treatment")
-####RR_treatment_c(arkaute, variables[i])
-####RR_treatment_wp(arkaute, variables[i])
-####}
-####
-####gg_stats_variable
-####
-##### Differences at treatment level
-####gg_dunn_variable 
-####gg_ttest_variable
-####gg_RR_dynamics
-####gg_RR_dynamics_wp
-####
-##### Dynamics differences
-####gg_all1n
-####gg_facet
-####gg_delta_RR
-####gg_delta_RR_wp 
-####
-##### Coefficient of variation
-####gg_stats_cv
-####gg_dunn_cv
-####gg_ttest_cv  
-####gg_dynamics_cv
+{i = 9
+ j = 1
+meta_function(data_list[[j]], variables[i], "treatment")
+RR_treatment_c(data_list[[j]], variables[i])
+RR_treatment_wp(data_list[[j]], variables[i])
+}
+
+gg_stats_variable
+
+# Differences at treatment level
+gg_dunn_variable 
+gg_ttest_variable
+gg_RR_dynamics
+gg_RR_dynamics_wp
+
+# Dynamics differences
+gg_all1n
+gg_facet
+gg_delta_RR
+gg_delta_RR_wp 
+
+# Coefficient of variation
+gg_stats_cv
+gg_dunn_cv
+gg_ttest_cv  
+gg_dynamics_cv
 
 
 
