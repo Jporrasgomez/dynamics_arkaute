@@ -18,11 +18,9 @@ arkaute <- read.csv("data/arkaute.csv") %>%
     treatment = as.factor(treatment)) %>% 
   filter(sampling != "0")
 
-                          
-source("code/palettes_labels.R")                          
-palette <- palette5
-labels <- labels_RR
-
+     
+                     
+source("code/palettes_labels.R")
 source("code/meta_function/RR_TREATMENT_c.R")
 source("code/meta_function/RR_TREATMENT_wp.R")
 
@@ -93,27 +91,74 @@ z = 1.96
   ## Multiplying by -1 gamma zipf in order to have positive values and being able to read the plots as
   ## evenness
   ggplot(aes(x = variable, y = RR, color = RR_descriptor)) + 
+  geom_hline(yintercept = 0, linetype = "dashed", color = "#12D08C", linewidth = 1.1) +
   geom_errorbar(
     aes(ymin = RR - z * se_RR,
         ymax = RR + z * se_RR),
-    linewidth = 0.5,
-    position = position_dodge(width = 0.2),
-    width = 0.1
+    linewidth = 1.1,
+    position = position_dodge(width = 0.3),
+    width = 0.2
   ) +  
-  geom_point(position = position_dodge(width = 0.2)) + 
-  scale_color_manual(values = palette_RR, labels = labels_RR) +
+  geom_point(position = position_dodge(width = 0.3), size = 2.5) + 
+  scale_color_manual(values = palette_RR_CB, labels = labels_RR2) +
+  #scale_y_continuous(labels = function(y) round((exp(y) - 1) * 100, 0)) +
   scale_x_discrete(
     limits = limits_variables,
     
     labels = labels_variables) +
   
-  geom_hline(yintercept = 0, linetype = "dashed", color = "gray40") +
-  labs(x = NULL, y = "RR of mean values at plot level", color = NULL) +
-  theme(legend.position = "bottom")
-
+  
+  labs(x = NULL, y = "LRR", color = NULL) +
+    theme(
+      axis.title.x = element_blank(),  # Ajusta la distancia aquí
+      panel.grid = element_blank(),
+      strip.background = element_blank(),
+      strip.text = element_text(face = "bold"),
+      text = element_text(size = 16),
+      legend.position = "bottom"
+    )
 print(gg_RR_c)
 
-ggsave("results/Plots/protofinal/1.treatment_effects.png", plot = gg_RR_c, dpi = 300)
+ggsave("results/Plots/protofinal/1.treatment_effects_SIBECOL.png", plot = gg_RR_c, dpi = 300)
+}
+
+{gg_RR_c <- 
+    RR_c %>% 
+    filter(!variable == "biomass") %>% 
+    mutate(
+      RR_perc = if_else(variable == "Y_zipf", -1 * RR_perc, RR_perc), 
+      se_RR_perc = if_else(variable == "Y_zipf", -1 * se_RR_perc, se_RR_perc)) %>% 
+    ## Multiplying by -1 gamma zipf in order to have positive values and being able to read the plots as
+    ## evenness
+    ggplot(aes(x = variable, y = RR_perc, color = RR_descriptor)) + 
+    geom_errorbar(
+      aes(ymin = RR_perc - z * se_RR_perc,
+          ymax = RR_perc + z * se_RR_perc),
+      linewidth = 1.1,
+      position = position_dodge(width = 0.3),
+      width = 0.2
+    ) +  
+    geom_point(position = position_dodge(width = 0.3), size = 2.5) + 
+    scale_color_manual(values = palette_RR_CB, labels = labels_RR2) +
+    #scale_y_continuous(labels = function(y) round((exp(y) - 1) * 100, 0)) +
+    scale_x_discrete(
+      limits = limits_variables,
+      
+      labels = labels_variables) +
+    
+    geom_hline(yintercept = 0, linetype = "dashed", color = "gray40") +
+    labs(x = NULL, y = "LRR (% change)", color = NULL) +
+    theme(
+      axis.title.x = element_blank(),  # Ajusta la distancia aquí
+      panel.grid = element_blank(),
+      strip.background = element_blank(),
+      strip.text = element_text(face = "bold"),
+      text = element_text(size = 16),
+      legend.position = "bottom"
+    )
+  print(gg_RR_c)
+  
+  #ggsave("results/Plots/protofinal/1.treatment_effects.png", plot = gg_RR_c, dpi = 300)
 }
 
 
@@ -127,22 +172,21 @@ RR_wp %>%
     se_RR = if_else(variable == "Y_zipf", -1 * se_RR, se_RR)) %>% 
   #filter(RR_descriptor == "wp_vs_p") %>% 
 ggplot(aes(x = variable, y = RR, color = RR_descriptor)) + 
-  #facet_wrap(~ RR_descriptor, ncol = 1, nrow = 2, labeller = labeller(RR_descriptor = labels_RR_wp2)) +
+  geom_hline(yintercept = 0, linetype = "dashed", color = "#00CAFF", linewidth = 1.1) +
   geom_errorbar(aes(ymin = RR - z * se_RR,
                     ymax = RR + z * se_RR,
                     color = RR_descriptor), 
-                linewidth = 0.5,
+                linewidth = 1.1,
                 position = position_dodge(width = 0.2),
                 width = 0.1) +  
   geom_point(aes(color = RR_descriptor), position = position_dodge(width = 0.2)) + 
-  scale_color_manual(values = palette_RR_wp, labels = labels_RR_wp2) +
+  scale_color_manual(values = palette_RR_wp, labels = labels_RR_wp3) +
     scale_x_discrete(
       limits = limits_variables,
       
       labels = labels_variables) +
   
-  geom_hline(yintercept = 0, linetype = "dashed", color = "gray40") +
-  labs(x = NULL, y = "RR of mean values at plot level", color = NULL) +
+  labs(x = NULL, y = "LRR", color = NULL) +
   theme(
     legend.position = "bottom",
    # strip.text = element_blank(),  # 🔹 Quita el título del facet_wrap
@@ -151,11 +195,18 @@ ggplot(aes(x = variable, y = RR, color = RR_descriptor)) +
   ) +
   theme(
     axis.text.x = element_text() # 🔹 Vuelve a mostrar las etiquetas del último panel
-  )
+  )  +
+  theme(
+       axis.title.x = element_blank(),  # Ajusta la distancia aquí
+       panel.grid = element_blank(),
+       strip.background = element_blank(),
+       strip.text = element_text(face = "bold"),
+       text = element_text(size = 16),
+       legend.position = "bottom")
 
 print(gg_RR_wp)
 
-ggsave("results/Plots/protofinal/2.globalchange_effects.png", plot = gg_RR_wp, dpi = 300)
+ggsave("results/Plots/protofinal/2.globalchange_effects_SIBECOL.png", plot = gg_RR_wp, dpi = 300)
 }
 
  

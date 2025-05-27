@@ -86,8 +86,11 @@ RR_treatment <- effect %>%
     RR_descriptor = fct_recode(RR_descriptor,
                                "w_vs_c" = "w",
                                "p_vs_c" = "p", 
-                               "wp_vs_c" = "wp"))
-
+                               "wp_vs_c" = "wp")) %>% 
+  mutate(
+    RR_perc = 100*(exp(RR)-1),
+    se_RR_perc = 100*(exp(se_RR)-1)
+  )
 
 RR_treatment <<- RR_treatment
 

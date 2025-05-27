@@ -108,7 +108,7 @@ RR_dynamics_wp <- function(data, variable){
     filter(!RR == "-Inf") %>% 
     mutate(
       variable = variable
-    )
+    ) 
   
   
   
@@ -159,7 +159,7 @@ RR_dynamics_wp <- function(data, variable){
     filter(!RR == "NaN") %>% 
     mutate(
       variable = variable
-    )
+    ) 
   
   
   RR_wp_vs_treatment <- rbind(RR_wp_vs_p, RR_wp_vs_w)

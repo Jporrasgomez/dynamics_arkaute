@@ -91,7 +91,7 @@ data_list <- list(data_c, data_w, data_p, data_wp)
 
 
 
-{i = 4
+{i = 3
 
 pairs(data_list[[i]][,variables])
 

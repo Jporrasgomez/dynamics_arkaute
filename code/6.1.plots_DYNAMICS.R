@@ -49,32 +49,32 @@ data_list <- list(arkaute_no0, arkaute_norm)
 
 variables <- c("richness", "abundance", "Y_zipf", "biomass", "biomass012", "NMDS1", "NMDS2", "PC1", "PC2")
                  # 1         # 2         # 3         # 4          # 5       # 6      # 7      # 8    # 9      
-{i = 9
- j = 1
-meta_function(data_list[[j]], variables[i], "treatment")
-RR_treatment_c(data_list[[j]], variables[i])
-RR_treatment_wp(data_list[[j]], variables[i])
-}
-
-gg_stats_variable
-
-# Differences at treatment level
-gg_dunn_variable 
-gg_ttest_variable
-gg_RR_dynamics
-gg_RR_dynamics_wp
-
-# Dynamics differences
-gg_all1n
-gg_facet
-gg_delta_RR
-gg_delta_RR_wp 
-
-# Coefficient of variation
-gg_stats_cv
-gg_dunn_cv
-gg_ttest_cv  
-gg_dynamics_cv
+#{i = 9
+# j = 1
+#meta_function(data_list[[j]], variables[i], "treatment")
+#RR_treatment_c(data_list[[j]], variables[i])
+#RR_treatment_wp(data_list[[j]], variables[i])
+#}
+#
+#gg_stats_variable
+#
+## Differences at treatment level
+#gg_dunn_variable 
+#gg_ttest_variable
+#gg_RR_dynamics
+#gg_RR_dynamics_wp
+#
+## Dynamics differences
+#gg_all1n
+#gg_facet
+#gg_delta_RR
+#gg_delta_RR_wp 
+#
+## Coefficient of variation
+#gg_stats_cv
+#gg_dunn_cv
+#gg_ttest_cv  
+#gg_dynamics_cv
 
 
 
@@ -93,7 +93,6 @@ for(i in seq_along(variables)){
   
   results_list_wp[[i]] <- RR_wp_vs_treatment %>% 
     select(date, RR_descriptor, sampling, variable, delta_RR, se_delta_RR)
-  
 }
 
 RR_data <- do.call(rbind, results_list)
@@ -109,8 +108,8 @@ RR_whole <- rbind(RR_data, RR_data_wp) %>%
                           "Richness" = "richness",
                           "Cover" = "abundance",
                           "Evenness" = "Y_zipf",
-                          "Biomass" = "biomass",
-                          "Biomass012" = "biomass012",
+                          "Biomass*" = "biomass",
+                          "Biomass" = "biomass012",
                           "SC1" = "NMDS1",
                           "SC2" = "NMDS2",
                           "CWM1" = "PC1", 
@@ -120,8 +119,8 @@ RR_whole <- rbind(RR_data, RR_data_wp) %>%
                            "Richness",
                            "Cover",
                            "Evenness",
+                           "Biomass*",
                            "Biomass",
-                           "Biomass012",
                            "SC1",
                            "SC2",
                            "CWM1", 
@@ -132,16 +131,20 @@ z = 1.96
 
 {gg_dynamics <- RR_whole %>% 
     filter(RR_descriptor %in% c("w_vs_c", "p_vs_c", "wp_vs_c")) %>% 
-    filter(variable != "Biomass") %>% 
+    filter(variable != "Biomass*") %>% 
 ggplot(aes(x = date, y = delta_RR)) + 
   facet_grid(variable ~ RR_descriptor, scales = "free_y",
              labeller = labeller(
-               RR_descriptor = as_labeller(labels_RR), 
+               RR_descriptor = as_labeller(labels_RR2), 
              )) +  
   geom_errorbar(aes(ymin = delta_RR - z * se_delta_RR,
                     ymax = delta_RR + z * se_delta_RR,
                     color = RR_descriptor), alpha = 0.5) +
   geom_point(aes(color = RR_descriptor), size = 1.2) + 
+    scale_y_continuous(
+      breaks = scales::breaks_pretty(n = 3)
+   #   labels = function(y) round((exp(y) - 1) * 100, 0)
+    )+
   geom_line(aes(color = RR_descriptor)) +
   scale_color_manual(values = palette_RR) +
   geom_hline(yintercept= 0, linetype = "dashed", color = "gray40") +
@@ -150,6 +153,7 @@ ggplot(aes(x = date, y = delta_RR)) +
 print(gg_dynamics)
 #ggsave("results/Plots/protofinal/2.dynamics.png", plot = gg_dynamics, dpi = 300)
 }
+
 
 
 {gg_dynamics_wp <- RR_whole %>% 

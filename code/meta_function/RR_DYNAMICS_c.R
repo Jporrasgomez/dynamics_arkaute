@@ -91,8 +91,7 @@ RR_dynamics_c <- function(data, variable){
     ) %>% 
     mutate(
       variable = variable
-    )
-  
+    ) 
   RR_treatment <- RR_treatment %>% 
     filter(! RR == "-Inf") %>% 
     rename(RR_descriptor = treatment) %>% 

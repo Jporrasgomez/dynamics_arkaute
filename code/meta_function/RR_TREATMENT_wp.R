@@ -99,7 +99,16 @@ RR_treatment_wp <- function(data, variable){
       variable = variable
     ) %>% 
     filter(!RR == "Inf") %>% 
-    select(RR_descriptor, RR, se_RR, variable)
+    select(RR_descriptor, RR, se_RR, variable) %>% 
+    mutate(
+      RR = (exp(RR) -1) *100,
+      se_RR = (exp(se_RR) - 1) * 100
+    )  %>% 
+    mutate(
+      RR_perc = 100*(exp(RR)-1),
+      se_RR_perc = 100*(exp(se_RR)-1)
+    )
+  
   
   
   RR_wp_vs_p <- effect_wp %>% 
@@ -116,7 +125,11 @@ RR_treatment_wp <- function(data, variable){
       variable = variable
     ) %>% 
     filter(!RR == "Inf") %>% 
-    select(RR_descriptor, RR, se_RR, variable)
+    select(RR_descriptor, RR, se_RR, variable) %>% 
+    mutate(
+      RR_perc = 100*(exp(RR)-1),
+      se_RR_perc = 100*(exp(se_RR)-1)
+    )
   
   RR_wp_vs_treatment <- rbind(RR_wp_vs_p, RR_wp_vs_w)
   
