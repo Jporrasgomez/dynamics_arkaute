@@ -131,27 +131,36 @@ z = 1.96
 
 {gg_dynamics <- RR_whole %>% 
     filter(RR_descriptor %in% c("w_vs_c", "p_vs_c", "wp_vs_c")) %>% 
+    filter(variable %in% c("Richness", "Cover", "Biomass")) %>% 
     filter(variable != "Biomass*") %>% 
 ggplot(aes(x = date, y = delta_RR)) + 
   facet_grid(variable ~ RR_descriptor, scales = "free_y",
              labeller = labeller(
                RR_descriptor = as_labeller(labels_RR2), 
              )) +  
+  geom_hline(yintercept= 0, linetype = "dashed", color = "#12D08C", linewidth = 0.8) +
+  geom_vline(xintercept = as.Date("2023-05-11"), linetype = "dashed", color = "gray40", linewidth = 0.8) +
   geom_errorbar(aes(ymin = delta_RR - z * se_delta_RR,
                     ymax = delta_RR + z * se_delta_RR,
-                    color = RR_descriptor), alpha = 0.5) +
-  geom_point(aes(color = RR_descriptor), size = 1.2) + 
+                    color = RR_descriptor), alpha = 0.5, linewidth = 0.8) +
+  geom_point(aes(color = RR_descriptor), size = 1.5) + 
     scale_y_continuous(
       breaks = scales::breaks_pretty(n = 3)
    #   labels = function(y) round((exp(y) - 1) * 100, 0)
     )+
-  geom_line(aes(color = RR_descriptor)) +
-  scale_color_manual(values = palette_RR) +
-  geom_hline(yintercept= 0, linetype = "dashed", color = "gray40") +
-  geom_vline(xintercept = as.Date("2023-05-11"), linetype = "dashed", color = "gray40") +
-  theme(legend.position = "none")
+  geom_line(aes(color = RR_descriptor), linewidth = 0.8) +
+  scale_color_manual(values = palette_RR_CB) +
+  labs(y = "Log Response Ratio") +
+    theme(
+      axis.title.x = element_blank(),  # Ajusta la distancia aquí
+      panel.grid = element_blank(),
+      strip.background = element_blank(),
+      strip.text = element_text(face = "bold"),
+      text = element_text(size = 16),
+      legend.position = "none"
+    )
 print(gg_dynamics)
-#ggsave("results/Plots/protofinal/2.dynamics.png", plot = gg_dynamics, dpi = 300)
+ggsave("results/Plots/protofinal/2.dynamics_SIBECOL1.png", plot = gg_dynamics, dpi = 300)
 }
 
 

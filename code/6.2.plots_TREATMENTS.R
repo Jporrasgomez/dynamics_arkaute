@@ -46,9 +46,9 @@ gglist_wp <- list()
     gglist_wp[[i]] <- gg_RR_wp
   }
   
-#i = 6
-#gglist_c[[i]]
-#gglist_wp[[i]]
+i = 4
+gglist_c[[i]]
+gglist_wp[[i]]
 
 RR_c <- do.call(rbind, list_c)
 RR_wp <- do.call(rbind, list_wp)
@@ -119,7 +119,7 @@ z = 1.96
     )
 print(gg_RR_c)
 
-ggsave("results/Plots/protofinal/1.treatment_effects_SIBECOL.png", plot = gg_RR_c, dpi = 300)
+#ggsave("results/Plots/protofinal/1.treatment_effects_SIBECOL.png", plot = gg_RR_c, dpi = 300)
 }
 
 {gg_RR_c <- 
