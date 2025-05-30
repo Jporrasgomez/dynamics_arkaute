@@ -256,22 +256,30 @@ nmds_df_sampling <- nmds_df_sampling %>% arrange(sampling)
 {ggnmds_alltreatments <- 
   ggplot(nmds_df_sampling, aes(x = NMDS1, y = NMDS2, color = treatment)) +
     stat_ellipse(geom = "polygon", aes(fill = treatment),
-                 alpha = 0.1, show.legend = FALSE, level = 0.9) + 
+                 alpha = 0.25, show.legend = FALSE, level = 0.9) + 
     geom_point(size = 1.5, aes(shape = treatment), show.legend =T) +
-    geom_text_repel(aes(label = sampling), max.overlaps = 100, size = 3, show.legend = F) +
+    #geom_text_repel(aes(label = sampling), max.overlaps = 100, size = 3, show.legend = F) +
     geom_hline(yintercept = 0, color = "gray52", linetype = "dashed") +
-    geom_path(aes(group = treatment), linetype = "dotted", alpha = 0.8) +
+    geom_path(aes(group = treatment), linetype = "dotted", alpha = 1) +
     geom_vline(xintercept = 0, color = "gray52", linetype = "dashed") +
-    scale_color_manual(values = palette, labels = labels, guide = "legend") +
-    scale_fill_manual(values = palette, guide = "none" ) +
+    scale_color_manual(values = palette_CB, labels = labels, guide = "legend") +
+    scale_fill_manual(values = palette_CB, guide = "none" ) +
     scale_shape_manual(values = point_shapes, guide = "none") +
     labs(title = "NMDS Bray-Curtis: mean abundance of species at sampling level",
          subtitle = paste0("Stress = ", round(nmds_bc_sampling$stress, 3)),
          x = "NMDS1", y = "NMDS2", color = " ") +
-    theme(legend.position = "bottom")
+    theme(
+      axis.title.x = element_blank(),  # Ajusta la distancia aquí
+      panel.grid = element_blank(),
+      strip.background = element_blank(),
+      strip.text = element_text(face = "bold"),
+      text = element_text(size = 16),
+      legend.position = "bottom"
+    )
 
 print(ggnmds_alltreatments)
-ggsave("results/Plots/protofinal/species_composition_sampling.png", plot = ggnmds_alltreatments, dpi = 300)}
+#ggsave("results/Plots/protofinal/species_composition_sampling.png", plot = ggnmds_alltreatments, dpi = 300)
+}
 
 
   # Print the plot

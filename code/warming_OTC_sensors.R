@@ -500,17 +500,47 @@ ggplot(allplots_temp_24h_diff_growth_daylight) +
   theme(legend.position = "NULL")
 
 
-ggt24h_diff_justtop <- ggplot(allplots_temp_24h_diff) +
-  geom_line(aes(x = time, y = t_top_mean_diff, group = 1, color = "red2"), linetype = "solid", linewidth = 1) +
-  geom_line(aes(x = time, y = t_top_mean_diff + t_top_sd_diff, group = 1, color = "red2"), linetype = "dashed") +
-  geom_line(aes(x = time, y = t_top_mean_diff - t_top_sd_diff, group = 1, color = "red2"), linetype = "dashed")+
+#ggt24h_diff_justtop <- 
+  ggplot(allplots_temp_24h_diff) +
+  geom_line(aes(x = time, y = t_top_mean_diff, group = 1, color = "#D94E47"), linetype = "solid", linewidth = 1) +
+  geom_line(aes(x = time, y = t_top_mean_diff + t_top_sd_diff, group = 1, color = "#D94E47"), linetype = "dashed") +
+  geom_line(aes(x = time, y = t_top_mean_diff - t_top_sd_diff, group = 1, color = "#D94E47"), linetype = "dashed")+
   geom_hline(yintercept = 0, linetype = "dotted", color = "black") +
-  labs(x = "24 hours (January 2023 - October 2024)", y = "Temperature difference (warming-control) ºC") +
+  labs(x = "24 hours (January 2023 - October 2024)", y = "Mean temperature difference ºC") +
   scale_x_discrete(breaks = allplots_temp_24h_diff$time[c(1, seq(24, length(allplots_temp_24h_diff$time), length.out = 5))]) +
   theme_bw() +
-  theme(legend.position = "NULL")
+  theme(
+    panel.grid = element_blank(),
+    strip.background = element_blank(),
+    strip.text = element_text(face = "bold"),
+    text = element_text(size = 16),
+    legend.position = "none"
+  )
+  
+  ggplot(all_plots_growth_daylight, aes( x = ttreat, y = T_top, fill = ttreat)) +
+    geom_boxplot() +
+    #scale_color_manual(values = c("c" = "#48A597", "w" = "#D94E47")) +
+    scale_fill_manual(values = c("c" = "#48A597", "w" = "#D94E47")) +
+    theme_minimal()
 
+  anova_model <- aov(T_top ~ ttreat, data = all_plots_growth_daylight)
+  summary(anova_model)
+  aggregate(T_top ~ ttreat, data = all_plots_growth_daylight, mean)
+  model <- lm(T_top ~ ttreat, data = all_plots_growth_daylight)
+  anova(model)
 
+  ggboxplot(all_plots_growth_daylight, 
+            x = "ttreat", 
+            y = "T_top", 
+            fill = "ttreat",
+            palette = c("c" = "#48A597", "w" = "#D94E47")) +
+    stat_compare_means(method = "t.test", 
+                       label = "p.signif", 
+                       comparisons = list(c("c", "w")),
+                       tip.length = 0.01) +
+    theme_minimal()
+  
+  
 ggt24h_diff_justtop_growth <- ggplot(allplots_temp_24h_diff_growth) +
   geom_line(aes(x = time, y = t_top_mean_diff, group = 1, color = "red2"), linetype = "solid", linewidth = 1) +
   geom_line(aes(x = time, y = t_top_mean_diff + t_top_sd_diff, group = 1, color = "red2"), linetype = "dashed") +

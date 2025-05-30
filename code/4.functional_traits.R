@@ -394,9 +394,9 @@ gg_cwm_sampling <-
 ggplot(pca_sampling, aes(x = PC1, y = PC2, color = treatment, shape = treatment)) +
   geom_path(aes(group = treatment), linewidth = 0.5, alpha = 0.2) +  # Conecta puntos del mismo tratamiento
   geom_point(size = 1.5) +
-  geom_text_repel(aes(label = sampling, color = treatment), size = 3, max.overlaps = Inf)  +  # Números de sampling
+  #geom_text_repel(aes(label = sampling, color = treatment), size = 3, max.overlaps = Inf)  +  # Números de sampling
   stat_ellipse(aes(fill = treatment, color = treatment),
-               alpha = 0.2,
+               alpha = 0.25,
                geom = "polygon",
                level = 0.68,
                type = "norm",
@@ -413,8 +413,8 @@ ggplot(pca_sampling, aes(x = PC1, y = PC2, color = treatment, shape = treatment)
                   inherit.aes = FALSE,
                   color = "gray30",
                   max.overlaps = Inf) +
-  scale_color_manual(values = palette5, labels = labels3) +
-  scale_fill_manual(values = palette5) +
+  scale_color_manual(values = palette_CB, labels = labels3) +
+  scale_fill_manual(values = palette_CB) +
   scale_shape_manual(values = point_shapes, labels = labels3) +
   labs(x = paste0("PC1 (", var_explained[1], "%)"),
        y = paste0("PC2 (", var_explained[2], "%)"),
@@ -423,7 +423,13 @@ ggplot(pca_sampling, aes(x = PC1, y = PC2, color = treatment, shape = treatment)
          shape = guide_legend(title = NULL),
          fill = "none") +
   theme_test() +
-  theme(legend.position = "bottom")
+  theme( # Ajusta la distancia aquí
+    panel.grid = element_blank(),
+    strip.background = element_blank(),
+    strip.text = element_text(face = "bold"),
+    text = element_text(size = 16),
+    legend.position = "bottom"
+  )
 print(gg_cwm_sampling)
 #ggsave("results/Plots/protofinal/FT_cwm_sampling.png", plot = gg_cwm_sampling, dpi = 300)
 

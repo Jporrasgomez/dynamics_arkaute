@@ -49,32 +49,32 @@ data_list <- list(arkaute_no0, arkaute_norm)
 
 variables <- c("richness", "abundance", "Y_zipf", "biomass", "biomass012", "NMDS1", "NMDS2", "PC1", "PC2")
                  # 1         # 2         # 3         # 4          # 5       # 6      # 7      # 8    # 9      
-#{i = 9
-# j = 1
-#meta_function(data_list[[j]], variables[i], "treatment")
-#RR_treatment_c(data_list[[j]], variables[i])
-#RR_treatment_wp(data_list[[j]], variables[i])
-#}
-#
-#gg_stats_variable
-#
-## Differences at treatment level
-#gg_dunn_variable 
-#gg_ttest_variable
-#gg_RR_dynamics
-#gg_RR_dynamics_wp
-#
-## Dynamics differences
-#gg_all1n
-#gg_facet
-#gg_delta_RR
-#gg_delta_RR_wp 
-#
-## Coefficient of variation
-#gg_stats_cv
-#gg_dunn_cv
-#gg_ttest_cv  
-#gg_dynamics_cv
+{i = 7
+ j = 1
+meta_function(data_list[[j]], variables[i], "treatment")
+RR_treatment_c(data_list[[j]], variables[i])
+RR_treatment_wp(data_list[[j]], variables[i])
+}
+
+gg_stats_variable
+
+# Differences at treatment level
+gg_dunn_variable 
+gg_ttest_variable
+gg_RR_dynamics
+gg_RR_dynamics_wp
+
+# Dynamics differences
+gg_all1n
+gg_facet
+gg_delta_RR
+gg_delta_RR_wp 
+
+# Coefficient of variation
+gg_stats_cv
+gg_dunn_cv
+gg_ttest_cv  
+gg_dynamics_cv
 
 
 
@@ -112,8 +112,8 @@ RR_whole <- rbind(RR_data, RR_data_wp) %>%
                           "Biomass" = "biomass012",
                           "SC1" = "NMDS1",
                           "SC2" = "NMDS2",
-                          "CWM1" = "PC1", 
-                          "CWM2" = "PC2"),
+                          "FT1" = "PC1", 
+                          "FT2" = "PC2"),
     
     variable = fct_relevel(variable,
                            "Richness",
@@ -123,8 +123,8 @@ RR_whole <- rbind(RR_data, RR_data_wp) %>%
                            "Biomass",
                            "SC1",
                            "SC2",
-                           "CWM1", 
-                           "CWM2"))
+                           "FT1", 
+                           "FT2"))
 
  
 z = 1.96
@@ -160,30 +160,48 @@ ggplot(aes(x = date, y = delta_RR)) +
       legend.position = "none"
     )
 print(gg_dynamics)
-ggsave("results/Plots/protofinal/2.dynamics_SIBECOL1.png", plot = gg_dynamics, dpi = 300)
+#ggsave("results/Plots/protofinal/2.dynamics_SIBECOL1.png", plot = gg_dynamics, dpi = 300)
 }
 
-
+sibecol1 <- c("Richness", "Cover", "Evenness")
+sibecol2 <- c("Biomass", "SC1", "FT1")
 
 {gg_dynamics_wp <- RR_whole %>% 
     filter(RR_descriptor %in% c("wp_vs_p")) %>% 
-    filter(!variable == "Biomass") %>% 
+    filter(!variable == "Biomass*") %>% 
+    filter(variable %in% sibecol1) %>% 
 ggplot(aes(x = date, y = delta_RR)) + 
   facet_grid(variable ~ RR_descriptor, scales = "free_y",
              labeller = labeller(
                RR_descriptor = as_labeller(labels_RR_wp2), 
              )) +  
+  geom_hline(yintercept= 0, linetype = "dashed", color = "#00CAFF",
+             linewidth = 0.8) +
+  geom_vline(xintercept = as.Date("2023-05-11"), linetype = "dashed", color = "gray40",
+             linewidth = 0.8)+
   geom_errorbar(aes(ymin = delta_RR - z * se_delta_RR,
                     ymax = delta_RR + z * se_delta_RR,
-                    color = RR_descriptor), alpha = 0.5) +
-  geom_point(aes(color = RR_descriptor), size = 1.2) + 
-  geom_line(aes(color = RR_descriptor)) +
+                    color = RR_descriptor), alpha = 0.5, linewidth = 0.8) +
+  geom_point(aes(color = RR_descriptor), size = 1.5) + 
+  geom_line(aes(color = RR_descriptor), linewidth = 0.5) +
+  geom_smooth(method = "lm", aes(color = RR_descriptor, fill = RR_descriptor), alpha = 0.3) +
+    scale_y_continuous(
+      breaks = scales::breaks_pretty(n = 3)
+     
+    )+
   scale_color_manual(values = palette_RR_wp) +
-  geom_hline(yintercept= 0, linetype = "dashed", color = "gray40") +
-  geom_vline(xintercept = as.Date("2023-05-11"), linetype = "dashed", color = "gray40") +
-  theme(legend.position = "none")
+  scale_fill_manual(values = palette_RR_wp) +
+    labs(y = "Log Response Ratio") +
+    theme(
+      axis.title.x = element_blank(),  # Ajusta la distancia aquí
+      panel.grid = element_blank(),
+      strip.background = element_blank(),
+      strip.text = element_text(face = "bold"),
+      text = element_text(size = 16),
+      legend.position = "none"
+    )
 print(gg_dynamics_wp)
-#ggsave("results/Plots/protofinal/3.globalchange_dynamics.png", plot = gg_dynamics_wp, dpi = 300)
+ggsave("results/Plots/protofinal/3.globalchange_dynamics_SIBECOL1.png", plot = gg_dynamics_wp, dpi = 300)
 }
 
 
