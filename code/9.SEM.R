@@ -1,6 +1,7 @@
 
 
 # To do's
+
 # multigroups function 
 
 ##  data(meadows)
@@ -91,7 +92,7 @@ data_list <- list(data_c, data_w, data_p, data_wp)
 
 
 
-{i = 3
+{i = 2
 
 pairs(data_list[[i]][,variables])
 
@@ -207,7 +208,26 @@ plot(global_model, title = paste0(unique(data_list[[i]]$treat_label)))
 }
 
 
+# Model6: NO NMDS1 and abundance
+{
+  mod1 = lme(biomass ~ richness + Y_zipf + PC1, random = ~ 1 | plot,  data_list[[i]])
+  mod2 = lme(PC1 ~ richness,  random = ~ 1 | plot, data_list[[i]])
+  mod3 = lme(Y_zipf ~ richness, random = ~ 1 | plot, data_list[[i]])
+  
+  global_model <- psem(
+    mod1,
+    mod2,
+    mod3
+  )
+  
+ 
+  
+  plot(global_model, title = paste0(unique(data_list[[i]]$treat_label)))
+  
+  print(summary(global_model))
+}
 
-
+# Probar quitar NMDS
+# Probar quitar NMDS + abundance
 
 

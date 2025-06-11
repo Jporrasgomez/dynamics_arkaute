@@ -282,6 +282,20 @@ print(ggnmds_alltreatments)
 }
 
 
+adonis_sampling <- adonis2(
+  distance_matrix_sampling_bc ~ treatment,  # puedes agregar más variables si quieres
+  data = sp_wide_sampling,                 # debe tener las variables explicativas
+  permutations = 999,                      # número de permutaciones
+  method = "bray"
+)
+
+# Mostrar resultados
+print(adonis_sampling)
+
+
+bd <- betadisper(distance_matrix_sampling_bc, sp_wide_sampling$treatment)
+anova(bd)
+
   # Print the plot
 
 
@@ -384,6 +398,15 @@ nmds_df_plot <- data.frame(
   date = sp_wide_plot$date
 )
 
+
+adonis_plot <- adonis2(
+  distance_matrix_bc_plot ~ treatment,  # puedes agregar más variables si quieres
+  data = sp_wide_plot,                 # debe tener las variables explicativas
+  permutations = 999,                      # número de permutaciones
+  method = "bray"
+)
+
+print(adonis_plot)
 # Arrange by sampling order
 
 min(nmds_df_plot$NMDS1)
@@ -392,28 +415,12 @@ min(nmds_df_plot$NMDS3)
 
 # Changes on NMDS values to avoid pressence of 0 and negative values since log(RR) do not work with those
 
-nmds_df_plot<- nmds_df_plot %>% 
-  mutate(NMDS1 = NMDS1 + abs(min(nmds_df_plot$NMDS1)) + 1,
-         NMDS2 = NMDS2 + abs(min(nmds_df_plot$NMDS2)) + 1,
-         NMDS3 = NMDS3 + abs(min(nmds_df_plot$NMDS3)) + 1)
-
-nmds_df_plot %>%  write.csv("data/nmds_df_plot.csv", row.names = F)
-
-source("code/meta_function/meta_function.R")
-
-meta_function(nmds_df_plot, "NMDS1", "treatment")
-gg_all1n
-gg_delta_RR
-
-source("code/meta_function/RR_TREATMENT_c.R")
-RR_treatment_c(nmds_df_plot, "NMDS1")
-gg_RR
-
-
-source("code/meta_function/RR_TREATMENT_wp.R")
-RR_treatment_wp(nmds_df_plot, "NMDS1")
-gg_RR_wp
-
+#nmds_df_plot<- nmds_df_plot %>% 
+#  mutate(NMDS1 = NMDS1 + abs(min(nmds_df_plot$NMDS1)) + 1,
+#         NMDS2 = NMDS2 + abs(min(nmds_df_plot$NMDS2)) + 1,
+#         NMDS3 = NMDS3 + abs(min(nmds_df_plot$NMDS3)) + 1)
+#
+#nmds_df_plot %>%  write.csv("data/nmds_df_plot.csv", row.names = F)
 
 cor1 <- cor(distance_matrix_bc_plot, dist(nmds_bc_plot$points[,1]), method = "pearson")
 cor2 <- cor(distance_matrix_bc_plot, dist(nmds_bc_plot$points[,2]), method = "pearson")
@@ -429,12 +436,12 @@ print(explained_NMDS3 <- (cor3^2 / (cor1^2 + cor2^2 + cor3^2)) * 100)
 {ggNMDS12_allplots <-
   ggplot(nmds_df_plot, aes(x = NMDS1, y = NMDS2, color = treatment)) +
   stat_ellipse(geom = "polygon", aes(fill = treatment),
-               alpha = 0.1, show.legend = FALSE, level = 0.9) + 
+               alpha = 0.1, show.legend = FALSE, level = 0.68) + 
   geom_point(size = 1.5, aes(shape= treatment)) +
   geom_hline(yintercept = 0, color = "gray52", linetype = "dashed") +
   geom_vline(xintercept = 0, color = "gray52", linetype = "dashed") +
-  scale_colour_manual(values = palette) +
-  scale_fill_manual(values = palette) +
+  scale_colour_manual(values = palette_CB) +
+  scale_fill_manual(values = palette_CB) +
   labs(
     title = "NMDS Bray-Curtis: abundance of species at plot level",
     subtitle = paste0("Stress = ", round(nmds_bc_plot$stress, 3)),
@@ -442,7 +449,8 @@ print(explained_NMDS3 <- (cor3^2 / (cor1^2 + cor2^2 + cor3^2)) * 100)
   ) +
   theme(axis.title.x = element_text(size = 12, face = "bold", color = "black", margin = margin(t = 10)))
 print(ggNMDS12_allplots)
-ggsave("results/Plots/protofinal/species_composition_plot.png", plot = ggNMDS12_allplots, dpi = 300)}
+#ggsave("results/Plots/protofinal/species_composition_plot.png", plot = ggNMDS12_allplots, dpi = 300)
+}
 
 
 ggNMDS13_allplots <-

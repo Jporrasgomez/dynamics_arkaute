@@ -1,6 +1,5 @@
 
 
-
 rm(list = ls(all.names = TRUE))  #Se limpia el environment
 pacman::p_unload(pacman::p_loaded(), character.only = TRUE) #se quitan todos los paquetes (limpiamos R)
 pacman::p_load(dplyr, tidyr, tidyverse, ggplot2, BIEN, ape, maps, sf, rtry, ggrepel)
@@ -57,7 +56,7 @@ flora_abrich <- flora_abrich %>%
   filter(!code %in% c("chsp", "amsp", "cisp", "casp"))
 
 traits <- traits %>% 
-  filter(!code %in% c("chsp", "amsp")) #Actually we have no tait info about "cisp" and "casp"
+  filter(!code %in% c("chsp", "amsp")) #Actually we have no trait info about "cisp" and "casp"
 
 
 
@@ -146,10 +145,13 @@ traits_mean <- bind_rows(traits_mean, traits_poaceae, traits_asteraceae, traits_
 
 
 
-
 #The function checks which species are present in traits_mean$species but not present in flora$species.
 setdiff(unique(traits_mean$code), unique(flora_abrich$code))
 setdiff(unique(flora_abrich$code), unique(traits_mean$code))
+
+
+setdiff(unique(species_code$code), unique(traits_mean$code))
+setdiff(unique(species_code$code), unique(traits$code))
 
 # I have to check on Myosotis, Sonchus and Cirsium. 
 
@@ -217,12 +219,12 @@ traits_mean_wide %>%
   theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1))
   
 ## According to Carmona et al. 2021, we have to remove the species with less than the 50% of the traits. 
-# These are: libi, amsp and rapa. 
+# These are: libi and rapa. 
 # Before deleting them, we can check the relevance of these species (in checking.results we can do it)
 # rapa is a species with a lot of abundance and n_observations, but not one of the highest
 
 traits_mean_wide <- traits_mean_wide %>% 
-  filter(!code %in% c("libi", "amsp", "rapa")) %>% 
+  filter(!code %in% c("libi", "rapa")) %>% 
   droplevels()
 
 ## REMOVING TRAITS WITH HIGH NUMBER OF NA
