@@ -41,7 +41,20 @@ arkaute_norm <- read.csv("data/arkaute_norm.csv") %>%
     treatment = as.factor(treatment))
 
 
+plot(arkaute$richness ~ arkaute$mean_temperature)
+plot(arkaute$abundance ~ arkaute$mean_temperature)
+plot(arkaute$biomass012 ~ arkaute$mean_temperature)
+plot(arkaute$Y_zipf ~ arkaute$mean_temperature)
+plot(arkaute$NMDS2 ~ arkaute$mean_temperature)
+plot(arkaute$PC2 ~ arkaute$mean_temperature)
 
+
+plot(arkaute$richness ~ arkaute$mean_vwc)
+plot(arkaute$abundance ~ arkaute$mean_vwc)
+plot(arkaute$biomass012 ~ arkaute$mean_vwc)
+plot(arkaute$Y_zipf ~ arkaute$mean_vwc)
+plot(arkaute$NMDS2 ~ arkaute$mean_vwc)
+plot(arkaute$PC2 ~ arkaute$mean_vwc)
 
 
 

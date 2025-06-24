@@ -57,7 +57,8 @@ for (i in seq_along(file_code_values)) {
   new_name <- plots$plot_code[i]
   ttreat_value <- plots$ttreat[i]  # Get ttreat value for the current plot_code
   data <- read_delim(file_path, 
-                     ";", escape_double = FALSE, col_names = FALSE, 
+                     ";", escape_double = FALSE,
+                     col_names = FALSE, 
                      trim_ws = TRUE)
   data$ttreat <- ttreat_value  # Add a new variable "ttreat" to the data with ttreat_value
   plots_list[[new_name]] <- data
@@ -74,12 +75,14 @@ for (i in seq_along(file_code_values)) {
 
 for (i in seq_along(plots_list)) {
   item <- plots_list[[i]]
-  colnames(item) <- c("n", "date_time", "time_zone", "T_ground", "T_bottom", "T_top", "soil_moisture", "a", "b", "c", "ttreat")
+  colnames(item) <- c("n", "date_time", "time_zone", "T_ground", "T_bottom",
+                      "T_top", "soil_moisture", "a", "b", "c", "ttreat")
   
   plots_list[[i]] <- item %>% 
     select(date_time, T_ground, T_bottom, T_top, soil_moisture, ttreat) %>% 
     mutate(
-      datetimenew = lubridate::parse_date_time(stringr::str_replace(date_time, "\\.", "/"), orders = "%Y/%m/%d %H:%M")
+      datetimenew = lubridate::parse_date_time(stringr::str_replace(date_time, "\\.", "/"),
+                                               orders = "%Y/%m/%d %H:%M")
     ) %>% 
     mutate(
       date = format(as.Date(datetimenew), "%Y/%m/%d"),
@@ -177,8 +180,19 @@ sampling_dates_vector <- sampling_dates$date
 
 j <- all_plots %>% 
   filter(date %in% sampling_dates_vector) %>% 
-  select(T_top, vwc, date, time, plot)
+  select(T_top, vwc, date, time, plot)  
 
+j$treatment <- gsub("[0-9]", "", as.character(j$plot))
+j$plot <- gsub("[^0-9]", "", as.character(j$plot))
+
+j <- j %>% 
+  mutate(treatment = as.factor(treatment), 
+         plot = as.factor(plot)) %>% 
+  group_by(date, plot, treatment) %>% 
+  summarize(mean_temperature = mean(T_top), 
+            mean_vwc = mean(vwc))
+
+j %>%  write.csv("data/temp_vwc_data.csv",  row.names = F)
 
 
 

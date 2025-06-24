@@ -29,7 +29,7 @@ arkaute <- read.csv("data/arkaute.csv") %>%
 
 arkaute_long <- arkaute %>% 
   pivot_longer(
-    cols = richness:PC2,          
+    cols = richness:mean_vwc,          
     names_to = "variable",      
     values_to = "value"          
   )
@@ -59,7 +59,7 @@ for(i in seq_along(variables)){
   
 }
 
-i = 1
+i = 10
 gglist_hist[[i]] 
 
 normality_df <- do.call(rbind, normality_list)

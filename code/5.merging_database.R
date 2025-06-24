@@ -19,6 +19,8 @@ pca_cwm_plot <- read.csv("data/pca_cwm_plot.csv") %>%
 radcoeff_db_plot <- read.csv("data/radcoeff_db_plot.csv") %>% 
   select(-one_month_window, -omw_date, -year)
 
+temp_vwc_data <- read.csv("data/temp_vwc_data.csv")
+
 
 library(dplyr)
 
@@ -28,9 +30,10 @@ arkaute <- abrich_db_plot %>%
   full_join(nmds_df_plot,        by = c("sampling", "plot", "treatment", "date")) %>%
   full_join(pca_cwm_plot,        by = c("sampling", "plot", "treatment", "date")) %>% 
   full_join(radcoeff_db_plot,    by = c("sampling", "plot", "treatment", "date")) %>% 
-  select(year, date, omw_date, one_month_window, sampling, plot, treatment, 
-         richness, abundance, biomass, biomass012, Y_zipf, NMDS1, NMDS2, PC1, PC2)
-
+  full_join(temp_vwc_data,       by = c("plot", "treatment", "date")) %>% 
+  select(year, date, omw_date, one_month_window, sampling, plot,
+         treatment, richness, abundance, biomass, biomass012, Y_zipf, 
+         NMDS1, NMDS2,PC1, PC2, mean_temperature, mean_vwc)
 
 
 na_rows <- arkaute %>%
