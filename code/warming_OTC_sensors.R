@@ -161,7 +161,23 @@ ws <- do.call(rbind, w_list)
 
 
 all_plots <- merge(controls, ws, all = TRUE)
+all_plots$date <- date(all_plots$date)
 all_plots$ttreat <- as.factor(all_plots$ttreat)
+
+sampling_dates <- read.csv("data/sampling_dates.csv") %>% 
+  mutate(sampling = as.factor(sampling),
+         date = ymd(date), 
+         month = month(date, label = TRUE),
+         day = day(date), 
+         year = year(date)) %>% 
+  select(sampling, date, day, month, year, one_month_window, omw_date) %>% 
+  mutate(across(where(is.character), as.factor))
+
+sampling_dates_vector <- sampling_dates$date
+
+j <- all_plots %>% 
+  filter(date %in% sampling_dates_vector) %>% 
+  select(T_top, vwc, date, time, plot)
 
 
 
