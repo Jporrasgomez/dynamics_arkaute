@@ -256,7 +256,7 @@ nmds_df_sampling <- nmds_df_sampling %>% arrange(sampling)
 {ggnmds_alltreatments <- 
   ggplot(nmds_df_sampling, aes(x = NMDS1, y = NMDS2, color = treatment)) +
     stat_ellipse(geom = "polygon", aes(fill = treatment),
-                 alpha = 0.25, show.legend = FALSE, level = 0.9) + 
+                 alpha = 0.25, show.legend = FALSE, level = 0.95) + 
     geom_point(size = 1.5, aes(shape = treatment), show.legend =T) +
     #geom_text_repel(aes(label = sampling), max.overlaps = 100, size = 3, show.legend = F) +
     geom_hline(yintercept = 0, color = "gray52", linetype = "dashed") +
@@ -291,15 +291,39 @@ adonis_sampling <- adonis2(
 
 # Mostrar resultados
 print(adonis_sampling)
-
+# Hay un efecto significativo del tratamiento sobre la composición de especies (p = 0.001). 
+# El tratamiento explica aproximadamente el 33.7% de la variación en la composición.
 
 bd <- betadisper(distance_matrix_sampling_bc, sp_wide_sampling$treatment)
 anova(bd)
+# El resultado de ANOVA para las dispersiónes dentro de grupos (tratamientos) es significativo (p = 0.0004).
+# Esto significa que la variabilidad o dispersión dentro de al menos un grupo es diferente respecto a otros grupos.
+permutest(bd) 
+plot(bd)
+boxplot(bd)
 
-  # Print the plot
+permutest(bd, pairwise = TRUE)
+TukeyHSD(bd)
+
+library(pairwiseAdonis)
 
 
 
+# Ejecutamos las comparaciones por pares
+pw_adonis <- pairwise.adonis(
+  x           = distance_matrix_sampling_bc,                 # tu matriz de distancias Hellinger–Bray
+  factors     = sp_wide_sampling$treatment,  # factor con los cuatro tratamientos
+  perm        = 999,                         # número de permutaciones
+  p.adjust.m  = "BH"                         # corrección de p por Benjamini–Hochberg
+)
+
+print(pw_adonis)
+
+# Print the plot
+
+
+### Codigo con chat gpt transformando distancias a distancias hellinger
+source("code/nmds_bray_withhellinger_sampling.R")
 
 # Chat gpt:
 
@@ -399,14 +423,6 @@ nmds_df_plot <- data.frame(
 )
 
 
-adonis_plot <- adonis2(
-  distance_matrix_bc_plot ~ treatment,  # puedes agregar más variables si quieres
-  data = sp_wide_plot,                 # debe tener las variables explicativas
-  permutations = 999,                      # número de permutaciones
-  method = "bray"
-)
-
-print(adonis_plot)
 # Arrange by sampling order
 
 min(nmds_df_plot$NMDS1)
@@ -451,6 +467,45 @@ print(explained_NMDS3 <- (cor3^2 / (cor1^2 + cor2^2 + cor3^2)) * 100)
 print(ggNMDS12_allplots)
 #ggsave("results/Plots/protofinal/species_composition_plot.png", plot = ggNMDS12_allplots, dpi = 300)
 }
+
+
+
+## Diferences between treatments? 
+
+adonis_plot <- adonis2(
+  distance_matrix_bc_plot ~ treatment,  # puedes agregar más variables si quieres
+  data = sp_wide_plot,                 # debe tener las variables explicativas
+  permutations = 999,                      # número de permutaciones
+  method = "bray"
+)
+
+print(adonis_plot)
+
+## Differences due to dispersion within treatments?
+bd <- betadisper(distance_matrix_bc_plot, sp_wide_plot$treatment)
+anova(bd) # we got significant differences in dispersion. So adonis can be influences by this
+
+permutest(bd) 
+plot(bd)
+boxplot(bd)
+
+permutest(bd, pairwise = TRUE)
+TukeyHSD(bd)
+
+library(pairwiseAdonis)
+
+# Ejecutamos las comparaciones por pares
+pw_adonis <- pairwise.adonis(
+  x           = distance_matrix_bc_plot,                 # tu matriz de distancias Hellinger–Bray
+  factors     = sp_wide_plot$treatment,  # factor con los cuatro tratamientos
+  perm        = 999,                         # número de permutaciones
+  p.adjust.m  = "BH"                         # corrección de p por Benjamini–Hochberg
+)
+
+print(pw_adonis)
+
+# NMDS con distancias hellinger
+source("code/nmds_bray_withhellinger_plot.R")
 
 
 ggNMDS13_allplots <-

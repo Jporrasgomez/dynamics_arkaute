@@ -35,7 +35,7 @@ arkaute_long <- arkaute %>%
   )
 
 
-
+ ######################  NORMALIZATION AT TREATMENT LEVEL ################################
 #### 1. Checking normality of variables ######
 source("code/meta_function/stats_function.R")
 
@@ -64,7 +64,7 @@ gglist_hist[[i]]
 
 normality_df <- do.call(rbind, normality_list)
 
-normality_df <- do.call(rbind, normality_list) %>% 
+do.call(rbind, normality_list) %>% 
   ggplot(aes(y = variable, x = p_value)) +
   facet_grid(~ normality_test) + 
   geom_point() + 
@@ -73,6 +73,133 @@ normality_df <- do.call(rbind, normality_list) %>%
 
 # No variable follows a normal distribution
 
+
+
+########################################################################################
+                          #  GENERAL NORMALIZATION AT VARIABLE LEVEL   #
+
+# 1. Checking which transformation fits the variable to a normal distribution
+
+library(bestNormalize)
+
+nloops = 15
+results_all <- matrix(ncol = 7, nrow = length(variables) * nloops)
+colnames(results_all) <- c("variable", "treatment", "n", "shapiro_pre",
+                       "transformation", "shapiro_post", "n_transformation")
+results_all <- as.data.frame(results_all, stringsAsFactors = FALSE)
+
+counter <- 0
+
+  for (i in seq_along(variables)) {
+    
+    # Filtrar los datos
+    z <- arkaute_long %>%
+      filter(variable == variables[i])
+    
+    x_clean <- na.omit(z$value)
+    n_samples <- length(x_clean)
+    
+    # Calcular una única vez el p-valor original
+    shapiro_pre_pval <- tryCatch(shapiro.test(x_clean)$p.value, error = function(e) NA)
+    
+    for (k in 1:nloops) {
+      counter <- counter + 1
+      
+      # Normalización
+      bn <- bestNormalize(x_clean)
+      x_best <- predict(bn)
+      shapiro_post_pval <- tryCatch(shapiro.test(x_best)$p.value, error = function(e) NA)
+      
+      # Guardar resultados
+      results_all[counter, ] <- list(
+        variable = variables[i],
+        treatment = paste0(unique(z$treatment)),
+        n = n_samples,
+        shapiro_pre = shapiro_pre_pval,
+        transformation = class(bn$chosen_transform)[1],
+        shapiro_post = shapiro_post_pval,
+        n_transformation = k
+      )
+    }
+    
+  }
+
+
+#Checking shapiro-test. If there some "FALSE" it means any of the iterations found a feasible transformation
+# to get normality
+results_all %>%
+  group_by(variable) %>%
+  summarize(
+    any_above_0_05 = any(as.numeric(shapiro_post) > 0.05, na.rm = TRUE),
+    .groups = "drop"
+  ) %>% 
+  print()
+
+possible_transformations <- results_all %>%
+  mutate(shapiro_post = as.numeric(shapiro_post)) %>%
+  group_by(variable, treatment) %>%
+  slice_max(shapiro_post, n = 1, with_ties = FALSE) %>%  
+  ungroup()
+
+# 2. Transforming variables according to possible_transformations
+
+arkaute_norm_all <- arkaute %>%
+  mutate(
+    richness         = predict(orderNorm(richness)),
+    abundance        = predict(orderNorm(abundance)),
+    biomass          = predict(orderNorm(biomass)),
+    biomass012       = predict(orderNorm(biomass012)),
+    Y_zipf           = asinh(Y_zipf),  
+    NMDS1            = predict(orderNorm(NMDS1)),
+    NMDS2            = predict(orderNorm(NMDS2)),
+    PC1              = predict(orderNorm(PC1)),
+    PC2              = predict(orderNorm(PC2)),
+    mean_temperature = predict(orderNorm(mean_temperature)),
+    mean_vwc         = predict(orderNorm(mean_vwc))
+  )
+ 
+
+
+# 3. Checking normality
+
+arkaute_norm_all_long <- arkaute_norm_all %>% 
+  pivot_longer(
+    cols = richness:mean_vwc,          
+    names_to = "variable",      
+    values_to = "value"          
+  )
+
+gglist_hist <- list()
+gglist_tests <- list()
+normality_list <- list()
+
+for(i in seq_along(variables)){
+  z <- arkaute_norm_all_long %>% 
+    filter(variable == variables[i])
+  
+  stats(z, "value", "treatment")
+  gglist_hist[[i]] <- gg_stats
+  gglist_tests[[i]] <- gg_normality_tests
+  
+  normality_list[[i]] <- normality_df
+  
+}
+
+i = 1
+gglist_hist[[i]] 
+
+
+do.call(rbind, normality_list) %>% 
+  ggplot(aes(y = variable, x = p_value)) +
+  facet_grid(~ normality_test) + 
+  geom_point() + 
+  geom_vline(xintercept = 0.05, color = "red", linetype = "dashed")
+
+
+arkaute_norm_all %>%  write.csv("data/arkaute_norm_all.csv", row.names = F)
+
+########################################################################################
+                              #  NORMALIZATION AT TREATMENT LEVEL #
 
 # Normality at treatment level?
 
@@ -201,7 +328,9 @@ arkaute_norm_c <- arkaute %>%
     NMDS1 = predict(orderNorm(NMDS1)),
     NMDS2 = predict(orderNorm(NMDS2)),
     PC1 = predict(orderNorm(PC1)),
-    PC2 = predict(orderNorm(PC2))
+    PC2 = predict(orderNorm(PC2)),
+    mean_temperature = predict(orderNorm(mean_temperature)),
+    mean_vwc         = predict(orderNorm(mean_vwc))
   )
 
 
@@ -216,7 +345,9 @@ arkaute_norm_w <- arkaute %>%
     NMDS1 = predict(orderNorm(NMDS1)),
     NMDS2 = predict(orderNorm(NMDS2)),
     PC1 = predict(orderNorm(PC1)),
-    PC2 = predict(yeojohnson(PC2))
+    PC2 = predict(yeojohnson(PC2)),
+    mean_temperature = predict(orderNorm(mean_temperature)),
+    mean_vwc         = predict(orderNorm(mean_vwc))
   )
 
 
@@ -232,7 +363,9 @@ arkaute_norm_p <- arkaute %>%
     NMDS1 = predict(orderNorm(NMDS1)),
     NMDS2 = predict(orderNorm(NMDS2)),
     PC1 = predict(orderNorm(PC1)),
-    PC2 = predict(orderNorm(PC2))            # Original transformation was yeojohnson but it was not working
+    PC2 = predict(orderNorm(PC2)),
+    mean_temperature = predict(orderNorm(mean_temperature)),
+    mean_vwc         = predict(orderNorm(mean_vwc))# Original transformation was yeojohnson but it was not working
   )
 
 
@@ -248,7 +381,9 @@ arkaute_norm_wp <- arkaute %>%
     NMDS1 = predict(orderNorm(NMDS1)), #### Original was sqrt
     NMDS2 = predict(orderNorm(NMDS2)),
     PC1 = predict(orderNorm(PC1)),
-    PC2 = predict(orderNorm(PC2))
+    PC2 = predict(orderNorm(PC2)),
+    mean_temperature = predict(orderNorm(mean_temperature)),
+    mean_vwc         = predict(orderNorm(mean_vwc))
   )
 
 

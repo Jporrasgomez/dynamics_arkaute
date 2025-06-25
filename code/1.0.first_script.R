@@ -165,9 +165,8 @@ length(unique(flora_medium$code))
 #1.  Since sampling 12, we have been estimating the number of individuals per species and plot based on direct field observations.
 
 plots <- read.csv("data/plots.csv") %>% 
-  select(nplot, treatment_code) %>% 
-  rename(treatment = treatment_code,
-         plot = nplot)
+  select(plot, treatment_code) %>% 
+  rename(treatment = treatment_code)
 
 nind1 <- read.csv("data/n_individuals.csv") %>% 
   merge(plots) %>% 
@@ -208,7 +207,7 @@ one_ind_species <- c("rucr", "amsp", "kisp")
 
 ## IMPUTATION OF is.na(nind_m2)  ####
 
-source("code/0.2.MICE.R")
+source("code/1.1.MICE.R")
 
 
 #plot(biomass_mice_imputed) 
@@ -253,10 +252,10 @@ source("code/0.2.MICE.R")
 }
 
 
-source("code/0.3.lm_biomass012.R")
+source("code/1.2.lm_biomass012.R")
 
 flora_medium012 <- left_join(flora_medium, lm_data_filtered) %>%
-  filter(sampling %in% c("0", "1", "2")) %>%  # I COULD PUT HERE SAMPLING 12
+  filter(sampling %in% c("0", "1", "2", "12")) %>%  # I COULD PUT HERE SAMPLING 12
   mutate(year = year(date)) %>% 
   mutate(abundance = ifelse(abundance < 1, 1, abundance)) %>% 
   mutate(biomass_s = exp(intercept + slope * log(abundance)) * smearing_factor)
@@ -368,16 +367,16 @@ biomass012_db_plot %>%  write.csv("data/biomass012_db_plot.csv", row.names = F)
 
 
 
-radcoeff_df <- read.csv("data/radcoeff_df.csv") %>% 
-  mutate(treatment = as.factor(treatment), 
-         sampling = as.factor(sampling), 
-         plot = as.factor(plot))
-
-
-ab_rich_dynamics <- full_join(flora_abrich, radcoeff_df)   
-
-
-rm(list = setdiff(ls(), c("flora_abrich", "biomass_imp", "biomass_noimp", "biomass_imp012", 
-                          "biomass_noimp012", "ab_rich_dynamics"
-)))
+###radcoeff_df <- read.csv("data/radcoeff_df.csv") %>% 
+###  mutate(treatment = as.factor(treatment), 
+###         sampling = as.factor(sampling), 
+###         plot = as.factor(plot))
+###
+###
+###ab_rich_dynamics <- full_join(flora_abrich, radcoeff_df)   
+###
+###
+###rm(list = setdiff(ls(), c("flora_abrich", "biomass_imp", "biomass_noimp", "biomass_imp012", 
+###                          "biomass_noimp012", "ab_rich_dynamics"
+###)))
 

@@ -206,7 +206,7 @@ ggplot(aes(x = variable, y = RR, color = RR_descriptor)) +
 
 print(gg_RR_wp)
 
-ggsave("results/Plots/protofinal/2.globalchange_effects_SIBECOL.png", plot = gg_RR_wp, dpi = 300)
+#ggsave("results/Plots/protofinal/2.globalchange_effects_SIBECOL.png", plot = gg_RR_wp, dpi = 300)
 }
 
  

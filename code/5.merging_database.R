@@ -35,6 +35,11 @@ arkaute <- abrich_db_plot %>%
          treatment, richness, abundance, biomass, biomass012, Y_zipf, 
          NMDS1, NMDS2,PC1, PC2, mean_temperature, mean_vwc)
 
+arkaute <- arkaute %>% 
+  mutate(OTC = ifelse(treatment %in% c("w", "wp"), paste0("YES"), paste0("NO"))) %>% 
+  mutate(perturbation = ifelse(treatment %in% c("p", "wp"), paste0("YES"), paste0("NO"))) %>% 
+  select(colnames(arkaute)[1:7], "OTC", "perturbation", colnames(arkaute[8:18]))
+
 
 na_rows <- arkaute %>%
   filter(is.na(biomass))
