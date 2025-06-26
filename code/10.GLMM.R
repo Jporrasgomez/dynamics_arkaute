@@ -1,391 +1,328 @@
 
 
 
-
-# Structural equation models
+# =================================================================================
+# 0. Clear environment
+# =================================================================================
 rm(list = ls(all.names = TRUE))
 
-pacman::p_load(dplyr,reshape2,tidyverse, lubridate, ggplot2, ggpubr, gridExtra,
-               car, ggsignif, dunn.test, rstatix)
+# =================================================================================
+# 1. Load packages
+# =================================================================================
+pacman::p_load(
+  dplyr, reshape2, tidyverse, lubridate,
+  ggplot2, ggpubr, gridExtra,
+  car, ggsignif, dunn.test, rstatix,
+  lme4, nlme, glmmTMB, performance,
+  emmeans, DHARMa
+)
 
+# Custom palettes and labels
 source("code/palettes_labels.R")
 
-theme_set(theme_bw() +
-            theme(
-              legend.position = "right",
-              panel.grid = element_blank(),
-              strip.background = element_blank(),
-              strip.text = element_text(face = "bold"),
-              text = element_text(size = 11)))
-
-arkaute <- read.csv("data/arkaute.csv") %>% 
-  mutate(
-    year = as.factor(year),
-    date = ymd(date),
-    omw_date = as.factor(omw_date),
-    one_month_window = as.factor(one_month_window),
-    sampling = as.factor(sampling),
-    plot = as.factor(plot),
-    treatment = as.factor(treatment)) %>% 
-  filter(sampling != "0") %>%                               # quito pre-muestreo porque no nos es relevante
-  filter(!(sampling == "1" & treatment %in% c("p", "wp")))  # quito estos muestreos para p y wp porque añaden ruido con los 0
-
-
-
-arkaute_norm <- read.csv("data/arkaute_norm_all.csv") %>%   # aqui cargo los datos de arkaute normalizados a nivel de variable, sin diferenciar por tratamientos
-  mutate(
-    year = as.factor(year),
-    date = ymd(date),
-    omw_date = as.factor(omw_date),
-    one_month_window = as.factor(one_month_window),
-    sampling = as.factor(sampling),
-    plot = as.factor(plot),
-    treatment = as.factor(treatment))
-
-
-## Antes de nada, vamos a ver si mean_vwc actua como covariable ##
-
-ggplot(arkaute, aes(x = treatment, y = mean_vwc, fill = treatment)) +
-  geom_boxplot(alpha = 0.6) +
-  geom_jitter(width = 0.1, alpha = 0.3) +
-  theme_minimal() +
-  labs(title = "Distribución de humedad por tratamiento",
-       y = "Humedad (mean_vwc)", x = "Tratamiento")
-
-ggplot(arkaute, aes(x = plot, y = mean_vwc)) +
-  geom_boxplot(fill = "lightblue") +
-  theme_minimal() +
-  labs(title = "Distribución de humedad por parcela",
-       y = "Humedad (mean_vwc)", x = "Parcela")
-
-ggplot(arkaute, aes(x = perturbation, y = mean_vwc, fill = perturbation)) +
-  geom_boxplot(alpha = 0.6) +
-  geom_jitter(width = 0.1, alpha = 0.3) +
-  theme_minimal()
-
-ggplot(arkaute, aes(x = OTC, y = mean_vwc, fill = OTC)) +
-  geom_boxplot(alpha = 0.6) +
-  geom_jitter(width = 0.1, alpha = 0.3) +
-  theme_minimal()
-
-##| ¿Cuánta colinealidad hay entre `mean_vwc` y `treatment`?
-
-summary(lm(mean_vwc ~ treatment, data = arkaute))  # R² bajo = aporta info extra
-
-# el modelo indica que el modelo mean_vwc ~ treatment explica un 8.1% de la varianza total observada
-# en el a humedad del suelo. 91.9% de la variabilidad en mean_vwc no se explica por el tratameiento. 
-# Esto significa que treatment y mean_vwc no están altamente colineados, por lo que incluir ambos en el modelo 
-# tiene sentido. 
-
-
-# Cargar las librerías necesarias
-library(lme4)
-library(glmmTMB)
-library(performance)
-library(emmeans)
-library(DHARMa)
-
-
-
-
-#### GLMM RICHNESS ######################################################################
-
-# Si hay sobredispersión significativa, usar binomial negativa
-model_nb <- glmmTMB(richness ~ treatment + scale(mean_vwc) + (1 | plot),
-                    data = arkaute,
-                    family = nbinom2(link = "log"))
-
-check_overdispersion(model_nb)
-plot(simulateResiduals(model_nb)) # si los residuales se ajustan al modelo y los boxplots salen grises esque es un buen modelo
-
-# Resumen del modelo binomial negativo
-summary(model_nb)
-
-# Comparaciones post-hoc entre tratamientos
-emmeans(model_nb, pairwise ~ treatment)
- # Se confirman LRR results para c-w y wp-p. Añade diferencia entre p-c que no se ve en el LRR
-
-
-# PARa la misma variable, el GLM detecta diferencias significativas entre riqueza y tratamiento y el LME no. 
-##| ========================================================
-##| MODELAJE DE ABUNDANCE SIN CEROS ESTRUCTURALES
-##| ========================================================
-##|
-##| En algunos muestreos se introdujeron ceros manualmente
-##| porque se retiró toda la cobertura vegetal (perturbación).
-##|
-##| Estos ceros:
-##|   - No provienen de observaciones "naturales".
-##|   - Representan un estado forzado experimental (ausencia total).
-##|
-##| Por tanto:
-##| ✅ Se pueden incluir en gráficas descriptivas o log-response ratios.
-##| ❌ Pero NO deben incluirse en modelos de tipo GLMM (como Gamma o Tweedie),
-##|    ya que estas distribuciones suponen valores > 0 continuos.
-##|
-##| Solución: Filtrar los ceros antes del ajuste del modelo.
-##|
-##| ========================================================
-##| Filtrar los datos para eliminar ceros estructurales:
-##| 
-
-
- #### GLMM ABUNDANCE ######################################################################
-
-model_abundance <- glmmTMB(
-  abundance ~ treatment + scale(mean_vwc) + (1 | plot),
-  data = arkaute,
-  family = Gamma(link = "log")
+# Global ggplot2 theme
+theme_set(
+  theme_bw() +
+    theme(
+      legend.position    = "right",
+      panel.grid         = element_blank(),
+      strip.background   = element_blank(),
+      strip.text         = element_text(face = "bold"),
+      text               = element_text(size = 11)
+    )
 )
 
-check_overdispersion(model_abundance)
+# =================================================================================
+# 2. Data import & preprocessing
+# =================================================================================
+arkaute <- read.csv("data/arkaute.csv") %>%
+  mutate(
+    year             = factor(year),
+    date             = ymd(date),
+    omw_date         = factor(omw_date),
+    one_month_window = factor(one_month_window),
+    sampling         = factor(sampling),
+    plot             = factor(plot),
+    treatment        = factor(treatment)
+  ) %>%
+  # drop pre-sampling and noisy first sampling for p & wp
+  filter(sampling != "0") %>%
+  filter(!(sampling == "1" & treatment %in% c("p", "wp")))
 
-##| Chequeo de sobredispersión del modelo
-##| --------------------------------------
-##| La función `check_overdispersion()` indica si hay sobredispersión o subdispersión
-##| comparando la varianza observada con la esperada bajo el modelo (en este caso, un GLMM con glmmTMB).
-##|
-##| Resultado:
-##|   - ratio de dispersión = 0.488
-##|   - p-valor < 0.001
-##|
-##| Esto sugiere **subdispersión significativa**, es decir, la varianza observada es 
-##| menor de lo que se esperaría bajo una distribución Poisson (o binomial negativa, si se usara).
-##|
-##| 🔍 Interpretación:
-##|   - La subdispersión no es tan común como la sobredispersión, y puede deberse a:
-##|     - Estructura del diseño muy controlada.
-##|     - Restricciones en la variabilidad (p. ej., efectos de techo o suelo).
-##|     - Errores en la estructura del modelo (por ejemplo, variables predictoras omitidas).
-##|
-##| ⚠️ Implicaciones:
-##|   - La subdispersión puede llevar a **sobreestimar la significación estadística** 
-##|     (es decir, p-valores más bajos de lo que deberían ser).
-##|   - No hay un ajuste directo como en el caso de la sobredispersión (donde pasarías a binomial negativa).
-##|   - Se recomienda ser conservador con las inferencias, y complementar con diagnósticos visuales
-##|     y sensibilidad del modelo.
+arkaute_norm <- read.csv("data/arkaute_norm_all.csv") %>%
+  mutate(
+    year             = factor(year),
+    date             = ymd(date),
+    omw_date         = factor(omw_date),
+    one_month_window = factor(one_month_window),
+    sampling         = factor(sampling),
+    plot             = factor(plot),
+    treatment        = factor(treatment)
+  )
 
-plot(simulateResiduals(model_abundance))
+# =================================================================================
+# 3. Exploratory check: collinearity of mean_vwc and treatment
+# =================================================================================
+# Boxplots
+ggplot(arkaute, aes(treatment, mean_vwc, fill = treatment)) +
+  geom_boxplot(alpha = 0.6) +
+  geom_jitter(width = 0.1, alpha = 0.3) +
+  labs(title = "Soil moisture by treatment",
+       x = "Treatment", y = "mean_vwc")
 
-##| Diagnóstico de residuos con DHARMa para model_abundance
-##| --------------------------------------------------------
-##| Se usó `simulateResiduals()` seguido de `plot()` para evaluar la adecuación del modelo.
-##|
-##| 1. QQ plot (izquierda):
-##|    - La desviación clara respecto a la línea diagonal indica que los residuos simulados
-##|      no siguen la distribución esperada bajo el modelo.
-##|    - KS test: p = 0 → desviación significativa de la uniformidad.
-##|    - Dispersion test: p = 0 → fuerte evidencia de **subdispersión**.
-##|    - Outlier test: p = 0.00024 → posible presencia de outliers importantes.
-##|
-##| 2. Boxplot de residuos por predictores categóricos (derecha):
-##|    - Rojo indica diferencias significativas en la varianza residual entre grupos.
-##|    - Levene Test significativo → violación de la homogeneidad de varianzas.
-##|
-##| ✳️ Conclusión:
-##|    - El modelo presenta **problemas claros de ajuste**: subdispersión, varianza no homogénea
-##|      y residuos no uniformes.
-##|    - Es recomendable revisar:
-##|       • Si hay estructura no modelada (p. ej., variables omitidas).
-##|       • La distribución usada (quizás un modelo `beta` para proporciones o transformación logit).
-##|       • Posibles outliers o errores en los datos (especialmente 0s o >100).
-##|
-##| ⚠️ Sugerencias:
-##|    - Considerar modelar con `beta regression` (`beta_family()` en `glmmTMB`) si los datos están entre 0 y 1.
-##|    - Si hay valores 0 o >1, transformar previamente (p. ej., `(abundance + ε)/(max + 2ε)`) o usar un modelo alternativo como `Tweedie`.
+ggplot(arkaute, aes(plot, mean_vwc)) +
+  geom_boxplot(fill = "lightblue") +
+  labs(title = "Soil moisture by plot",
+       x = "Plot", y = "mean_vwc")
 
+# Linear model R²
+colmod <- lm(mean_vwc ~ treatment, data = arkaute)
+summary(colmod)  # R² ~0.08
 
+# =================================================================================
+# 4. Diagnostic helper functions
+# =================================================================================
 
-model_abundance_tw <- glmmTMB(
-  abundance ~ treatment  + scale(mean_vwc) + (1 | plot),
-  data = arkaute,
+# 4.1 Overdispersion test for nlme::lme
+test_overdispersion_lme <- function(model) {
+  resid_p <- residuals(model, type = "pearson")
+  rdf     <- length(resid_p) - length(fixef(model))
+  chi2    <- sum(resid_p^2)
+  ratio   <- chi2 / rdf
+  p_value <- pchisq(chi2, df = rdf, lower.tail = FALSE)
+  cat("Overdispersion test:\n")
+  cat("  Chi2 =", round(chi2, 2),
+      "on", rdf, "df → dispersion =", round(ratio, 2), "\n")
+  cat("  P =", signif(p_value, 3), "\n")
+}
+
+# 4.2 GLMM diagnostics via DHARMa
+diagnose_glmm <- function(model) {
+  print(summary(model))
+  sim <- simulateResiduals(model)
+  plot(sim)
+  print(testDispersion(sim))
+  invisible(sim)
+}
+
+# 4.3 LME diagnostics: Q–Q, resid vs fit, Levene, manual dispersion
+diagnose_lme <- function(model, data, group_var = "treatment") {
+  # Q–Q plot
+  qqnorm(resid(model, type = "normalized"),
+         main = "Q–Q Plot of Normalized Residuals")
+  qqline(resid(model, type = "normalized"),
+         col = "red", lwd = 2)
+  # Residuals vs fitted
+  plot(fitted(model), resid(model, type = "normalized"),
+       main = "Residuals vs Fitted",
+       xlab = "Fitted values", ylab = "Normalized residuals")
+  abline(h = 0, lty = 2)
+  # Levene’s test for homogeneity
+  rv <- resid(model, type = "normalized")
+  grp <- data[[group_var]]
+  print(car::leveneTest(rv ~ grp))
+  # Manual overdispersion
+  test_overdispersion_lme(model)
+  invisible(NULL)
+}
+
+# =================================================================================
+# 5. Modeling workflow
+#    For each response: GLMM → diagnose_glmm() → emmeans
+#                      LME  → diagnose_lme()  → emmeans
+# =================================================================================
+
+# 5.1 Richness
+glmm_richness <- glmmTMB(
+  richness ~ treatment + scale(mean_vwc) + (1 | plot),
+  data   = arkaute,
+  family = nbinom2(link = "log")
+)
+diagnose_glmm(glmm_richness)
+emmeans(glmm_richness, pairwise ~ treatment)
+
+lme_richness <- lme(
+  richness ~ treatment + scale(mean_vwc),
+  random = ~ 1 | plot,
+  data   = arkaute_norm
+)
+diagnose_lme(lme_richness, arkaute_norm)
+emmeans(lme_richness, pairwise ~ treatment)
+
+# 5.2 Abundance
+# GLMM Gamma
+glmm_abundance <- glmmTMB(
+  abundance ~ treatment * scale(mean_vwc) + (1 | plot),
+  data   = arkaute,
+  family = Gamma(link = "log")
+)
+diagnose_glmm(glmm_abundance)
+
+# GLMM Tweedie
+glmm_abundance_tw <- glmmTMB(
+  abundance ~ treatment + scale(mean_vwc) + (1 | plot),
+  data   = arkaute,
   family = tweedie(link = "log")
 )
+diagnose_glmm(glmm_abundance_tw)
 
-check_overdispersion(model_abundance_tw)
-plot(simulateResiduals(model_abundance_tw))
-
-arkaute <- arkaute %>%
-  mutate(log_abundance = log(abundance + 1))  # +1 evita log(0)
-
-# Modelo GLMM con distribución normal
-model_abundance_log <- glmmTMB(
+# GLMM log(abundance+1)
+arkaute <- arkaute %>% mutate(log_abundance = log(abundance + 1))
+glmm_abundance_log <- glmmTMB(
   log_abundance ~ treatment + scale(mean_vwc) + (1 | plot),
-  data = arkaute,
+  data   = arkaute,
   family = gaussian()
 )
+diagnose_glmm(glmm_abundance_log)
+emmeans(glmm_abundance_log, pairwise ~ treatment, type = "response")
 
-check_overdispersion(model_abundance_log)
-sim_log_abund <- simulateResiduals(model_abundance_log)
-plot(sim_log_abund)
- # no consigo que se ajuste ningún modelo..
+# LME
+lme_abundance <- lme(
+  abundance ~ treatment + scale(mean_vwc),
+  random = ~ 1 | plot,
+  data   = arkaute_norm
+)
+diagnose_lme(lme_abundance, arkaute_norm)
+emmeans(lme_abundance, pairwise ~ treatment)
 
-#### GLMM para eveness ######################################################################
+# 5.3 Evenness (Y_zipf)
+arkaute_Yzipf      <- arkaute %>% filter(!is.na(Y_zipf))
+arkaute_norm_Yzipf <- arkaute_norm %>% filter(!is.na(Y_zipf))
 
-##| Modelo GLMM para Y_zipf (evenness)
-##| -----------------------------------
-##| Se modela el coeficiente gamma del modelo Zipf como proxy de evenness.
-##| Más cercano a 0 = mayor evenness; más negativo = más dominancia.
-##| Se usa distribución normal porque Y_zipf es continuo y ya transformado.
-##| Incluimos:
-##| - `treatment`: efecto fijo de interés.
-##| - `mean_vwc`: covariable centrada/escalada.
-##| - `plot`: efecto aleatorio (estructura jerárquica).
-
-model_evenness <- glmmTMB(
-  Y_zipf ~ treatment +  scale(mean_vwc) + (1 | plot),
-  data = arkaute,
+glmm_evenness <- glmmTMB(
+  Y_zipf ~ treatment + scale(mean_vwc) + (1 | plot),
+  data   = arkaute_Yzipf,
   family = gaussian()
 )
+diagnose_glmm(glmm_evenness)
+emmeans(glmm_evenness, pairwise ~ treatment)
 
-summary(model_evenness)
+lme_evenness <- lme(
+  Y_zipf ~ treatment + scale(mean_vwc),
+  random = ~ 1 | plot,
+  data   = arkaute_norm_Yzipf
+)
+diagnose_lme(lme_evenness, arkaute_norm_Yzipf)
+emmeans(lme_evenness, pairwise ~ treatment)
 
-plot(simulateResiduals(model_evenness))
+# 5.4 Biomass
+arkaute_biomass      <- arkaute %>% filter(!is.na(biomass))
+arkaute_norm_biomass <- arkaute_norm %>% filter(!is.na(biomass))
 
-emmeans(model_evenness, pairwise ~ treatment, type = "response")
-
-## Se confirma LRR para p-c, pero no para wp-c ni p-wp !! Problema?? :((((((((
-
-
-# El modelo no es perfecto pero es válido. 
-
-
-
-### GLMM PARA BIOMASA ##################################################################
-
-model_biomass <- glmmTMB(
+glmm_biomass <- glmmTMB(
   biomass ~ treatment + scale(mean_vwc) + (1 | plot),
-  data = arkaute,
+  data   = arkaute_biomass,
   family = Gamma(link = "log")
 )
+diagnose_glmm(glmm_biomass)
+emmeans(glmm_biomass, pairwise ~ treatment, type = "response")
 
-summary(model_biomass)
+lme_biomass <- lme(
+  biomass ~ treatment + scale(mean_vwc),
+  random = ~ 1 | plot,
+  data   = arkaute_norm_biomass
+)
+diagnose_lme(lme_biomass, arkaute_norm_biomass)
+emmeans(lme_biomass, pairwise ~ treatment)
 
-##| Diagnóstico de residuos
-plot(simulateResiduals(model_biomass))
-
-
-emmeans(model_biomass, pairwise ~ treatment, type = "response")
-
-
-
-### GLMM PARA BIOMASA012 ######################################################################
-
-model_biomass012 <- glmmTMB(
+# 5.5 Biomass012
+glmm_biomass012 <- glmmTMB(
   biomass012 ~ treatment + scale(mean_vwc) + (1 | plot),
-  data = arkaute,
+  data   = arkaute,
   family = Gamma(link = "log")
 )
+diagnose_glmm(glmm_biomass012)
+emmeans(glmm_biomass012, pairwise ~ treatment, type = "response")
 
-summary(model_biomass012)
+lme_biomass012 <- lme(
+  biomass012 ~ treatment + scale(mean_vwc),
+  random = ~ 1 | plot,
+  data   = arkaute_norm
+)
+diagnose_lme(lme_biomass012, arkaute_norm)
+emmeans(lme_biomass012, pairwise ~ treatment)
 
-##| Diagnóstico de residuos
-plot(simulateResiduals(model_biomass012))
+# 5.6 NMDS1
+arkaute_NMDS1      <- arkaute %>% filter(!is.na(NMDS1))
+arkaute_norm_NMDS1 <- arkaute_norm %>% filter(!is.na(NMDS1))
 
-# MOdelo aceptable
-
-emmeans(model_biomass012, pairwise ~ treatment, type = "response")
-# Confirmo resultados LRR entre c-p y wp-p
-
-#### GLMM PARA NMDS1  y NMDS2 ############################################################################
-
-##| Modelo GLMM para NMDS1
-##| -----------------------
-##| NMDS1 es un eje de ordenación, continuo, positivo y con ligera asimetría a la derecha.
-##| Se modela con distribución Gamma y link logarítmico.
-##| Efectos fijos: treatment + mean_vwc (escalado).
-##| Efecto aleatorio: plot (estructura experimental).
-
-model_NMDS1 <- glmmTMB(
+glmm_NMDS1 <- glmmTMB(
   NMDS1 ~ treatment + scale(mean_vwc) + (1 | plot),
-  data = arkaute,
+  data   = arkaute_NMDS1,
   family = Gamma(link = "log")
 )
+diagnose_glmm(glmm_NMDS1)
+emmeans(glmm_NMDS1, pairwise ~ treatment, type = "response")
 
-summary(model_NMDS1)
+lme_NMDS1 <- lme(
+  NMDS1 ~ treatment + scale(mean_vwc),
+  random = ~ 1 | plot,
+  data   = arkaute_norm_NMDS1
+)
+diagnose_lme(lme_NMDS1, arkaute_norm_NMDS1)
+emmeans(lme_NMDS1, pairwise ~ treatment)
 
-##| Diagnóstico de residuos
-plot(simulateResiduals(model_NMDS1))
-emmeans(model_NMDS1, pairwise ~ treatment, type = "response")
+# 5.7 NMDS2
+arkaute_NMDS2      <- arkaute %>% filter(!is.na(NMDS2))
+arkaute_norm_NMDS2 <- arkaute_norm %>% filter(!is.na(NMDS2))
 
-# Confirma LRR difrencias entre p-c pero no ve diferencias entre wp-c. 
-
-
-model_NMDS2 <- glmmTMB(
+glmm_NMDS2 <- glmmTMB(
   NMDS2 ~ treatment + scale(mean_vwc) + (1 | plot),
-  data = arkaute,
+  data   = arkaute_NMDS2,
   family = Gamma(link = "log")
 )
+diagnose_glmm(glmm_NMDS2)
+emmeans(glmm_NMDS2, pairwise ~ treatment, type = "response")
 
-summary(model_NMDS2)
+lme_NMDS2 <- lme(
+  NMDS2 ~ treatment + scale(mean_vwc),
+  random = ~ 1 | plot,
+  data   = arkaute_norm_NMDS2
+)
+diagnose_lme(lme_NMDS2, arkaute_norm_NMDS2)
+emmeans(lme_NMDS2, pairwise ~ treatment)
 
-##| Diagnóstico de residuos
-plot(simulateResiduals(model_NMDS2))
-# Modelo algo limitado. 
-
-emmeans(model_NMDS2, pairwise ~ treatment, type = "response")
-
-## COnfirma diferencias entre c-p y c-wp 
-
-
-#### GLMM PARA PC1 Y PC2 ############################################################################
+# 5.8 PC1
+arkaute_PC1      <- arkaute %>% filter(!is.na(PC1))
+arkaute_norm_PC1 <- arkaute_norm %>% filter(!is.na(PC1))
 
 model_PC1 <- glmmTMB(
   PC1 ~ treatment + scale(mean_vwc) + (1 | plot),
-  data = arkaute,
+  data   = arkaute_PC1,
   family = tweedie(link = "log")
 )
-
-summary(model_PC1)
-##| Diagnóstico de residuos
-plot(simulateResiduals(model_PC1))
-# Modelo muy limitado. 
-
+diagnose_glmm(model_PC1)
 emmeans(model_PC1, pairwise ~ treatment, type = "response")
-# No confirma nada porque no encuentro un modelo que se ajuste bien
 
+lme_PC1 <- lme(
+  PC1 ~ treatment + scale(mean_vwc),
+  random = ~ 1 | plot,
+  data   = arkaute_norm_PC1
+)
+diagnose_lme(lme_PC1, arkaute_norm_PC1)
+emmeans(lme_PC1, pairwise ~ treatment)
+
+# 5.9 PC2
+arkaute_PC2      <- arkaute %>% filter(!is.na(PC2))
+arkaute_norm_PC2 <- arkaute_norm %>% filter(!is.na(PC2))
 
 model_PC2 <- glmmTMB(
   PC2 ~ treatment + scale(mean_vwc) + (1 | plot),
-  data = arkaute,
+  data   = arkaute_PC2,
   family = tweedie(link = "log")
 )
-
-
-summary(model_PC2)
-##| Diagnóstico de residuos
-plot(simulateResiduals(model_PC2))
-# Modelo  limitado.
-
+diagnose_glmm(model_PC2)
 emmeans(model_PC2, pairwise ~ treatment, type = "response")
-# Confirma LRR differences c-p y c-wp
 
+lme_PC2 <- lme(
+  PC2 ~ treatment + scale(mean_vwc),
+  random = ~ 1 | plot,
+  data   = arkaute_norm_PC2
+)
+diagnose_lme(lme_PC2, arkaute_norm_PC2)
+emmeans(lme_PC2, pairwise ~ treatment)
 
+# =================================================================================
+# End of script
+# =================================================================================
 
-
-
-
-
-
-
-
-
-
-
-
-## GLMM en base a tiempo?
-
-model_richness_time <- glmmTMB(richness ~ treatment * sampling + scale(mean_vwc) + (1 | plot),
-                    data = arkaute,
-                    family = nbinom2(link = "log"))
-
-
-
-
-summary(model_richness_time)
-##| Diagnóstico de residuos
-plot(simulateResiduals(model_richness_time))
-# Modelo  limitado.
-
-emmeans(model_richness_time, pairwise ~ treatment, type = "response")
-# Confirma LRR differences c-p y c-wp
