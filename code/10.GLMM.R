@@ -92,37 +92,55 @@ test_overdispersion_lme <- function(model) {
   p_value <- pchisq(chi2, df = rdf, lower.tail = FALSE)
   cat("Overdispersion test:\n")
   cat("  Chi2 =", round(chi2, 2),
-      "on", rdf, "df → dispersion =", round(ratio, 2), "\n")
-  cat("  P =", signif(p_value, 3), "\n")
+      " on", rdf, "df → dispersion =", round(ratio, 2), "\n")
+  cat("  P =", signif(p_value, 3), "\n\n")
 }
 
-# 4.2 GLMM diagnostics via DHARMa
-diagnose_glmm <- function(model) {
+# 4.2 GLMM diagnostics via DHARMa (including heteroscedasticity)
+diagnose_glmm <- function(model, data = NULL, group_var = NULL) {
+  # 1) Summary
   print(summary(model))
-  sim <- simulateResiduals(model)
+  # 2) Simulate
+  sim <- DHARMa::simulateResiduals(fittedModel = model)
+  # 3) DHARMa standard plots
   plot(sim)
-  print(testDispersion(sim))
+  # 4) Dispersion
+  print(DHARMa::testDispersion(sim))
+  
+  # 5) Heteroscedasticity via Levene on scaled residuals
+  if (!is.null(data) && !is.null(group_var)) {
+    grp  <- data[[group_var]]
+    # extract the scaled (uniform) residuals
+    resu <- sim$scaledResiduals
+    cat("Levene test on DHARMa residuals by", group_var, ":\n")
+    print(car::leveneTest(resu ~ grp))
+    # also plot residuals vs group
+    plotResiduals(sim, form = grp)
+  }
+  
   invisible(sim)
 }
 
-# 4.3 LME diagnostics: Q–Q, resid vs fit, Levene, manual dispersion
+# 4.3 LME diagnostics: Q–Q, resid vs. fitted, Levene, manual dispersion
 diagnose_lme <- function(model, data, group_var = "treatment") {
-  # Q–Q plot
-  qqnorm(resid(model, type = "normalized"),
-         main = "Q–Q Plot of Normalized Residuals")
-  qqline(resid(model, type = "normalized"),
-         col = "red", lwd = 2)
-  # Residuals vs fitted
+  # Q–Q plot of normalized residuals
+  qqnorm(resid(model, type = "normalized"), main = "Q–Q Plot of Normalized Residuals")
+  qqline(resid(model, type = "normalized"), col = "red", lwd = 2)
+  
+  # Residuals vs. fitted
   plot(fitted(model), resid(model, type = "normalized"),
        main = "Residuals vs Fitted",
        xlab = "Fitted values", ylab = "Normalized residuals")
   abline(h = 0, lty = 2)
+  
   # Levene’s test for homogeneity
-  rv <- resid(model, type = "normalized")
+  rv  <- resid(model, type = "normalized")
   grp <- data[[group_var]]
   print(car::leveneTest(rv ~ grp))
+  
   # Manual overdispersion
   test_overdispersion_lme(model)
+  
   invisible(NULL)
 }
 
@@ -138,7 +156,14 @@ glmm_richness <- glmmTMB(
   data   = arkaute,
   family = nbinom2(link = "log")
 )
-diagnose_glmm(glmm_richness)
+
+diagnose_glmm(
+  glmm_richness,
+  data      = arkaute,
+  group_var = "treatment"
+)
+
+
 emmeans(glmm_richness, pairwise ~ treatment)
 
 lme_richness <- lme(
@@ -149,6 +174,14 @@ lme_richness <- lme(
 diagnose_lme(lme_richness, arkaute_norm)
 emmeans(lme_richness, pairwise ~ treatment)
 
+lme_richness <- lme(
+  richness ~ treatment + scale(mean_vwc),
+  random = ~ 1 | plot,
+  data   = arkaute
+)
+diagnose_lme(lme_richness, arkaute)
+emmeans(lme_richness, pairwise ~ treatment)
+
 # 5.2 Abundance
 # GLMM Gamma
 glmm_abundance <- glmmTMB(
@@ -156,7 +189,12 @@ glmm_abundance <- glmmTMB(
   data   = arkaute,
   family = Gamma(link = "log")
 )
-diagnose_glmm(glmm_abundance)
+
+diagnose_glmm(
+  glmm_abundance,
+  data      = arkaute,
+  group_var = "treatment"
+)
 
 # GLMM Tweedie
 glmm_abundance_tw <- glmmTMB(
@@ -164,7 +202,11 @@ glmm_abundance_tw <- glmmTMB(
   data   = arkaute,
   family = tweedie(link = "log")
 )
-diagnose_glmm(glmm_abundance_tw)
+diagnose_glmm(
+  glmm_abundance_tw,
+  data      = arkaute,
+  group_var = "treatment"
+)
 
 # GLMM log(abundance+1)
 arkaute <- arkaute %>% mutate(log_abundance = log(abundance + 1))
@@ -173,7 +215,13 @@ glmm_abundance_log <- glmmTMB(
   data   = arkaute,
   family = gaussian()
 )
-diagnose_glmm(glmm_abundance_log)
+
+diagnose_glmm(
+  glmm_abundance_log,
+  data      = arkaute,
+  group_var = "treatment"
+)
+
 emmeans(glmm_abundance_log, pairwise ~ treatment, type = "response")
 
 # LME
@@ -183,7 +231,20 @@ lme_abundance <- lme(
   data   = arkaute_norm
 )
 diagnose_lme(lme_abundance, arkaute_norm)
+summary(lme_abundance)
 emmeans(lme_abundance, pairwise ~ treatment)
+
+
+lme_abund_varPower <- lme(
+  abundance ~ treatment + scale(mean_vwc),
+  random  = ~ 1 | plot,
+  data    = arkaute,
+  weights = varPower(form = ~ fitted(.))      # variance ∝ |fitted|^(2*power)
+)
+diagnose_lme(lme_abund_varPower, arkaute)
+summary(lme_abund_varPower)
+emmeans(lme_abund_varPower, pairwise ~ treatment)
+
 
 # 5.3 Evenness (Y_zipf)
 arkaute_Yzipf      <- arkaute %>% filter(!is.na(Y_zipf))
@@ -194,7 +255,12 @@ glmm_evenness <- glmmTMB(
   data   = arkaute_Yzipf,
   family = gaussian()
 )
-diagnose_glmm(glmm_evenness)
+diagnose_glmm(
+  glmm_evenness,
+  data      = arkaute_Yzipf,
+  group_var = "treatment"
+)
+summary(glmm_evenness)
 emmeans(glmm_evenness, pairwise ~ treatment)
 
 lme_evenness <- lme(
@@ -203,7 +269,19 @@ lme_evenness <- lme(
   data   = arkaute_norm_Yzipf
 )
 diagnose_lme(lme_evenness, arkaute_norm_Yzipf)
+summary(lme_evenness)
 emmeans(lme_evenness, pairwise ~ treatment)
+
+
+lme_evenness_varPower <- lme(
+  Y_zipf ~ treatment + scale(mean_vwc),
+  random  = ~ 1 | plot,
+  data    = arkaute_Yzipf,
+  weights = varPower(form = ~ fitted(.))
+)
+diagnose_lme(lme_evenness_varPower, arkaute_norm_Yzipf)
+summary(lme_evenness_varPower)
+emmeans(lme_evenness_varPower, pairwise ~ treatment)
 
 # 5.4 Biomass
 arkaute_biomass      <- arkaute %>% filter(!is.na(biomass))
@@ -214,7 +292,13 @@ glmm_biomass <- glmmTMB(
   data   = arkaute_biomass,
   family = Gamma(link = "log")
 )
-diagnose_glmm(glmm_biomass)
+
+diagnose_glmm(
+  glmm_biomass,
+  data      = arkaute_biomass,
+  group_var = "treatment"
+)
+summary(glmm_biomass)
 emmeans(glmm_biomass, pairwise ~ treatment, type = "response")
 
 lme_biomass <- lme(
@@ -223,15 +307,22 @@ lme_biomass <- lme(
   data   = arkaute_norm_biomass
 )
 diagnose_lme(lme_biomass, arkaute_norm_biomass)
+summary(lme_biomass)
 emmeans(lme_biomass, pairwise ~ treatment)
 
 # 5.5 Biomass012
+
 glmm_biomass012 <- glmmTMB(
   biomass012 ~ treatment + scale(mean_vwc) + (1 | plot),
   data   = arkaute,
   family = Gamma(link = "log")
 )
-diagnose_glmm(glmm_biomass012)
+
+diagnose_glmm(
+  glmm_biomass012,
+  data      = arkaute,
+  group_var = "treatment"
+)
 emmeans(glmm_biomass012, pairwise ~ treatment, type = "response")
 
 lme_biomass012 <- lme(
@@ -251,7 +342,12 @@ glmm_NMDS1 <- glmmTMB(
   data   = arkaute_NMDS1,
   family = Gamma(link = "log")
 )
-diagnose_glmm(glmm_NMDS1)
+
+diagnose_glmm(
+  glmm_NMDS1,
+  data      = arkaute_NMDS1,
+  group_var = "treatment"
+)
 emmeans(glmm_NMDS1, pairwise ~ treatment, type = "response")
 
 lme_NMDS1 <- lme(
@@ -271,7 +367,11 @@ glmm_NMDS2 <- glmmTMB(
   data   = arkaute_NMDS2,
   family = Gamma(link = "log")
 )
-diagnose_glmm(glmm_NMDS2)
+diagnose_glmm(
+  glmm_NMDS2,
+  data      = arkaute_NMDS2,
+  group_var = "treatment"
+)
 emmeans(glmm_NMDS2, pairwise ~ treatment, type = "response")
 
 lme_NMDS2 <- lme(
@@ -286,13 +386,17 @@ emmeans(lme_NMDS2, pairwise ~ treatment)
 arkaute_PC1      <- arkaute %>% filter(!is.na(PC1))
 arkaute_norm_PC1 <- arkaute_norm %>% filter(!is.na(PC1))
 
-model_PC1 <- glmmTMB(
+glmm_PC1 <- glmmTMB(
   PC1 ~ treatment + scale(mean_vwc) + (1 | plot),
   data   = arkaute_PC1,
   family = tweedie(link = "log")
 )
-diagnose_glmm(model_PC1)
-emmeans(model_PC1, pairwise ~ treatment, type = "response")
+diagnose_glmm(
+  glmm_PC1,
+  data      = arkaute_PC1,
+  group_var = "treatment"
+)
+emmeans(glmm_PC1, pairwise ~ treatment, type = "response")
 
 lme_PC1 <- lme(
   PC1 ~ treatment + scale(mean_vwc),
@@ -306,13 +410,17 @@ emmeans(lme_PC1, pairwise ~ treatment)
 arkaute_PC2      <- arkaute %>% filter(!is.na(PC2))
 arkaute_norm_PC2 <- arkaute_norm %>% filter(!is.na(PC2))
 
-model_PC2 <- glmmTMB(
+glmm_PC2 <- glmmTMB(
   PC2 ~ treatment + scale(mean_vwc) + (1 | plot),
   data   = arkaute_PC2,
   family = tweedie(link = "log")
 )
-diagnose_glmm(model_PC2)
-emmeans(model_PC2, pairwise ~ treatment, type = "response")
+diagnose_glmm(
+  glmm_PC2,
+  data      = arkaute_PC2,
+  group_var = "treatment"
+)
+emmeans(glmm_PC2, pairwise ~ treatment, type = "response")
 
 lme_PC2 <- lme(
   PC2 ~ treatment + scale(mean_vwc),
