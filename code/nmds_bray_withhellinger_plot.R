@@ -37,7 +37,10 @@ vecs_plot <- scores(
 
 # 4. Preparar data.frame de coordinates
 nmds_df_plot <- as_tibble(nmds_plot$points) %>%
-  rename(NMDS1 = MDS1, NMDS2 = MDS2, NMDS3 = MDS3) %>%
+  rename(NMDS1 = MDS1,
+         NMDS2 = MDS2,
+         NMDS3 = MDS3
+         ) %>%
   mutate(
     treatment = sp_wide_plot$treatment,
     sampling  = sp_wide_plot$sampling,

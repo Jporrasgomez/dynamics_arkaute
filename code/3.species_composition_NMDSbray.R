@@ -448,11 +448,10 @@ print(explained_NMDS2 <- (cor2^2 / (cor1^2 + cor2^2 + cor3^2)) * 100)
 print(explained_NMDS3 <- (cor3^2 / (cor1^2 + cor2^2 + cor3^2)) * 100)
 
 
-
 {ggNMDS12_allplots <-
   ggplot(nmds_df_plot, aes(x = NMDS1, y = NMDS2, color = treatment)) +
   stat_ellipse(geom = "polygon", aes(fill = treatment),
-               alpha = 0.1, show.legend = FALSE, level = 0.68) + 
+               alpha = 0.1, show.legend = FALSE, level = 0.95) + 
   geom_point(size = 1.5, aes(shape= treatment)) +
   geom_hline(yintercept = 0, color = "gray52", linetype = "dashed") +
   geom_vline(xintercept = 0, color = "gray52", linetype = "dashed") +
@@ -467,7 +466,6 @@ print(explained_NMDS3 <- (cor3^2 / (cor1^2 + cor2^2 + cor3^2)) * 100)
 print(ggNMDS12_allplots)
 #ggsave("results/Plots/protofinal/species_composition_plot.png", plot = ggNMDS12_allplots, dpi = 300)
 }
-
 
 
 ## Diferences between treatments? 
@@ -504,9 +502,6 @@ pw_adonis <- pairwise.adonis(
 
 print(pw_adonis)
 
-# NMDS con distancias hellinger
-source("code/nmds_bray_withhellinger_plot.R")
-
 
 ggNMDS13_allplots <-
   ggplot(nmds_df_plot, aes(x = NMDS1, y = NMDS3, color = treatment)) +
@@ -542,6 +537,8 @@ ggNMDS23_allplots<-
   # Print the plot
 
 
+# NMDS con distancias hellinger
+source("code/nmds_bray_withhellinger_plot.R")
 
 
 

@@ -73,10 +73,11 @@ labels_variables <- c(
   "biomass012" = "Biomass",
   "NMDS1" = "SC1",
   "NMDS2" = "SC2",
-  "PC1" = "CWM1", 
-  "PC2" = "CWM2")
+  "PC1" = "FT1", 
+  "PC2" = "FT2")
 
-
+limits_variables <- rev(limits_variables)
+labels_variables <- rev(labels_variables)
 
 
 
@@ -121,6 +122,47 @@ print(gg_RR_c)
 
 #ggsave("results/Plots/protofinal/1.treatment_effects_SIBECOL.png", plot = gg_RR_c, dpi = 300)
 }
+
+
+{gg_RR_c <- 
+    RR_c %>% 
+    filter(variable != "biomass") %>% 
+    mutate(
+      RR    = if_else(variable == "Y_zipf", -1 * RR,    RR), 
+      se_RR = if_else(variable == "Y_zipf", -1 * se_RR, se_RR)
+    ) %>% 
+    ggplot(aes(y = variable, x = RR, color = RR_descriptor)) + 
+    geom_vline(xintercept = 0, linetype = "dashed", color = "#12D08C", linewidth = 0.9) +
+    geom_errorbar(
+      aes(xmin = RR - z * se_RR,
+          xmax = RR + z * se_RR),
+      linewidth = 0.9,
+      position = position_dodge(width = 0.3),
+      width = 0.2
+    ) +  
+    geom_point(position = position_dodge(width = 0.3), size = 2.5) + 
+    scale_color_manual(values = palette_RR_CB, labels = labels_RR2) +
+    scale_y_discrete(
+      limits = limits_variables,
+      labels = labels_variables
+    ) +
+    labs(x = "Log Response Ratio", y = NULL) +
+    theme(
+      panel.grid      = element_blank(),
+      strip.background = element_blank(),
+      strip.text      = element_text(face = "bold"),
+      text            = element_text(size = 13),
+      legend.position = "none",
+      axis.text.y     = element_text(face = "bold",
+                                     angle = 90,
+                                     hjust = 0.5)
+    )
+  
+  print(gg_RR_c)
+  
+  ggsave("results/Plots/protofinal/1.treatment_effects_vertical.png", plot = gg_RR_c, dpi = 300)
+}
+
 
 {gg_RR_c <- 
     RR_c %>% 
