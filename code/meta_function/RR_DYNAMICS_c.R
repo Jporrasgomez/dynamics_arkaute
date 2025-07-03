@@ -4,7 +4,8 @@
 
 RR_dynamics_c <- function(data, variable){
   
-
+palette <- palette_RR_CB
+  
   effect <- data %>% 
     select(date, sampling, treatment, mean, sd) %>% 
     distinct()
@@ -115,7 +116,7 @@ RR_dynamics_c <- function(data, variable){
                       color = RR_descriptor), alpha = 0.5) +
     geom_point(aes(color = RR_descriptor)) + 
     geom_line(aes(color = RR_descriptor)) +
-    scale_color_manual(values = palette_RR) +
+    scale_color_manual(values = palette) +
     geom_hline( yintercept= 0, linetype = "dashed", color = "gray40") +
     geom_vline(xintercept = as.Date("2023-05-11"), linetype = "dashed", color = "gray40") +
     labs(x = NULL, y = paste0("RR ", ytitle)) +
@@ -131,7 +132,7 @@ RR_dynamics_c <- function(data, variable){
                       color = RR_descriptor), alpha = 0.5) +
     geom_point(aes(color = RR_descriptor)) + 
     geom_line(aes(color = RR_descriptor)) +
-    scale_color_manual(values = palette_RR) +
+    scale_color_manual(values = palette) +
     geom_hline( yintercept= 0, linetype = "dashed", color = "gray40") +
     geom_vline(xintercept = as.Date("2023-05-11"), linetype = "dashed", color = "gray40") +
     labs(x = NULL, y = paste0("delta-RR ", ytitle)) +
@@ -147,7 +148,7 @@ RR_dynamics_c <- function(data, variable){
                       color = RR_descriptor), alpha = 0.5) +
     geom_point(aes(color = RR_descriptor)) + 
     geom_line(aes(color = RR_descriptor)) +
-    scale_color_manual(values = palette_RR) +
+    scale_color_manual(values = palette) +
     geom_hline( yintercept= 0, linetype = "dashed", color = "gray40") +
     geom_vline(xintercept = as.Date("2023-05-11"), linetype = "dashed", color = "gray40") +
     labs(x = NULL, y = paste0("sigma-RR ", ytitle)) +

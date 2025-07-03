@@ -35,7 +35,7 @@ arkaute_norm <- read.csv("data/arkaute_norm.csv") %>%
 
 source("code/palettes_labels.R")
 
-palette <- palette5
+palette <- palette_CB
 labels <- labels3
 
 
@@ -102,7 +102,6 @@ RR_whole <- rbind(RR_data, RR_data_wp) %>%
   mutate(variable = as.factor(variable)) %>% 
   mutate(
     delta_RR = if_else(variable == "Y_zipf", -1 * delta_RR, delta_RR),         ## To make evenness data easily interpretable
-    se_delta_RR = if_else(variable == "Y_zipf", -1 * se_delta_RR, se_delta_RR),## To make evenness data easily interpretable
     
     
     variable = fct_recode(variable,
@@ -133,12 +132,29 @@ RR_whole <- rbind(RR_data, RR_data_wp) %>%
     lower_limit = delta_RR - se_delta_RR * 1.96
   ) %>% 
     mutate(
-      null_effect = ifelse(lower_limit <= 0 & upper_limit >= 0, "YES","NO")  # Which lines have a nule effect? this is: which lines cross the 0? 
+      null_effect = ifelse(lower_limit <= 0 & upper_limit >= 0, "YES","NO"))  # Which lines have a nule effect? this is: which lines cross the 0? 
+    
+    
+Variables <-  c("Richness","Cover","Evenness","Biomass*","Biomass","SC1","SC2","FT1", "FT2")
+scales_data <- list()
+for(i in seq_along(variables)){
+  
+  scale_i <- RR_whole %>% 
+    filter(variable == Variables[i]) %>% 
+    mutate(
+      scale = (max(abs(upper_limit)) + max(abs(lower_limit)))/100
     )
+  
+  scales_data[[i]] <- scale_i
+  
+}
+
+RR_whole <- do.call(rbind, scales_data)
 
   
-  
  
+
+
 
 
 {gg_dynamics <- RR_whole %>% 
@@ -152,12 +168,14 @@ ggplot(aes(x = date, y = delta_RR)) +
   geom_hline(yintercept= 0, linetype = "dashed",
              #color = "#12D08C",
              color = "gray25",
-             linewidth = 0.7) +
+             linewidth = 0.5) +
   geom_vline(xintercept = as.Date("2023-05-11"), linetype = "dashed", color = "gray40", linewidth = 0.7) +
   geom_errorbar(aes(ymin = lower_limit,
                     ymax = upper_limit,
                     color = RR_descriptor), alpha = 0.5, linewidth = 0.7) +
   geom_point(aes(color = RR_descriptor), size = 1.1) + 
+    
+    
     scale_y_continuous(
       breaks = scales::breaks_pretty(n = 3)
    #   labels = function(y) round((exp(y) - 1) * 100, 0)
@@ -174,34 +192,56 @@ ggplot(aes(x = date, y = delta_RR)) +
       legend.position = "none"
     )
 print(gg_dynamics)
-#ggsave("results/Plots/protofinal/2.dynamics.png", plot = gg_dynamics, dpi = 300)
+ggsave("results/Plots/protofinal/2.dynamics.png", plot = gg_dynamics, dpi = 300)
+#saveRDS(gg_dynamics, file = "results/plots/gg_dynamics_wp.rds")
 }
 
-sibecol1 <- c("Richness", "Cover", "Evenness")
-sibecol2 <- c("Biomass", "SC1", "FT1")
 
 {gg_dynamics_wp <- RR_whole %>% 
     filter(RR_descriptor %in% c("wp_vs_p")) %>% 
     filter(!variable == "Biomass*") %>% 
-    filter(variable == "Richness") %>% 
+    #filter(variable == "Richness") %>% 
     #filter(variable %in% sibecol1) %>% 
 ggplot(aes(x = date, y = delta_RR)) + 
-  facet_grid(variable ~ RR_descriptor, scales = "free_y",
-             labeller = labeller(
-               RR_descriptor = as_labeller(labels_RR_wp2), 
-             )) +  
+  #facet_grid(variable ~ RR_descriptor, scales = "free_y",
+  #           labeller = labeller(
+  #             RR_descriptor = as_labeller(labels_RR_wp2), 
+  #           )) +  
+    facet_wrap(
+      ~ variable,         
+      ncol      = 2,      
+      scales    = "free_y", 
+      strip.position = "right"
+    ) +
   geom_hline(yintercept= 0, linetype = "dashed", color = "#00CAFF",
-             linewidth = 0.8) +
+             linewidth = 0.5) +
   geom_vline(xintercept = as.Date("2023-05-11"), linetype = "dashed", color = "gray40",
-             linewidth = 0.8)+
+             linewidth = 0.5)+
+    
   geom_errorbar(aes(ymin = lower_limit,
                     ymax = upper_limit,
-                    color = RR_descriptor), alpha = 0.5, linewidth = 0.8) +
-  geom_point(aes(color = RR_descriptor), size = 1.5) + 
+                    color = RR_descriptor), alpha = 0.5, linewidth = 0.5) +
+    
+  geom_point(aes(color = RR_descriptor), size = 1.1) + 
+  
   geom_line(aes(color = RR_descriptor), linewidth = 0.5) +
+    
+    geom_text(
+      aes(
+        x = date,
+        y = lower_limit - 10*scale,     
+        label = ifelse(null_effect == "NO", "*", NA_character_)
+      ),
+      inherit.aes = FALSE,  # heredamos sólo date y color
+      size  = 5,
+      color = wp_CB
+    )  +
   #geom_smooth(method = "lm", aes(color = RR_descriptor, fill = RR_descriptor), alpha = 0.3) +
-  #  scale_y_continuous(
-  #    breaks = scales::breaks_pretty(n = 3))+
+
+    scale_y_continuous(
+      breaks      = scales::pretty_breaks(n = 4),
+      minor_breaks = NULL
+    ) +
   scale_color_manual(values = palette_RR_wp) +
   scale_fill_manual(values = palette_RR_wp) +
     labs(y = "Log Response Ratio") +
@@ -210,11 +250,12 @@ ggplot(aes(x = date, y = delta_RR)) +
       panel.grid = element_blank(),
       strip.background = element_blank(),
       strip.text = element_text(face = "bold"),
-      text = element_text(size = 16),
+      text = element_text(size = 12),
       legend.position = "none"
     )
 print(gg_dynamics_wp)
-#ggsave("results/Plots/protofinal/3.globalchange_dynamics_SIBECOL1.png", plot = gg_dynamics_wp, dpi = 300)
+ggsave("results/Plots/protofinal/3.globalchange_dynamics_wide.png", plot = gg_dynamics_wp, dpi = 300)
+#saveRDS(gg_dynamics_wp, file = "results/plots/gg_dynamics_wp.rds")
 }
 
 

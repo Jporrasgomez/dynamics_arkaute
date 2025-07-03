@@ -3,6 +3,7 @@
 
 RR_dynamics_wp <- function(data, variable){
   
+ 
 
   effect_wp <- data %>% 
     filter(treatment == "wp") %>% 

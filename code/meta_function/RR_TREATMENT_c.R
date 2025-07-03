@@ -104,7 +104,7 @@ gg_RR<-
                     ymax = RR + z * se_RR,
                     color = RR_descriptor), linewidth = 0.5) +
   geom_point(aes(color = RR_descriptor)) + 
-  scale_color_manual(values = palette_RR) +
+  scale_color_manual(values = palette_RR_CB) +
   scale_x_discrete(labels = labels_RR) +
   geom_hline(yintercept = 0, linetype = "dashed", color = "gray40") +
   labs(x = NULL, y = paste0("RR ", ytitle)) +
