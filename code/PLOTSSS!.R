@@ -37,6 +37,7 @@ source("code/meta_function/RR_TREATMENT_wp.R")
 
 variables <- c("richness", "abundance", "Y_zipf", "biomass", "biomass012", "NMDS1", "NMDS2", "PC1", "PC2")
 
+
 ####################### RR DATA ########################
  
 ###   1. Aggregated analysis 
@@ -88,6 +89,9 @@ for(i in seq_along(variables)){
 }
 
 RR_whole_aggregated <- do.call(rbind, scales_data)
+
+
+
     
 
 
@@ -137,16 +141,32 @@ RR_whole_dynamics <- do.call(rbind, scales_data)
     
 
 
-limits_variables <- c(
-  "richness",
-  "abundance",
-  "Y_zipf",
-  #"biomass",
-  "biomass012",
-  "NMDS1",
-  "NMDS2",
-  "PC1",
-  "PC2")
+############### PLOTS ###########################
+
+
+gg_theme <- 
+  theme(
+  panel.grid      = element_blank(),
+  strip.background = element_blank(),
+  strip.text      = element_text(face = "bold"),
+  text            = element_text(size = 11
+                                 ),
+  legend.position = "none",
+  axis.text.y     = element_text(face = "bold",
+                                 angle = 90,
+                                 hjust = 0.5))
+
+
+
+limits_variables <- c("richness",
+                      "abundance",
+                      "Y_zipf",
+                      #"biomass",
+                      "biomass012",
+                      "NMDS1",
+                      "NMDS2",
+                      "PC1",
+                      "PC2")
 labels_variables <- c(
   "richness" = "Richness",
   "abundance" = "Cover",
@@ -159,22 +179,15 @@ labels_variables <- c(
   "PC2" = "FT2")
 
 
-gg_theme <- 
-  theme(
-  panel.grid      = element_blank(),
-  strip.background = element_blank(),
-  strip.text      = element_text(face = "bold"),
-  text            = element_text(size = 13),
-  legend.position = "none",
-  axis.text.y     = element_text(face = "bold",
-                                 angle = 90,
-                                 hjust = 0.5))
 
+# 1. Aggregated analysis
 
 {gg_RR_agg_c <- 
     RR_whole_aggregated %>% 
     filter(RR_descriptor %in% c("p_vs_c", "w_vs_c", "wp_vs_c")) %>% 
     filter(variable != "biomass") %>%
+    mutate(RR_descriptor = factor(RR_descriptor,
+                                  levels = c("p_vs_c", "w_vs_c", "wp_vs_c"))) %>%
     ggplot(aes(y = variable, x = RR, color = RR_descriptor)) + 
     geom_vline(xintercept = 0, linetype = "dashed",
                #color = c_CB,
@@ -222,9 +235,9 @@ gg_theme <-
     geom_errorbar(
       aes(xmin = lower_limit,
           xmax = upper_limit),
-      linewidth = 0.8,
+      linewidth = 0.6,
       position = position_dodge(width = 0.3),
-      width = 0.2
+      width = 0.1
     ) +  
     geom_point(position = position_dodge(width = 0.3), size = 2) + 
     geom_text(
@@ -233,14 +246,14 @@ gg_theme <-
         x = lower_limit - scale/10,     
         label = ifelse(null_effect == "NO", "*", NA_character_),
         color = RR_descriptor,
-        size = 12
+        size = 13
         ))+
     scale_color_manual(values = palette_RR_wp, labels = labels_RR_wp) +
     scale_y_discrete(
       limits = rev(limits_variables),
       labels = labels_variables
     ) +
-    #labs(x = "Log Response Ratio", y = NULL) +
+    labs(x = NULL, y = NULL) +
     gg_theme
     
   
@@ -252,6 +265,156 @@ gg_theme <-
 
 
 
+ # 2. Temporal dynamics analysis
 
+{gg_RR_dynamics_wp <- RR_whole_dynamics %>% 
+    filter(RR_descriptor %in% c("wp_vs_p")) %>% 
+    filter(!variable == "biomass") %>% 
+    mutate(variable = factor(variable, 
+                             levels = limits_variables, 
+                             labels = labels_variables)) %>%
+    ggplot(aes(x = date, y = delta_RR)) + 
+    facet_grid(variable ~ RR_descriptor, scales = "free_y",
+               labeller = labeller(
+                 RR_descriptor = as_labeller(labels_RR_wp2), 
+               )) +  
+    #facet_wrap(
+    #  ~ variable,         
+    #  ncol      = 2,      
+    #  scales    = "free_y", 
+    #  strip.position = "right"
+    #) +
+    geom_hline(yintercept= 0, linetype = "dashed", color = "#00CAFF",
+               linewidth = 0.5) +
+    geom_vline(xintercept = as.Date("2023-05-11"), linetype = "dashed", color = "gray40",
+               linewidth = 0.5)+
+    
+    geom_errorbar(aes(ymin = lower_limit,
+                      ymax = upper_limit,
+                      color = RR_descriptor),
+                  alpha = 0.5,
+                  linewidth = 0.5) +
+    
+    geom_point(aes(color = RR_descriptor), 
+               size = 1.1) + 
+    
+    geom_line(aes(color = RR_descriptor),
+              linewidth = 0.5) +
+    
+    geom_text(
+      aes(
+        x = date,
+        y = lower_limit - 10*scale,     
+        label = ifelse(null_effect == "NO", "*", NA_character_)
+      ),
+      inherit.aes = FALSE,  # heredamos sólo date y color
+      size  = 5,
+      color = wp_CB
+    )  +
+    #geom_smooth(method = "lm", aes(color = RR_descriptor, fill = RR_descriptor), alpha = 0.3) +
+    
+    scale_y_continuous(
+      breaks      = scales::pretty_breaks(n = 2),
+      minor_breaks = NULL
+    ) +
+    scale_color_manual(values = palette_RR_wp) +
+    scale_fill_manual(values = palette_RR_wp) +
+    labs(y = "Log Response Ratio") +
+    gg_theme +
+    theme(
+      strip.text.x       = element_blank()
+    ) + 
+    labs(x = NULL, y = NULL)
+  print(gg_RR_dynamics_wp)
+  #ggsave("results/Plots/protofinal/3.globalchange_dynamics_wide.png", plot = gg_dynamics_wp, dpi = 300)
+  #saveRDS(gg_dynamics_wp, file = "results/plots/gg_dynamics_wp.rds")
+}
+
+
+
+
+
+{gg_RR_dynamics <- 
+    RR_whole_dynamics %>% 
+    filter(RR_descriptor %in% c("w_vs_c", "p_vs_c", "wp_vs_c")) %>% 
+    filter(variable != "biomass") %>% 
+    # 1) re-defino el factor con el orden deseado:
+    mutate(
+      RR_descriptor = factor(RR_descriptor, 
+                             levels = c("wp_vs_c", "w_vs_c", "p_vs_c")),
+      variable = factor(variable, 
+                        levels = limits_variables, 
+                        labels = labels_variables)
+    ) %>%
+    ggplot(aes(x = date, y = delta_RR, color = RR_descriptor, group = RR_descriptor)) + 
+    
+    facet_grid(
+      variable ~ RR_descriptor, 
+      scales = "free_y",
+      labeller = labeller(RR_descriptor = as_labeller(labels_RR2))
+    ) +  
+    
+    geom_hline(yintercept=0, linetype="dashed", color="gray25", linewidth=0.5) +
+    geom_vline(xintercept=as.Date("2023-05-11"), linetype="dashed",
+               color="gray40", linewidth=0.7) +
+    
+    geom_errorbar(aes(ymin=lower_limit, ymax=upper_limit),
+                  position=position_dodge2(width=0.7, preserve="single"),
+                  width=0.2, alpha=0.5, linewidth=0.5) +
+    geom_point(position=position_dodge2(width=0.7, preserve="single"),
+               size=1.1) +
+    geom_line(linewidth=0.5) +
+    
+    geom_text(aes(
+      x = date,
+      y = lower_limit - 10*scale,
+      label = ifelse(null_effect=="NO", "*", NA_character_)
+    ),
+    position = position_dodge2(width=0.7, preserve="single"),
+    size = 5, show.legend = FALSE
+    ) +
+    
+    scale_color_manual(values = palette_RR_CB) +
+    scale_y_continuous(breaks = scales::breaks_pretty(n = 2)) +
+    labs(x = NULL, y = "Log Response Ratio") +
+    gg_theme +
+    theme(strip.text.x = element_blank()) + 
+    labs(x = NULL, y = NULL)
+  
+  print(gg_RR_dynamics)
+  #ggsave("results/Plots/protofinal/2.dynamics.png", plot = gg_dynamics, dpi = 300)
+  #saveRDS(gg_dynamics, file = "results/plots/gg_dynamics_wp.rds")
+}
+
+
+
+
+
+
+
+gg_Warming_Effect <- 
+  ggarrange(
+    gg_RR_agg_wp   + theme(plot.margin = margin(5,5,5,5)),   # margen uniforme
+    gg_RR_dynamics_wp + theme(plot.margin = margin(5,5,5,5)),
+    labels   = c("A","B"),
+    ncol     = 2, 
+    widths   = c(1, 2)    # A ocupará 1/(1+2)=1/3 del ancho, B 2/3
+  )
+print(gg_Warming_Effect)
+ggsave("results/Plots/protofinal/1.Warming_Effect.png", plot = gg_Warming_Effect, dpi = 300)
+
+
+
+
+gg_Results <- 
+  ggarrange(
+    gg_RR_agg_c   + theme(plot.margin = margin(5,5,5,5)),   # margen uniforme
+    gg_RR_dynamics + theme(plot.margin = margin(5,5,5,5)),
+    labels   = c("A","B"),
+    ncol     = 2, 
+    widths   = c(1, 3)    # A ocupará 1/(1+2)=1/3 del ancho, B 2/3
+  )
+print(gg_Results)
+ggsave("results/Plots/protofinal/1.Results.png", plot = gg_Results, dpi = 300)
 
 
