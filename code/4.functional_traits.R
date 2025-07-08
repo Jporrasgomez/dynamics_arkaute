@@ -436,7 +436,74 @@ ggplot(pca_sampling, aes(x = PC1, y = PC2, color = treatment, shape = treatment)
 print(gg_cwm_sampling)
 #ggsave("results/Plots/protofinal/FT_cwm_sampling.png", plot = gg_cwm_sampling, dpi = 300)
 
-}
+  }
+
+##############################################################################
+# Functional-trait PERMANOVA workflow on retained principal components (PCs) #
+##############################################################################
+
+# 1. Select the minimum number of PCs that together explain ≥ 80 % of variance
+# ---------------------------------------------------------------------------
+var_exp   <- (pca_sampling0$sdev^2) / sum(pca_sampling0$sdev^2)  # variance explained by each PC
+cum_var   <- cumsum(var_exp)                                     # cumulative variance curve
+k_retener <- which(cum_var >= 0.80)[1]      # first index at or above 80 %
+print(k_retener)
+
+inclu# 2. Build a scores data frame and add the treatment factor
+# ---------------------------------------------------------
+pc_scores <- as.data.frame(pca_sampling0$x[, 1:k_retener])       # PC coordinates for each sample
+pc_scores$treatment <- cwm_sampling$treatment                    # metadata: treatment as factor
+
+# 3. PERMANOVA on a Euclidean distance matrix of the retained PCs
+# ---------------------------------------------------------------
+dist_pc <- vegan::vegdist(pc_scores[, 1:k_retener], method = "euclidean")  # distance matrix
+adonis_pc <- adonis2(                                                      # permutation MANOVA
+  dist_pc ~ treatment,
+  data         = pc_scores,
+  permutations = 999,
+  method       = "euclidean"
+)
+print(adonis_pc)  # F-ratio, R² and p-value for the treatment effect
+
+# 4. Test homogeneity of dispersions (beta diversity) among treatments
+# --------------------------------------------------------------------
+bd_pc <- betadisper(dist_pc, pc_scores$treatment)  # distances to group centroids
+anova(bd_pc)                                       # permutational ANOVA for dispersion
+TukeyHSD(bd_pc)                                    # pairwise dispersion differences
+
+# 5. Pairwise PERMANOVA contrasts with Benjamini–Hochberg p-adjustment
+# --------------------------------------------------------------------
+library(pairwiseAdonis)
+pw_pc <- pairwise.adonis(
+  dist_pc,
+  factors    = pc_scores$treatment,
+  perm       = 999,
+  p.adjust.m = "BH"       # controls false-discovery rate
+)
+print(pw_pc)  # F, R², and adjusted p for every treatment pair
+
+# 6. (Optional) Repeat dispersion test using the original cwm_sampling object
+#    – included here only if you want to compare results
+# ---------------------------------------------------------------------------
+beta <- betadisper(dist_pc, cwm_sampling$treatment)
+anova(beta)  # duplicate dispersion test (should match bd_pc)
+plot(beta)   # visual assessment of within-group spread
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
