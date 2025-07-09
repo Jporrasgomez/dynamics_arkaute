@@ -14,8 +14,8 @@ flora_abrich <- read.csv("data/flora_abrich.csv")
 
 
 source("code/palettes_labels.R")
-palette <- palette5
-labels <- labels3
+palette <- palette_CB
+labels <- labels1
 
 
 
@@ -221,7 +221,23 @@ ggsave("results/Plots/protofinal/sorensen_wp.png", plot = gg_sorensen_wp, dpi = 
 
 
 
-sp_wide_sampling <- species_ab_sampling %>%
+
+
+
+##############################################################################
+#### 1. SPECIES COMPOSITION DIFFERENCES AT SAMPLING LEVEL #######################
+##############################################################################
+
+
+########### 1. VISUALIZATION: NMDS ##########################
+
+i = 1
+# 1: no abundance transformation
+# 2: Hellinger transformation of abundance
+
+
+{
+  sp_wide_sampling <- species_ab_sampling %>%
   pivot_wider(id_cols = c(sampling, date, treatment, id),
               names_from = code,
               values_from = abundance,
@@ -233,8 +249,13 @@ sp_wide_sampling <- species_ab_sampling %>%
 abundance_data_sampling <- sp_wide_sampling %>% 
   select(-treatment, -sampling, -date, -id)
 
+# Optional step in which I transform abundance data sampling in Hellinger abundances
+abundance_data_sampling_hellinger <- vegan::decostand(abundance_data_sampling, method = "hellinger")
+
+abundance_list <- list(abundance_data_sampling, abundance_data_sampling_hellinger)
 # Compute Bray-Curtis distance matrix
-distance_matrix_sampling_bc <- vegan::vegdist(abundance_data_sampling, method = "bray")
+
+distance_matrix_sampling_bc <- vegan::vegdist(as.data.frame(abundance_list[[i]]), method = "bray")
 
 # Run NMDS (2 dimensions, 100 tries)
 nmds_bc_sampling <- metaMDS(distance_matrix_sampling_bc, k = 2, trymax = 250, maxit = 999)
@@ -251,36 +272,88 @@ nmds_df_sampling <- data.frame(
 # Arrange by sampling order
 nmds_df_sampling <- nmds_df_sampling %>% arrange(sampling)
 
+
+
+
+# Species arrows visualization
+
+set.seed(123)  # reproducibility for envfit permutations
+fit <- vegan::envfit(nmds_bc_sampling, as.data.frame(abundance_list[[i]]), permutations = 999)
+
+# Extract species scores (vectors) 
+
+sp_scores <- as.data.frame(fit$vectors$arrows) %>%
+  mutate(p = fit$vectors$pvals,
+         R2 = fit$vectors$r,
+         species = rownames(.)) %>%
+  filter(p < 0.05, R2 > 0.15) %>%    # Filter significant and high correlation scores                             
+  mutate(NMDS1 = NMDS1 * R2 * 1.5,     # Scaling arrows
+         NMDS2 = NMDS2 * R2 * 1.5)     # Scaling arrows
+
+
+
+
 # Plot NMDS results using ggplot
 
-{ggnmds_alltreatments <- 
+ggnmds_alltreatments <- 
   ggplot(nmds_df_sampling, aes(x = NMDS1, y = NMDS2, color = treatment)) +
+    
+    
     stat_ellipse(geom = "polygon", aes(fill = treatment),
-                 alpha = 0.25, show.legend = FALSE, level = 0.95) + 
-    geom_point(size = 1.5, aes(shape = treatment), show.legend =T) +
-    #geom_text_repel(aes(label = sampling), max.overlaps = 100, size = 3, show.legend = F) +
+                 alpha = 0.12, show.legend = FALSE, level = 0.95) + 
+    
+    geom_point(size = 1.5, aes(shape = treatment), show.legend = T) +
+    
+    geom_text_repel(aes(label = sampling),
+                    max.overlaps = 3,
+                    size = 3,
+                    show.legend = F) +
     geom_hline(yintercept = 0, color = "gray52", linetype = "dashed") +
-    geom_path(aes(group = treatment), linetype = "dotted", alpha = 1) +
+    
+    geom_path(aes(group = treatment), linewidth = 0.5, alpha = 0.2) +
+    
     geom_vline(xintercept = 0, color = "gray52", linetype = "dashed") +
+  
+    #geom_segment(data = sp_scores,
+    #             aes(x = 0, y = 0, xend = NMDS1, yend = NMDS2),
+    #             arrow = arrow(length = unit(0.1, "cm")),
+    #             colour = "black", 
+    #             alpha = 0.5) +
+    #
+    #geom_text(data = sp_scores,
+    #          aes(x = NMDS1, y = NMDS2, label = species),
+    #          hjust = 0.5, vjust = -0.3, size = 3,
+    #          colour = "black",
+    #          alpha = 0.5)
+   
     scale_color_manual(values = palette_CB, labels = labels, guide = "legend") +
+    
     scale_fill_manual(values = palette_CB, guide = "none" ) +
+    
     scale_shape_manual(values = point_shapes, guide = "none") +
+    
     labs(title = "NMDS Bray-Curtis: mean abundance of species at sampling level",
          subtitle = paste0("Stress = ", round(nmds_bc_sampling$stress, 3)),
          x = "NMDS1", y = "NMDS2", color = " ") +
     theme(
-      axis.title.x = element_blank(),  # Ajusta la distancia aquí
       panel.grid = element_blank(),
       strip.background = element_blank(),
       strip.text = element_text(face = "bold"),
-      text = element_text(size = 16),
+      text = element_text(size = 15),
       legend.position = "bottom"
     )
 
 print(ggnmds_alltreatments)
-#ggsave("results/Plots/protofinal/species_composition_sampling.png", plot = ggnmds_alltreatments, dpi = 300)
+
 }
 
+#ggsave("results/Plots/protofinal/species_composition_sampling.png", plot = ggnmds_alltreatments, dpi = 300)
+
+
+
+
+
+########### 1.2. STATISTICAL ANALYSIS: PERMANOVA ##########################
 
 adonis_sampling <- adonis2(
   distance_matrix_sampling_bc ~ treatment,  # puedes agregar más variables si quieres
@@ -307,8 +380,6 @@ TukeyHSD(bd)
 
 library(pairwiseAdonis)
 
-
-
 # Ejecutamos las comparaciones por pares
 pw_adonis <- pairwise.adonis(
   x           = distance_matrix_sampling_bc,                 # tu matriz de distancias Hellinger–Bray
@@ -319,11 +390,11 @@ pw_adonis <- pairwise.adonis(
 
 print(pw_adonis)
 
-# Print the plot
 
 
-### Codigo con chat gpt transformando distancias a distancias hellinger
-source("code/nmds_bray_withhellinger_sampling.R")
+
+
+
 
 # Chat gpt:
 
@@ -348,41 +419,21 @@ cat("NMDS2 explains:", round(explained_NMDS2, 2), "%\n")
 
 
 
-ggNMDS1_dynamics_sampling <- 
-ggplot(nmds_df_sampling, aes(x = date, y = NMDS1, color = treatment, fill = treatment)) +
-  geom_point(show.legend = TRUE) + 
-  geom_smooth(
-    se = TRUE, aes(color = treatment, fill = treatment),
-    method = "loess", span = 0.9, alpha = 0.1, show.legend = TRUE
-  )+
-  geom_path(aes(group = treatment), show.legend = FALSE) +
-  scale_color_manual(values = palette) +
-  scale_fill_manual(values = palette, guide = "none") +
-  labs(title = "NMDS1 Bray-Curtis: mean abundance at sampling level ",
-       subtitle = paste0("Stress = ", round(nmds_bc_sampling$stress, 3)),
-       x = "Date", y = "NMDS1", color = "Treatment")
-
-
-ggNMDS2_dynamics_sampling <- 
-ggplot(nmds_df_sampling, aes(x = date, y = NMDS2, color = treatment, fill = treatment)) +
-  geom_point(show.legend = TRUE) +  # Hide extra legend from points
-  geom_smooth(
-    se = TRUE, aes(color = treatment, fill = treatment),
-    method = "loess", span = 0.9, alpha = 0.1, show.legend = TRUE # Keep one legend
-  ) +
-  geom_path(aes(group = treatment), show.legend = FALSE) + # Hide extra legend from paths
-  scale_color_manual(values = palette) +
-  scale_fill_manual(values = palette, guide = "none") +  # Hide fill legend
-  labs(title = "NMDS1 Bray-Curtis: mean abundance at sampling level ",
-       subtitle = paste0("Stress = ", round(nmds_bc_sampling$stress, 3)),
-       x = "Date", y = "NMDS2", color = "Treatment")
 
 
 
-########## DIFFERENCES AT TREATMENT x SAMPLING x PLOT level ##
+##############################################################################
+#### 2. SPECIES COMPOSITION DIFFERENCES AT PLOT LEVEL ###########################
+##############################################################################
 
 
-# NMDS for abundance of species at plot level in the same matrix
+####################### 2.1. VISUALIZATION: NMDS ##############################
+
+{i = 1
+# 1: no abundance transformation
+# 2: Hellinger transformation of abundance
+
+
 species_ab_plot <- flora_abrich %>% 
   select(date, code, sampling, plot, treatment, family, genus_level, species_level, abundance_s)
 
@@ -399,10 +450,16 @@ sp_wide_plot <- species_ab_plot %>%
               values_fill = list(abundance = 0)) %>%
   mutate(across(everything(), ~ replace_na(., 0)))
 
+
 abundance_data_plot <- sp_wide_plot %>% select(-treatment, -sampling, -date, -plot)
 
+# Optional step in which I transform abundance data sampling in Hellinger abundances
+abundance_data_plot_hellinger <- vegan::decostand(abundance_data_plot, method = "hellinger")
+
+abundance_plot_list <- list(abundance_data_plot, abundance_data_plot_hellinger)
+
 # Compute Bray-Curtis distance matrix
-distance_matrix_bc_plot <- vegan::vegdist(abundance_data_plot, method = "bray")
+distance_matrix_bc_plot <- vegan::vegdist(as.data.frame(abundance_plot_list[[i]]), method = "bray")
 
 # Run NMDS (2 dimensions, 250 tries)
 # here I expand the dimensions to 3 because stress = 0.23 if k = 2. We acn take a look to NMDS3
@@ -423,11 +480,85 @@ nmds_df_plot <- data.frame(
 )
 
 
-# Arrange by sampling order
+}
 
-min(nmds_df_plot$NMDS1)
-min(nmds_df_plot$NMDS2)
-min(nmds_df_plot$NMDS3)
+# Species arrows visualization
+
+{set.seed(123)  # reproducibility for envfit permutations
+fit_plot <- vegan::envfit(nmds_bc_plot, as.data.frame(abundance_plot_list[[i]]), permutations = 999)
+
+
+sp_scores_plot <- as.data.frame(fit$vectors$arrows) %>%
+  mutate(p = fit_plot$vectors$pvals,
+         R2 = fit_plot$vectors$r,
+         species = rownames(.)) %>%
+  filter(p < 0.05, R2 > 0.15) %>%    # Filter significant and high correlation scores                             
+  mutate(NMDS1 = NMDS1 * R2 * 3,     # Scaling arrows
+         NMDS2 = NMDS2 * R2 * 3)     # Scaling arrows
+
+
+
+ggNMDS12_allplots <-
+  ggplot(nmds_df_plot, aes(x = NMDS1, y = NMDS2, color = treatment)) +
+    
+ 
+  stat_ellipse(geom = "polygon", aes(fill = treatment),
+               alpha = 0.12, show.legend = FALSE, level = 0.95) + 
+  
+    
+  geom_point(size = 1.5, aes(shape= treatment), show.legend = T) +
+    
+  geom_hline(yintercept = 0, color = "gray52", linetype = "dashed") +
+    
+  geom_vline(xintercept = 0, color = "gray52", linetype = "dashed") +
+    
+   # geom_segment(data = sp_scores_plot,
+   #              aes(x = 0, y = 0, xend = NMDS1, yend = NMDS2),
+   #              arrow = arrow(length = unit(0.1, "cm")),
+   #              colour = "black", 
+   #              alpha = 0.5) +
+   # 
+   # geom_text(data = sp_scores_plot,
+   #           aes(x = NMDS1, y = NMDS2, label = species),
+   #           hjust = 0.5, vjust = -0.3, size = 3,
+   #           colour = "black",
+   #           alpha = 0.5) +
+    
+    
+  scale_color_manual(values = palette_CB, labels = labels, guide = "legend") +
+  
+  scale_fill_manual(values = palette_CB, guide = "none" ) +
+  
+  scale_shape_manual(values = point_shapes, guide = "none") +
+    
+    
+  labs(
+    title = "NMDS Bray-Curtis: abundance of species at plot level",
+    subtitle = paste0("Stress = ", round(nmds_bc_plot$stress, 3)),
+    x = "NMDS1", y = "NMDS2", color = "Treatment"
+  ) +
+    theme(
+      panel.grid = element_blank(),
+      strip.background = element_blank(),
+      strip.text = element_text(face = "bold"),
+      text = element_text(size = 15),
+      legend.position = "bottom"
+    )
+print(ggNMDS12_allplots)
+
+}
+
+ggsave("results/Plots/protofinal/species_composition_plot.png", plot = ggNMDS12_allplots, dpi = 300)
+
+
+
+
+
+## Arrange by sampling order
+#
+#min(nmds_df_plot$NMDS1)
+#min(nmds_df_plot$NMDS2)
+#min(nmds_df_plot$NMDS3)
 
 # Changes on NMDS values to avoid pressence of 0 and negative values since log(RR) do not work with those
 
@@ -438,34 +569,8 @@ min(nmds_df_plot$NMDS3)
 #
 #nmds_df_plot %>%  write.csv("data/nmds_df_plot.csv", row.names = F)
 
-cor1 <- cor(distance_matrix_bc_plot, dist(nmds_bc_plot$points[,1]), method = "pearson")
-cor2 <- cor(distance_matrix_bc_plot, dist(nmds_bc_plot$points[,2]), method = "pearson")
-cor3 <- cor(distance_matrix_bc_plot, dist(nmds_bc_plot$points[,3]), method = "pearson")
 
-
-print(explained_NMDS1 <- (cor1^2 / (cor1^2 + cor2^2 + cor3^2)) * 100)
-print(explained_NMDS2 <- (cor2^2 / (cor1^2 + cor2^2 + cor3^2)) * 100)
-print(explained_NMDS3 <- (cor3^2 / (cor1^2 + cor2^2 + cor3^2)) * 100)
-
-
-{ggNMDS12_allplots <-
-  ggplot(nmds_df_plot, aes(x = NMDS1, y = NMDS2, color = treatment)) +
-  stat_ellipse(geom = "polygon", aes(fill = treatment),
-               alpha = 0.1, show.legend = FALSE, level = 0.95) + 
-  geom_point(size = 1.5, aes(shape= treatment)) +
-  geom_hline(yintercept = 0, color = "gray52", linetype = "dashed") +
-  geom_vline(xintercept = 0, color = "gray52", linetype = "dashed") +
-  scale_colour_manual(values = palette_CB) +
-  scale_fill_manual(values = palette_CB) +
-  labs(
-    title = "NMDS Bray-Curtis: abundance of species at plot level",
-    subtitle = paste0("Stress = ", round(nmds_bc_plot$stress, 3)),
-    x = "NMDS1", y = "NMDS2", color = "Treatment"
-  ) +
-  theme(axis.title.x = element_text(size = 12, face = "bold", color = "black", margin = margin(t = 10)))
-print(ggNMDS12_allplots)
-#ggsave("results/Plots/protofinal/species_composition_plot.png", plot = ggNMDS12_allplots, dpi = 300)
-}
+####################### 2.2. STATISTICAL ANALYSIS: PERMANOVA ##############################
 
 
 ## Diferences between treatments? 
@@ -542,7 +647,9 @@ source("code/nmds_bray_withhellinger_plot.R")
 
 
 
-###### DIFFERENCES AT TREATMENT x SAMPLING x PLOT level but with different distance-matrix at sampling level 
+##############################################################################
+#### SPECIES COMPOSITION DIFFERENCES AT PLOT X SAMPLING LEVEL ###########################
+##############################################################################
 
 
 # Initialize a list to store NMDS results

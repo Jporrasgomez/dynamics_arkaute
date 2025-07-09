@@ -603,8 +603,8 @@ ggplot(pca_plot, aes(x = PC1, y = PC2, color = treatment, shape = treatment)) +
                   inherit.aes = FALSE,
                   color = "gray30",
                   max.overlaps = Inf) +
-  scale_color_manual(values = palette5, labels = labels3) +
-  scale_fill_manual(values = palette5) +
+  scale_color_manual(values = palette_CB, labels = labels3) +
+  scale_fill_manual(values = palette_CB) +
   scale_shape_manual(values = point_shapes, labels = labels3) +
   labs(x = paste0("PC1 (", var_explained[1], "%)"),
        y = paste0("PC2 (", var_explained[2], "%)"),
@@ -618,6 +618,61 @@ print(gg_cwm_plot)
 #ggsave("results/Plots/protofinal/FT_cwm_plot.png", plot = gg_cwm_plot, dpi = 300)
 
 }
+
+
+
+
+##############################################################################
+# Functional-trait PERMANOVA workflow on retained principal components (PCs) #
+##############################################################################
+
+# 1. Select the minimum number of PCs that together explain ≥ 80 % of variance
+# ---------------------------------------------------------------------------
+var_exp_plot   <- (pca_plot0$sdev^2) / sum(pca_plot0$sdev^2)  # variance explained by each PC
+cum_var_plot   <- cumsum(var_exp_plot)                                     # cumulative variance curve
+k_retener_plot <- which(cum_var_plot >= 0.80)[1]      # first index at or above 80 %
+print(k_retener_plot)
+
+# 2. Build a scores data frame and add the treatment factor
+# ---------------------------------------------------------
+pc_scores_plot <- as.data.frame(pca_plot0$x[, 1:k_retener_plot])       # PC coordinates for each sample
+pc_scores_plot$treatment <- cwm_plot$treatment                    # metadata: treatment as factor
+
+# 3. PERMANOVA on a Euclidean distance matrix of the retained PCs
+# ---------------------------------------------------------------
+dist_pc_plot <- vegan::vegdist(pc_scores_plot[, 1:k_retener_plot], method = "euclidean")  # distance matrix
+adonis_pc_plot <- adonis2(                                                      # permutation MANOVA
+  dist_pc_plot ~ treatment,
+  data         = pc_scores_plot,
+  permutations = 999,
+  method       = "euclidean"
+)
+print(adonis_pc_plot)  # F-ratio, R² and p-value for the treatment effect
+
+# 4. Test homogeneity of dispersions (beta diversity) among treatments
+# --------------------------------------------------------------------
+bd_pc_plot <- betadisper(dist_pc_plot, pc_scores_plot$treatment)  # distances to group centroids
+anova(bd_pc_plot)                                       # permutational ANOVA for dispersion
+TukeyHSD(bd_pc_plot)                                    # pairwise dispersion differences
+
+# 5. Pairwise PERMANOVA contrasts with Benjamini–Hochberg p-adjustment
+# --------------------------------------------------------------------
+library(pairwiseAdonis)
+pw_pc_plot <- pairwise.adonis(
+  dist_pc_plot,
+  factors    = pc_scores_plot$treatment,
+  perm       = 999,
+  p.adjust.m = "BH"       # controls false-discovery rate
+)
+print(pw_pc_plot)  # F, R², and adjusted p for every treatment pair
+
+# 6. (Optional) Repeat dispersion test using the original cwm_sampling object
+#    – included here only if you want to compare results
+# ---------------------------------------------------------------------------
+beta_plot <- betadisper(dist_pc_plot, cwm_plot$treatment)
+anova(beta_plot)  # duplicate dispersion test (should match bd_pc)
+plot(beta_plot)   # visual assessment of within-group spread
+
 
 
 
@@ -655,7 +710,7 @@ source("code/meta_function/meta_function.R")
 source("code/meta_function/RR_TREATMENT_c.R")
 source("code/meta_function/RR_TREATMENT_wp.R")
 
-palette <- palette5
+palette <- palette_CB
 labels <- labels3
 
 
@@ -694,7 +749,7 @@ RR_c %>%
     width = 0.1
   ) +  
   geom_point(position = position_dodge(width = 0.2)) + 
-  scale_color_manual(values = palette_RR, labels = labels_RR) +
+  scale_color_manual(values = palette_RR_CB, labels = labels_RR) +
   scale_x_discrete(
     limits = trait_levels,
     labels = c(
@@ -715,6 +770,7 @@ ggsave("results/Plots/protofinal/FT_cwm_treatment_effects.png", plot = gg_RR_cwm
 
 {gg_RR_cwm_wp <- 
 RR_wp %>% 
+    filter(RR_descriptor == "wp_vs_p") %>% 
   ## Multiplying by -1 gamma zipf in order to have positive values and being able to read the plots as
   ## evenness
   ggplot(aes(x = variable, y = RR, color = RR_descriptor)) + 
@@ -742,7 +798,8 @@ RR_wp %>%
   labs(x = NULL, y = "RR of CWM mean values at plot level", color = NULL) +
   theme(legend.position = "bottom")
 print(gg_RR_cwm_wp)
-ggsave("results/Plots/protofinal/FT_cwm_globalchange_effects.png", plot = gg_RR_cwm_wp, dpi = 300)}
+#ggsave("results/Plots/protofinal/FT_cwm_globalchange_effects.png", plot = gg_RR_cwm_wp, dpi = 300)
+}
 
 
 
@@ -786,16 +843,18 @@ RR_dyn_c %>%
                     color = RR_descriptor), alpha = 0.5) +
       geom_point(aes(color = RR_descriptor), size = 1.2) + 
       geom_line(aes(color = RR_descriptor)) +
-      scale_color_manual(values = palette_RR) + 
+      scale_color_manual(values = palette_RR_CB) + 
       geom_hline(yintercept= 0, linetype = "dashed", color = "gray40") +
       geom_vline(xintercept = as.Date("2023-05-11"), linetype = "dashed", color = "gray40") +
       theme(legend.position = "none")
 print(gg_cwm_dynamics)
-ggsave("results/Plots/protofinal/FT_cwm_dynamics.png", plot = gg_cwm_dynamics, dpi = 300)}
+#ggsave("results/Plots/protofinal/FT_cwm_dynamics.png", plot = gg_cwm_dynamics, dpi = 300)
+}
 
 
 {gg_cwm_dynamics_wp <- 
 RR_dyn_wp %>% 
+    filter(RR_descriptor == "wp_vs_p") %>% 
   mutate(variable = as.factor(variable)) %>% 
   mutate(
     variable = fct_recode(variable,
@@ -820,8 +879,7 @@ RR_dyn_wp %>%
   geom_vline(xintercept = as.Date("2023-05-11"), linetype = "dashed", color = "gray40") +
   theme(legend.position = "none")
 print(gg_cwm_dynamics_wp)
-ggsave("results/Plots/protofinal/FT_cwm_globalchange_dynamics.png", plot = gg_cwm_dynamics_wp, dpi = 300)}
-    
-    
-    
+#ggsave("results/Plots/protofinal/FT_cwm_globalchange_dynamics.png", plot = gg_cwm_dynamics_wp, dpi = 300)
+}
+
     
