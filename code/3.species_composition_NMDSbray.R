@@ -300,7 +300,7 @@ ggnmds_alltreatments <-
     
     
     stat_ellipse(geom = "polygon", aes(fill = treatment),
-                 alpha = 0.12, show.legend = FALSE, level = 0.95) + 
+                 alpha = 0.12, show.legend = FALSE, level = 0.68) + 
     
     geom_point(size = 1.5, aes(shape = treatment), show.legend = T) +
     
@@ -308,6 +308,7 @@ ggnmds_alltreatments <-
                     max.overlaps = 3,
                     size = 3,
                     show.legend = F) +
+  
     geom_hline(yintercept = 0, color = "gray52", linetype = "dashed") +
     
     geom_path(aes(group = treatment), linewidth = 0.5, alpha = 0.2) +
@@ -332,7 +333,8 @@ ggnmds_alltreatments <-
     
     scale_shape_manual(values = point_shapes, guide = "none") +
     
-    labs(title = "NMDS Bray-Curtis: mean abundance of species at sampling level",
+    labs(
+      #title = "NMDS Bray-Curtis: mean abundance of species at sampling level",
          subtitle = paste0("Stress = ", round(nmds_bc_sampling$stress, 3)),
          x = "NMDS1", y = "NMDS2", color = " ") +
     theme(
@@ -503,7 +505,7 @@ ggNMDS12_allplots <-
     
  
   stat_ellipse(geom = "polygon", aes(fill = treatment),
-               alpha = 0.12, show.legend = FALSE, level = 0.95) + 
+               alpha = 0.12, show.legend = FALSE, level = 0.68) + 
   
     
   geom_point(size = 1.5, aes(shape= treatment), show.legend = T) +
@@ -533,17 +535,17 @@ ggNMDS12_allplots <-
     
     
   labs(
-    title = "NMDS Bray-Curtis: abundance of species at plot level",
+    #title = "NMDS Bray-Curtis: abundance of species at plot level",
     subtitle = paste0("Stress = ", round(nmds_bc_plot$stress, 3)),
     x = "NMDS1", y = "NMDS2", color = "Treatment"
   ) +
-    theme(
-      panel.grid = element_blank(),
-      strip.background = element_blank(),
-      strip.text = element_text(face = "bold"),
-      text = element_text(size = 15),
-      legend.position = "bottom"
-    )
+  theme(
+    panel.grid = element_blank(),
+    strip.background = element_blank(),
+    strip.text = element_text(face = "bold"),
+    text = element_text(size = 15),
+    legend.position = "bottom"
+  )
 print(ggNMDS12_allplots)
 
 }
@@ -701,6 +703,8 @@ nmds_df_1x1sampling <- bind_rows(nmds_list)
 # Merge stress values into NMDS dataframe
 nmds_df_1x1sampling <- left_join(nmds_df_1x1sampling, stress_values, by = "sampling")
 
+nmds_df_1x1sampling <- nmds_df_1x1sampling %>% 
+  mutate(date_sampling = as.factor(date))
 
 # Create NMDS plot with stress values in facet labels
 
@@ -708,28 +712,37 @@ nmds_df_1x1sampling <- left_join(nmds_df_1x1sampling, stress_values, by = "sampl
 {gg_samplings <- 
 ggplot(nmds_df_1x1sampling, aes(x = NMDS1, y = NMDS2, color = treatment, fill = treatment)) +
   #facet_wrap(~ paste0(sampling, " (Stress = ", stress, ")"), ncol = 5, nrow = 5) +
-  facet_wrap(~ sampling, ncol = 5, nrow = 5, scales = "free") + 
+  facet_wrap(~ date_sampling, ncol = 5, nrow = 5, scales = "free") + 
   geom_point(size = 1.5) +
   stat_ellipse(geom = "polygon", aes(fill = treatment),
-               alpha = 0.2, show.legend = FALSE, level = 0.68) +
+               alpha = 0.12, show.legend = FALSE, level = 0.68) +
   geom_hline(aes(yintercept = 0), color = "black", linetype = "dashed") +
   geom_vline(aes(xintercept = 0), color = "black", linetype = "dashed") +
-  scale_colour_manual(values = palette) +
-  scale_fill_manual(values = palette) +
+  scale_colour_manual(values = palette_CB) +
+  scale_fill_manual(values = palette_CB) +
   labs(
     x = "NMDS1",
     y = "NMDS2"
   ) +
+    
+    scale_color_manual(values = palette_CB, labels = labels, guide = "legend") +
+    
+    scale_fill_manual(values = palette_CB, guide = "none" ) +
+    
+    scale_shape_manual(values = point_shapes, guide = "none") +
   theme(
     legend.position = "bottom",
-    strip.text = element_text(size = 10), # Adjust facet label size
-    plot.title = element_text(size = 10),
-    axis.title.x = element_text(size = 10),
-    axis.title.y = element_text(size = 10)
+    strip.text = element_text(size = 9, face = "bold"), # Adjust facet label size
+    plot.title = element_text(size = 12),
+    axis.title.x = element_text(size = 12),
+    axis.title.y = element_text(size = 12),
+    #legend.axis.line = element_text(size = 12)
   ) + 
+  
+
   labs(color = "Treatment")
 
 print(gg_samplings)
-ggsave("results/Plots/protofinal/species_composition_allsamplings.png", plot = gg_samplings, dpi = 300)}
+}
 
-
+ggsave("results/Plots/protofinal/species_composition_allsamplings.png", plot = gg_samplings, dpi = 300)

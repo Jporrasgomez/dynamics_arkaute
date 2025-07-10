@@ -384,6 +384,12 @@ loadings_df$trait <- rownames(loadings_df)
 loadings_df <- loadings_df %>%
   mutate(PC1 = PC1 * 4, PC2 = PC2 * 4)  # scale factor can be adjusted (lenth of arrows)
 
+loadings_df <- loadings_df %>%
+  mutate(trait = recode(trait,
+                        "leafN"     = "Leaf-Nitrogen",
+                        "seed.mass" = "Seed mass",
+                        "vegetation.height" = "Height"
+  ))
 # Explained variance
 eig_values <- pca_sampling0$sdev^2
 var_explained <- round(100 * eig_values / sum(eig_values), 1)
@@ -399,13 +405,16 @@ ggplot(pca_sampling, aes(x = PC1, y = PC2, color = treatment, shape = treatment)
   geom_point(size = 1.5) +
   #geom_text_repel(aes(label = sampling, color = treatment), size = 3, max.overlaps = Inf)  +  # Números de sampling
   stat_ellipse(aes(fill = treatment, color = treatment),
-               alpha = 0.25,
+               alpha = 0.12,
                geom = "polygon",
                level = 0.68,
                type = "norm",
-               linewidth = 0.6) +
+               linewidth = 0.6, 
+               show.legend = F) +
   geom_hline(yintercept = 0, linetype = "dashed", color = "gray50") +
+  
   geom_vline(xintercept = 0, linetype = "dashed", color = "gray50") +
+  
   geom_segment(data = loadings_df,
                aes(x = 0, y = 0, xend = PC1, yend = PC2),
                inherit.aes = FALSE,
@@ -416,21 +425,26 @@ ggplot(pca_sampling, aes(x = PC1, y = PC2, color = treatment, shape = treatment)
                   inherit.aes = FALSE,
                   color = "gray30",
                   max.overlaps = Inf) +
+  
   scale_color_manual(values = palette_CB, labels = labels3) +
+  
   scale_fill_manual(values = palette_CB) +
+  
   scale_shape_manual(values = point_shapes, labels = labels3) +
+  
   labs(x = paste0("PC1 (", var_explained[1], "%)"),
        y = paste0("PC2 (", var_explained[2], "%)"),
-       title = "CWM differences (mean abundance) at sampling level") +
+       #title = "CWM differences at sampling level"
+       ) +
   guides(color = guide_legend(title = NULL),
          shape = guide_legend(title = NULL),
          fill = "none") +
-  theme_test() +
-  theme( # Ajusta la distancia aquí
+  #theme_test() +
+  theme(
     panel.grid = element_blank(),
     strip.background = element_blank(),
     strip.text = element_text(face = "bold"),
-    text = element_text(size = 16),
+    text = element_text(size = 15),
     legend.position = "bottom"
   )
 print(gg_cwm_sampling)
@@ -573,6 +587,11 @@ loadings_df_plot$trait <- rownames(loadings_df_plot)
 loadings_df_plot <- loadings_df_plot %>%
   mutate(PC1 = PC1 * 4, PC2 = PC2 * 4)  # scale factor can be adjusted (lenth of arrows)
 
+loadings_df_plot <- loadings_df_plot %>%
+  mutate(trait = recode(trait,
+                        "leafN"     = "Leaf-Nitrogen",
+                        "seed.mass" = "Seed mass",
+                        "vegetation.height" = "Height"))
 # Explained variance
 eig_values <- pca_plot0$sdev^2
 var_explained <- round(100 * eig_values / sum(eig_values), 1)
@@ -586,36 +605,52 @@ gg_cwm_plot <-
 ggplot(pca_plot, aes(x = PC1, y = PC2, color = treatment, shape = treatment)) +
   geom_point(size = 1.5) +
   stat_ellipse(aes(fill = treatment, color = treatment),
-               alpha = 0.2,
+               alpha = 0.12,
                geom = "polygon",
                level = 0.68,
                type = "norm",
-               linewidth = 0.6) +
+               linewidth = 0.6, 
+               show.legend = F) +
+  
   geom_hline(yintercept = 0, linetype = "dashed", color = "gray50") +
+  
   geom_vline(xintercept = 0, linetype = "dashed", color = "gray50") +
+  
   geom_segment(data = loadings_df_plot,
                aes(x = 0, y = 0, xend = PC1, yend = PC2),
                inherit.aes = FALSE,
                arrow = arrow(length = unit(0.3, "cm")),
                color = "gray30") +
+  
   geom_text_repel(data = loadings_df_plot,
                   aes(x = PC1, y = PC2, label = trait),
                   inherit.aes = FALSE,
                   color = "gray30",
                   max.overlaps = Inf) +
-  scale_color_manual(values = palette_CB, labels = labels3) +
+  
+  scale_color_manual(values = palette_CB, labels = labels1) +
+  
   scale_fill_manual(values = palette_CB) +
-  scale_shape_manual(values = point_shapes, labels = labels3) +
+  
+  scale_shape_manual(values = point_shapes, labels = labels1) +
+  
   labs(x = paste0("PC1 (", var_explained[1], "%)"),
        y = paste0("PC2 (", var_explained[2], "%)"),
-       title = "CWM differences: abundance of species at plot level") +
+       #title = "CWM differences: abundance of species at plot level"
+       ) +
+  
   guides(color = guide_legend(title = NULL),
          shape = guide_legend(title = NULL),
          fill = "none") +
-  theme_test() +
-  theme(legend.position = "bottom")
+  theme(
+    panel.grid = element_blank(),
+    strip.background = element_blank(),
+    strip.text = element_text(face = "bold"),
+    text = element_text(size = 15),
+    legend.position = "bottom"
+  )
 print(gg_cwm_plot)
-#ggsave("results/Plots/protofinal/FT_cwm_plot.png", plot = gg_cwm_plot, dpi = 300)
+ggsave("results/Plots/protofinal/FT_cwm_plot.png", plot = gg_cwm_plot, dpi = 300)
 
 }
 
