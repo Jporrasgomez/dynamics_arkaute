@@ -223,17 +223,32 @@ ggplot(rad_treat_db, aes(x = rank, y = abundance_s)) +
 # We choose ZIPF
 
 {gg_rads_treatment <- 
-ggplot(rad_treat_db, aes(x = rank, y = abundance_s, color = treatment)) +
-  facet_wrap(~treatment, labeller = labeller(treatment = labels3)) + 
-  geom_point() +
-  geom_line(aes(x = rank, y = zipf_fit), size = 1) +
-  labs(x = "Rank", y = "Mean abundance", title = "RAD per treatment") +
-  scale_color_manual(values = palette5) + 
+ggplot(rad_treat_db, aes(x = rank, y = abundance_s)) +
+    
+  facet_wrap(~treatment, labeller = labeller(treatment = labels1), ncol = 4, nrow = 1) + 
+    
+  geom_point(aes(color = treatment)) +
+    
+  geom_line(aes(x = rank, y = zipf_fit, color = treatment), size = 1) +
+    
+  labs(x = "Rank", y = "Mean abundance") +
+    
+  scale_color_manual(values = palette_CB) + 
+    
   geom_text(aes(x = max(rank) * 0.7, y = max(abundance_s) * 0.9, 
-                label = paste("Zipf gamma:", round(zipf_gamma, 4))), size = 3.2)+
-  theme(legend.position = "none")
+                label = paste("Gamma:", round(zipf_gamma, 4))), size = 3.2) +
+    
+    theme(
+      panel.grid = element_blank(),
+      strip.background = element_blank(),
+      strip.text = element_text(face = "bold"),
+      text = element_text(size = 15),
+      legend.position = "none"
+    )
+  
 print(gg_rads_treatment)
-ggsave("results/Plots/protofinal/RADs_treatment.png", plot = gg_rads_treatment, dpi = 300)}
+ggsave("results/Plots/protofinal/RADs_treatment.png", plot = gg_rads_treatment, dpi = 300)
+}
 
 
 

@@ -196,12 +196,7 @@ j %>%  write.csv("data/temp_vwc_data.csv",  row.names = F)
 
 
 
-all_plots_growth <- all_plots %>% 
-  filter(month %in% c("Apr", "May", "Jun", "Jul", "Aug", "Sep"))
 
-all_plots_growth_daylight <- all_plots %>% 
-  filter(month %in% c("Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct")) %>% 
-  filter(hour %in% c(8:20))
 
 
 
@@ -289,7 +284,7 @@ for (item in plots_list) {
 dailygraph_sm_list <- list()
 dailygraph_sm_list <- lapply(plots_list, function(item) {
   ggplot(item, aes(x = datetimenew)) + 
-    geom_line((aes (y = soil_moisture)), group = 1, color = "black")+
+    geom_line((aes (y = vwc)), group = 1, color = "black")+
     theme_bw()+
     labs(x = NULL, y =  NULL)+ 
     ggtitle(as.character(item$plot))+
@@ -439,12 +434,56 @@ sd(allplots_temp_24h_diff_growth_daylight$t_ground_mean_diff, na.rm = T)
 
 
 
+theme_set(theme_bw() +
+            theme(
+              legend.position = "right",
+              panel.grid = element_blank(),
+              strip.background = element_blank(),
+              strip.text = element_text(face = "bold"),
+              text = element_text(size = 11)))
+
+
+
 
 ggplot(all_plots_growth_daylight, aes( x = ttreat, y = T_top, fill = ttreat)) +
   geom_boxplot() +
   #scale_color_manual(values = c("c" = "#48A597", "w" = "#D94E47")) +
+  scale_fill_manual(values = c("c" = "#48A597", "w" = "#D94E47")) 
+
+ggboxplot(
+  all_plots_growth_daylight, 
+  x     = "ttreat", 
+  y     = "T_top", 
+  fill  = "ttreat",
+  palette = c("c" = "#48A597", "w" = "#D94E47"),
+  add   = FALSE,       # opcional: añade puntos dispersos
+  width = 0.6             # ancho de las cajas
+) +
+  stat_compare_means(
+    method    = "t.test",
+    label     = "p.signif",    # o "p.format" para p = 0.012
+    label.y   = max(all_plots_growth_daylight$T_top) * 1.05,
+    comparisons = list(c("c", "w"))) +
+  theme(
+    legend.position = "none",
+    labs(x = "OTC")
+  )
+
+
+ggplot(all_plots_growth, aes( x = ttreat, y = T_top, fill = ttreat)) +
+  geom_boxplot() +
+  #scale_color_manual(values = c("c" = "#48A597", "w" = "#D94E47")) +
   scale_fill_manual(values = c("c" = "#48A597", "w" = "#D94E47")) +
   theme_minimal()
+
+ggplot(all_plots, aes( x = ttreat, y = T_top, fill = ttreat)) +
+  geom_boxplot() +
+  #scale_color_manual(values = c("c" = "#48A597", "w" = "#D94E47")) +
+  scale_fill_manual(values = c("c" = "#48A597", "w" = "#D94E47")) +
+  theme_minimal()
+
+
+
 
 hist(all_plots_growth_daylight$T_top, breaks = 100)
 hist(all_plots_growth_daylight$T_top[which(all_plots_growth_daylight$ttreat == "c")], breaks = 100)

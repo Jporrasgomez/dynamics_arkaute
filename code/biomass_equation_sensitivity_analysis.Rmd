@@ -57,7 +57,7 @@ First, we have to take a look to an histogram and a boxplot of $X$ distribution:
 
 ```{r}
 library(dplyr)
-flora_raw <- read.csv("data/flora_db.csv")
+flora_raw <- read.csv("data/flora_db_raw.csv")
 flora_raw <- flora_raw %>%
   mutate(across(where(is.character), as.factor))
 desired_order <- c("s0_may", "s1_may", "s2_jun", "s3_jun", "s4_jul", "s5_jul", "s6_aug", 
@@ -68,7 +68,7 @@ flora_raw$sampling <- factor(flora_raw$sampling, levels = desired_order)
 flora_raw$Dm <- flora_raw$Dm + 0.01
 flora_raw$Db <- flora_raw$Db + 0.01
 
-flora <- flora_raw %>% select(sampling, plot, treatment, species, abundance, height, Cb, Db, Cm, Dm)
+flora <- flora_raw %>% select(sampling, plot, treatment, code, abundance, height, Cb, Db, Cm, Dm)
 
 flora$cm <- round(ifelse(!is.na(flora$Dm), flora$Dm * pi, flora$Cm), 2)
 flora$cb <- round(ifelse(!is.na(flora$Db), flora$Db * pi, flora$Cb), 2)
@@ -172,7 +172,7 @@ par(mfrow = c(1, 4))
 hist(flora1$x)
 hist(flora3$x)
 hist(flora20$x)
-hist(flora_NoAm$x)
+#hist(flora_NoAm$x)
 par(mfrow = c(1, 1))
 
 
