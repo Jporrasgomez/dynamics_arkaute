@@ -5,7 +5,7 @@ rm(list = ls(all.names = TRUE))  #Se limpia el environment
 pacman::p_unload(pacman::p_loaded(), character.only = TRUE) #se quitan todos los paquetes (limpiamos R)
 
 
-pacman::p_load(dplyr, reshape2,tidyverse, lubridate, ggplot2, ggpubr, gridExtra, stringr, readr)
+pacman::p_load(dplyr, reshape2,tidyverse, lubridate, ggplot2, ggpubr, gridExtra, stringr, readr, nortest)
 
 theme_set(theme_bw() +
             theme(
@@ -19,7 +19,8 @@ theme_set(theme_bw() +
 ########### 1. OPENING DATA ######################
 # ! it takes time !
 
-plots <- read.csv("data/plots.csv")
+{
+  plots <- read.csv("data/plots.csv")
 plots$file_code <- paste0("data_", plots$sensor_code, "_2024_10_24_0.csv")
 
 file_code_values <- plots$file_code
@@ -77,7 +78,7 @@ for (i in seq_along(plots_list)) {
   #  moisture and plant species composition. Suplemetary materials, Apendix A. 
 }
 
-
+}
 
 ## Arranging data
 
@@ -92,17 +93,17 @@ OTC_list <- c(plots_list["w1"],  plots_list["wp4"], plots_list["wp5"], plots_lis
 OTCs <- do.call(rbind, OTC_list)
 
 
-all_plots <- merge(controls, OTCs, all = TRUE) %>% 
+data <- merge(controls, OTCs, all = TRUE) %>% 
   mutate(date = date(date), 
          OTC = as.factor(OTC))
 
-all_plots <- all_plots %>% 
+data <- data %>% 
   mutate(
     OTC_label = ifelse(OTC == "YES", paste0("otc"), paste0("control"))
   ) %>% 
   mutate(
     OTC_label = as.factor( OTC_label)
-  )
+  ) 
   
 
 ## SENSOR DATA FOR DAYS OF SAMPLINGS - for arkaute.csv ##
@@ -118,7 +119,7 @@ sampling_dates <- read.csv("data/sampling_dates.csv") %>%
 
 sampling_dates_vector <- sampling_dates$date
 
-sampling_days_data <- all_plots %>% 
+sampling_days_data <- data %>% 
   filter(date %in% sampling_dates_vector) %>% 
   select(T_top, vwc, date, time, plot)  
 
@@ -164,17 +165,39 @@ sampling_days_data <- sampling_days_data %>%
 
 palette <- c("t_top" = "red", "t_bottom" = "purple", "t_ground" = "orange", "vwc" = "blue3")
 
-data <- all_plots
+palette_OTC = c("control" = "#48A597", "otc"     = "#D94E47")
 
-data_daylight  <- all_plots %>% 
-  filter(hour %in% c(8:20))
+labels_OTC = c("control" = "Without OTC", "otc" = "With OTC")
 
-data_growth <- all_plots %>% 
-  filter(month %in% c("Apr", "May", "Jun", "Jul", "Aug", "Sep"))
+variables = c("t_top", "t_ground", "t_bottom", "vwc")
 
-data_growth_daylight <- all_plots %>% 
+
+
+# MEAN DIFFERENCE
+
+data <- data %>% 
+  mutate(
+    data = "All year - 24h"
+  )
+
+data_daylight  <- data %>% 
+  filter(hour %in% c(8:20)) %>% 
+  mutate(
+    data = "All year - daylight"
+  )
+
+data_growth <- data %>% 
+  filter(month %in% c("Apr", "May", "Jun", "Jul", "Aug", "Sep")) %>% 
+  mutate(
+    data = "Growth season - 24h"
+  )
+
+data_growth_daylight <- data %>% 
   filter(month %in% c("Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct")) %>% 
-  filter(hour %in% c(8:20))
+  filter(hour %in% c(8:20)) %>% 
+  mutate(
+    data = "Growth season - daylight"
+  )
 
 data_list <- list()
 data_list[["data"]] <- data
@@ -183,37 +206,132 @@ data_list[["data_growth"]] <- data_growth
 data_list[["data_growth_daylight"]] <- data_growth_daylight
 
 
-i = 2
-ggboxplot(data_list[[i]],
-  x     = "OTC_label", 
-  y     = "T_top", 
-  fill  = "OTC_label",
-  palette = c("control" = "#48A597", "otc" = "#D94E47"),
-  add   = FALSE,       # opcional: añade puntos dispersos
-  width = 0.6             # ancho de las cajas
-) +
+df_mean_difference <- data.frame(
+  data       = rep(NA, 4),
+  mean_diff  = rep(NA, 4),
+  IC_95      = rep(NA, 4),
+  mean_value_OTC = rep(NA, 4),
+  sd_value_OTC   = rep(NA, 4),
+  mean_value_control   = rep(NA, 4),
+  sd_value_control   = rep(NA, 4),
+  stringsAsFactors = FALSE
+)
+
+counter = 0 
+
+for ( i in 1:4) {
+  
+
+  anova_result <- aov(T_top ~ OTC_label, data = data_list[[i]])
+  summary(anova_result)
+  a <- TukeyHSD(anova_result)
+  
+  counter = counter + 1
+  
+  df_mean_difference$data[counter] <- unique(data_list[[i]]$data)
+  
+  df_mean_difference$mean_diff[counter] <- round(a$OTC_label[1], 2)
+  df_mean_difference$IC_95[counter] <- paste0(round(a$OTC_label[2], 2), "-", round(a$OTC_label[3],2))
+  
+  df_mean_difference$mean_value_OTC[counter] <- mean(data_list[[i]]$T_top[which(data_list[[i]]$OTC_label == "otc")])
+  df_mean_difference$sd_value_OTC[counter] <- sd(data_list[[i]]$T_top[which(data_list[[i]]$OTC_label == "otc")])
+  
+  df_mean_difference$mean_value_control[counter] <-mean(data_list[[i]]$T_top[which(data_list[[i]]$OTC_label == "control")])
+  df_mean_difference$sd_value_control[counter] <-sd(data_list[[i]]$T_top[which(data_list[[i]]$OTC_label == "control")])
+  
+  #kruskal.test(T_top ~ OTC_label, data = data_list[[i]])
+  #dunn.test::dunn.test(data_list[[i]]$T_top, data_list[[i]]$OTC_label, method = "bonferroni")
+  
+}
+
+df_mean_difference %>%  write.csv("results/OTC_effect.csv")
+
+
+metadata <- do.call(rbind, data_list)
+
+gg_OTC_temperature <- 
+ggboxplot(metadata,
+          x       = "OTC_label", 
+          y       = "T_top",            # cambiar aquí la variable
+          fill    = "OTC_label",
+          width   = 0.6) +
+  facet_wrap(~ data, ncol = 4) +
   stat_compare_means(
-    method    = "t.test",
-    label     = "p.signif",    # o "p.format" para p = 0.012
-    label.y   = max(data_list[[i]]$T_top) * 1.05,
-    comparisons = list(c("control", "otc"))) +
+    method       = "t.test",
+    label        = "p.signif",
+    label.y      = max(metadata$T_top) * 1.05,
+    comparisons  = list(c("control", "otc"))
+  ) +
+  scale_x_discrete(name = NULL) +
+  ylab("Temperature (ºC)") +
+  
+  scale_fill_manual( 
+    name = NULL,
+    values = palette_OTC,
+    labels = labels_OTC
+  ) +
+
+theme(
+  legend.position = "bottom",
+  axis.text.x     = element_blank(),
+  axis.ticks.x    = element_blank(),
+  panel.grid = element_blank(),
+  strip.background = element_blank(),
+  strip.text = element_text(face = "bold"),
+  text = element_text(size = 15)
+)
+print(gg_OTC_temperature)
+
+ggsave("results/Plots/protofinal/OTC_effect_temperature.png", plot = gg_OTC_temperature, dpi = 300)
+
+
+
+# DIFFERENCE THROUGH TIME: ALL 652 DAYS MEASURED
+
+gg_allyear <- 
+data %>% 
+  group_by(date, OTC_label) %>% 
+  summarise(t_top_mean = round(mean(T_top, na.rm = T), 2),
+            t_top_sd = round(sd(T_top, na.rm = T), 2), 
+            t_bottom_mean = round(mean (T_bottom, na.rm = T), 2),
+            t_bottom_sd = round(sd(T_bottom, na.rm = T), 2), 
+            t_ground_mean = round(mean(T_ground, na.rm = T), 2),
+            t_ground_sd = round(sd(T_ground, na.rm = T), 2),
+            vwc_mean = round(mean(vwc, na.rm = T), 6),
+            vwc_sd = round(sd(vwc, na.rm = T), 6)) %>% 
+  ggplot(aes(x = date, y = vwc_mean, color = OTC_label, fill = OTC_label)) +
+  geom_line() +
+  #geom_smooth(stat = "smooth", alpha = 0.2) +
+  scale_color_manual( 
+    name = NULL,
+    values = palette_OTC,
+    labels = labels_OTC
+  ) +
+    scale_fill_manual(
+      name = NULL, 
+      values = palette_OTC,
+      labels = labels_OTC
+    ) +
+  labs ( x = NULL, y = "Temperature (ºC)") +
   theme(
-    legend.position = "none",
-    labs(x = "OTC", y = "Temperature (ºC)")
-    #title ="asdsad"
+    legend.position = "bottom",
+    panel.grid = element_blank(),
+    strip.background = element_blank(),
+    strip.text = element_text(face = "bold"),
+    text = element_text(size = 15)
   )
+print(gg_allyear)
+
+ggsave("results/Plots/protofinal/OTC_effect_allyear.png", plot = gg_allyear, dpi = 300)
 
 
 
+# DIFFERENCE THROUGH TIME: 24 H
 
-
-
-# DIFFERENCE IN 24 H
-
-n <- as.numeric(as.Date(max(all_plots$date)) - as.Date(min(all_plots$date)))
+n <- as.numeric(as.Date(max(data$date)) - as.Date(min(data$date)))
 # 662 days we sampled
 
-
+gg_24h_ <- 
   data %>% 
     group_by(time, OTC_label) %>% 
     summarise(t_top_mean = round(mean(T_top, na.rm = T), 2),
@@ -254,33 +372,61 @@ n <- as.numeric(as.Date(max(all_plots$date)) - as.Date(min(all_plots$date)))
       mean_diff_value = mean,
       sd_diff_value   = sd
     ) %>% 
-filter(variable == "t_top") %>% 
+filter(variable == "t_top") %>%                                       #### Modify in this line the variable or variables we want to see
   ggplot(aes(x = time, y = mean_diff_value, color = variable)) +
   geom_hline(yintercept = 0, linetype = "dashed", color = "gray20") +
-  geom_line(aes(group = variable)) +
+  geom_line(aes(group = variable), size = 0.5) +
   geom_line(aes(x = time,
                 y = mean_diff_value + sd_diff_value,
-                group = variable) , linetype = "dashed") +
+                group = variable) , linetype = "dashed", size = 0.5) +
   geom_line(aes(x = time,
                 y = mean_diff_value - sd_diff_value,
-                group = variable) , linetype = "dashed") + 
+                group = variable) , linetype = "dashed", size = 0.5) + 
   scale_x_discrete(breaks = sprintf("%02d:00", c(1, 5, 9, 13, 17, 21))) +
-  scale_color_manual(values = palette) + 
+    
+  scale_color_manual(values = palette) +
+    
+    
   labs( x = NULL, y = "Temperature difference inside OTCs (ºC)") +
-  theme(
-    legend.position = "none"
-  )
+    theme(
+      legend.position = "none",
+      #axis.text.x     = element_blank(),
+      #axis.ticks.x    = element_blank(),
+      panel.grid = element_blank(),
+      strip.background = element_blank(),
+      strip.text = element_text(face = "bold"),
+      text = element_text(size = 15)
+    )
+print(gg_24h_)
+
+  ggsave("results/Plots/protofinal/OTC_effect_24h_ttop.png", plot = gg_24h_, dpi = 300)                                
 
 
-                                    
 
 
-
-
-
-
-
-
+  data %>% 
+    group_by(date, OTC_label) %>% 
+    summarise(t_top_mean = round(mean(T_top, na.rm = T), 2),
+              t_top_sd = round(sd(T_top, na.rm = T), 2), 
+              t_bottom_mean = round(mean (T_bottom, na.rm = T), 2),
+              t_bottom_sd = round(sd(T_bottom, na.rm = T), 2), 
+              t_ground_mean = round(mean(T_ground, na.rm = T), 2),
+              t_ground_sd = round(sd(T_ground, na.rm = T), 2),
+              vwc_mean = round(mean(vwc, na.rm = T), 6),
+              vwc_sd = round(sd(vwc, na.rm = T), 6)) %>% 
+    ggplot(aes(y = vwc_mean, x = t_top_mean, color = OTC_label)) + 
+    geom_point() + 
+    scale_color_manual( 
+      name = NULL,
+      values = palette_OTC,
+      labels = labels_OTC
+    ) +
+    scale_fill_manual(
+      name = NULL, 
+      values = palette_OTC,
+      labels = labels_OTC
+    ) +
+    geom_smooth(method = "lm")
 
 
 

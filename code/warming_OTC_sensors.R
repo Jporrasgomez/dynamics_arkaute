@@ -757,7 +757,6 @@ ggtdailydiff_bottom_growth <- ggplot(allplots_temp_day_diff_growth, aes(x = date
   theme_bw()
 
 
-
 ggtdailtdiff <- ggarrange(ggtdailydiff_top_growth, ggtdailydiff_bottom_growth, ggtdailydiff_ground_growth, 
                           labels = c("A", "B", "C"),
                           ncol = 1, nrow =3 )
