@@ -2,6 +2,10 @@
 
 
 
+# THEMES
+
+
+theme1 <- 
 theme_set(theme_bw() +
             theme(
               legend.position = "right",
@@ -9,6 +13,43 @@ theme_set(theme_bw() +
               strip.background = element_blank(),
               strip.text = element_text(face = "bold"),
               text = element_text(size = 11)))
+
+theme2 <- 
+theme(
+  legend.position = "bottom",
+  axis.text.x     = element_blank(),
+  axis.ticks.x    = element_blank(),
+  panel.grid = element_blank(),
+  strip.background = element_blank(),
+  strip.text = element_text(face = "bold"),
+  text = element_text(size = 15)
+)
+
+theme3 <- 
+  theme(
+    legend.position = "bottom",
+    panel.grid = element_blank(),
+    strip.background = element_blank(),
+    strip.text = element_text(face = "bold"),
+    text = element_text(size = 15)
+  )
+
+
+# SENSORS 
+
+palette_sensor <- c("t_top" = "red", "t_bottom" = "purple", "t_ground" = "orange", "vwc" = "blue3")
+
+palette_OTC = c("control" = "#48A597", "otc"     = "#D94E47")
+
+labels_OTC = c("control" = "Without OTC", "otc" = "With OTC")
+
+labels_variables_sensor <- c("t_top" = "Temp. 40 cm", "t_bottom"= "Temp. 2 cm", "t_ground" = "Temp. -6 cm", "vwc" = "VWC")
+
+
+
+
+
+# TREATMENTS
 
 c_CB = "#12D08C" # "CB" color blind
 w_CB = "#E05050"
@@ -32,6 +73,7 @@ palette_RR_CB <- c("w_vs_c" = w_CB, "p_vs_c" = p_CB, "wp_vs_c" = wp_CB)
 
 
 palette_RR_wp <- c(wp_vs_p = "#903996", wp_vs_w = "#E05050")
+
 labels_RR_wp <- c("wp_vs_w" = "Global Change vs Warming", "wp_vs_p" = "Global Change vs Perturbation")
 labels_RR_wp2 <- c("wp_vs_w" = "Perturbation effect", "wp_vs_p" = "Warming effect")
 labels_RR_wp3 <- c("wp_vs_w" = "Global Change vs Warming", "wp_vs_p" = "Combined vs Perturbation")
