@@ -47,6 +47,8 @@ theme3 <-
   )
 
 
+
+
 # SENSORS 
 
 palette_sensor <- c("t_top" = "red", "t_bottom" = "purple", "t_ground" = "orange", "vwc" = "blue3")
@@ -97,7 +99,6 @@ palette3 <- c("c" = "#1F8A8C", "w" = "#D93232", "p" = "#F4A300", "wp" = "#3A3A3A
 
 
 palette8 <- c("c" = "#00C4A7", "w" = "#A238A2", "p" = "#F4A300", "wp" = "#3A3A3A")
-
 
 
 
