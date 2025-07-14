@@ -69,7 +69,7 @@ for (i in seq_along(plots_list)) {
     # Topographic Wetness Index calculation guidelines based on measured soil
     #  moisture and plant species composition. Suplemetary materials, Apendix A
     mutate(
-      vwc =-0.0000000134 * soil_moisture^2 + 0.000249622 * soil_moisture - 0.157889
+      vwc = (-0.0000000134 * soil_moisture^2 + 0.000249622 * soil_moisture - 0.157889) * 100
            ) %>% 
     mutate(
       vwc = ifelse(vwc < 0, 0, vwc) # There are some data of vwc that gows below 0 and that is not possible. 
@@ -104,7 +104,7 @@ data <- data %>%
   mutate(
     OTC_label = as.factor( OTC_label)
   ) %>% 
-  select(plot, OTC_label, date, month, time, hour, starts_with("t_"), vwc )
+  select(plot, OTC_label, date, month, time, hour, starts_with("t_"), vwc, soil_moisture )
 
 data_long <- data %>% 
   pivot_longer(
@@ -332,13 +332,13 @@ variables = c("t_top", "t_ground", "t_bottom", "vwc")
 {
   
   
-i = 4
+i = 1
 
 ylabels <- c(
   t_top     = "Temperature at 40 cm (ºC)",
   t_ground  = "Temperature at 2 cm (ºC)",
   t_bottom  = "Temperature at -6 cm (ºC)",
-  vwc       = "VWC"
+  vwc       = "VWC (%)"
 )
 
 ytitle      <- ylabels[variables[i]]
@@ -495,13 +495,13 @@ gg_24h_diff <-
 filter(variable == variables[i]) %>%                                       #### Modify in this line the variable or variables we want to see
   ggplot(aes(x = time, y = mean_diff_value, color = variable)) +
   geom_hline(yintercept = 0, linetype = "dashed", color = "gray20") +
-  geom_line(aes(group = variable), size = 0.5, color = "#D94E47") +
+  geom_line(aes(group = variable), size = 0.5, color = "#EA6E13") +
   geom_line(aes(x = time,
                 y = mean_diff_value + sd_diff_value,
-                group = variable) , linetype = "dashed", size = 0.5, color = "#D94E47") +
+                group = variable) , linetype = "dashed", size = 0.5, color = "#EA6E13") +
   geom_line(aes(x = time,
                 y = mean_diff_value - sd_diff_value,
-                group = variable) , linetype = "dashed", size = 0.5, color = "#D94E47") + 
+                group = variable) , linetype = "dashed", size = 0.5, color = "#EA6E13") + 
   scale_x_discrete(breaks = sprintf("%02d:00", c(1, 5, 9, 13, 17, 21))) +
     
   #scale_color_manual(values = palette_sensor) +
@@ -559,7 +559,7 @@ gg_year_diff <-
   # Plot
   ggplot(aes(x = date, y = mean_diff_value)) +
   geom_hline(yintercept = 0, linetype = "dashed", color = "gray20") +
-  geom_line(color = "#D94E47", size = 0.5) +
+  geom_line(color = "#EA6E13", size = 0.5) +
   labs(
     x = NULL,
     y = paste0(ytitle)
@@ -585,7 +585,7 @@ gg_year_diff <-
 ## !!! cambiar nombre de los plots que guardes
 
   print(gg_boxplot_alldata)
-  ggsave("results/Plots/protofinal/OTC_effect_VWC_alldata.png", plot = gg_boxplot_alldata, dpi = 300)
+  #ggsave("results/Plots/protofinal/OTC_effect_VWC_alldata.png", plot = gg_boxplot_alldata, dpi = 300)
 
   
   print(gg_boxplot_daily_average)
@@ -596,10 +596,10 @@ gg_year_diff <-
   
   
   print(gg_24h_diff)
-  ggsave("results/Plots/protofinal/OTC_effect_24h_ttop.png", plot = gg_24h_, dpi = 300)   
+  ggsave("results/Plots/protofinal/OTC_effect_24h_ttop.png", plot = gg_24h_diff, dpi = 300)   
   
   print(gg_year_diff)
- #ggsave("results/Plots/protofinal/OTC_effect_year_ttop.png", plot = gg_year_diff, dpi = 300) 
+  ggsave("results/Plots/protofinal/OTC_effect_year_ttop.png", plot = gg_year_diff, dpi = 300) 
   
   
   
@@ -609,17 +609,60 @@ gg_year_diff <-
 ## HOW TEMPERATURE AND SOIL MOISTURE RELATES?  
 
 
-gg_vwc_vs_t <- 
+vwc_data <- 
+  
   data %>% 
   group_by(date, OTC_label) %>% 
   summarise(t_top_mean = round(mean(t_top, na.rm = T), 2),
-            t_top_sd = round(sd(t_top, na.rm = T), 2), 
-            t_bottom_mean = round(mean (t_bottom, na.rm = T), 2),
-            t_bottom_sd = round(sd(t_bottom, na.rm = T), 2), 
-            t_ground_mean = round(mean(t_ground, na.rm = T), 2),
-            t_ground_sd = round(sd(t_ground, na.rm = T), 2),
             vwc_mean = round(mean(vwc, na.rm = T), 6),
-            vwc_sd = round(sd(vwc, na.rm = T), 6)) %>% 
+            soil_moisture_mean = round(mean(soil_moisture, na.rm = T), 6))
+
+
+
+vwc_data %>% 
+  ggplot(aes(y = vwc_mean, x = soil_moisture_mean)) + 
+  geom_point(size = 0.5) + 
+  labs ( x = "Soil moisture TMS-4 raw signal", y = "VWC (%)") +
+  geom_smooth(method = "lm", se = FALSE) +
+  
+  # primero la ecuación
+  stat_regline_equation(
+    mapping     = aes(label = after_stat(eq.label)),
+    formula     = y ~ x,
+    label.x.npc = 0.2,
+    label.y.npc = 0.95,
+    size        = 5,
+    show.legend = FALSE
+  ) +
+  # luego el R²
+  stat_regline_equation(
+    mapping     = aes(label = after_stat(rr.label)),
+    formula     = y ~ x,
+    label.x.npc = 0.2,
+    label.y.npc = 0.80,
+    size        = 5,
+    show.legend = FALSE
+  ) +
+  
+  stat_cor(
+    mapping     = aes(label = after_stat(p.label)),
+    method      = "pearson",      # test de correlación Pearson
+    label.x.npc = 0.2,           # misma X para alinear
+    label.y.npc = 0.60,           # un poco más abajo
+    size        = 5,
+    show.legend = FALSE
+  ) +
+  
+  theme3
+
+
+
+
+
+
+
+gg_vwc_vs_t <- 
+  vwc_data %>% 
   ggplot(aes(y = vwc_mean, x = t_top_mean, color = OTC_label, fill = OTC_label)) + 
   geom_point() + 
   scale_color_manual( 
@@ -632,7 +675,7 @@ gg_vwc_vs_t <-
     values = palette_OTC,
     labels = labels_OTC
   ) +
-  labs ( x = "Temperature at 40 cm (ºC)", y = "VWC") +
+  labs ( x = "Temperature at 40 cm (ºC)", y = "VWC (%)") +
   geom_smooth(method = "lm", se = FALSE) +
   
   # primero la ecuación

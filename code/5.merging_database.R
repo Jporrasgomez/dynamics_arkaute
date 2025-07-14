@@ -14,7 +14,7 @@ nmds_df_plot <- read.csv("data/nmds_df_plot.csv") %>%
   select(-NMDS3)
 
 pca_cwm_plot <- read.csv("data/pca_cwm_plot.csv") %>% 
-  select(-PC3, -PC4, -PC5, -PC6)
+  select(-PC3)
 
 radcoeff_db_plot <- read.csv("data/radcoeff_db_plot.csv") %>% 
   select(-one_month_window, -omw_date, -year)

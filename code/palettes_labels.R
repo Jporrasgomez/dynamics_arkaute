@@ -5,6 +5,18 @@
 # THEMES
 
 
+gg_RR_theme <- 
+  theme(
+    panel.grid      = element_blank(),
+    strip.background = element_blank(),
+    strip.text      = element_text(face = "bold"),
+    text            = element_text(size = 13
+    ),
+    legend.position = "none",
+    axis.text.y     = element_text(face = "bold",
+                                   angle = 90,
+                                   hjust = 0.5))
+
 theme1 <- 
 theme_set(theme_bw() +
             theme(
@@ -39,7 +51,7 @@ theme3 <-
 
 palette_sensor <- c("t_top" = "red", "t_bottom" = "purple", "t_ground" = "orange", "vwc" = "blue3")
 
-palette_OTC = c("control" = "#48A597", "otc"     = "#D94E47")
+palette_OTC = c("control" = "#1FBDC7", "otc"     = "#EA6E13")
 
 labels_OTC = c("control" = "Without OTC", "otc" = "With OTC")
 

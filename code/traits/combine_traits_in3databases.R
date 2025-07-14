@@ -243,3 +243,21 @@ TRY.used = combine.indi %>% filter(trait_ID %in% c("leafN_TRY", "rootN_TRY", "RT
 # combine the two dataframes above; outlier should be checked based on 'all.indi.used.csv'
 all.indi.used <- rbind(TRY.used, combine.indi.used)
 write.csv(all.indi.used, 'data/traits/all.indi.used.csv', row.names = F)
+
+
+
+all.indi.used %>% 
+  mutate(
+    species = as.factor(species), 
+    trait_ID = as.factor(trait_ID), 
+    trait_name = as.factor(trait_name), 
+    database = as.factor(database)
+  ) %>% 
+  group_by(trait_name, database) %>% 
+  summarize(
+    n = n()
+  ) %>% 
+  filter(
+    trait_name %in% c("SLA.ex", "SLA.inc", "LDMC", "leafN")
+  ) %>% 
+  View()

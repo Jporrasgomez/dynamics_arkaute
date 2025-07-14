@@ -248,8 +248,22 @@ ggplot(aes(x = variable, y = missing_perc)) +
   theme_minimal() +
   theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1))
 
-traits_mean_wide <- traits_mean_wide %>% 
-  select(!c("rootN", "RTD", "SRL", "SSD"))
+
+################ CHOOSING TRAITS ##############################################################################
+
+##
+traits_final <- traits_mean_wide %>% 
+  select(c("code",
+           "SLA", 
+           "LDMC",
+           "leafN",
+           #"LA", 
+           #"seed.mass", 
+           #"vegetation.height"
+           ))  ### Choose here the FUNCTIONAL TRAITS WE WANT
+
+#################################################################################################################
+
 
 #Now we have 2 traits above 50 % NA, 1 = 50% and 1 around 45%. I would delete them all
 # given that the following one is araound 15%
@@ -258,7 +272,7 @@ traits_mean_wide <- traits_mean_wide %>%
 
 # Prepare the database for the FD function: 
 
-traits_matrix <- as.data.frame(traits_mean_wide)
+traits_matrix <- as.data.frame(traits_final)
 
 rownames(traits_matrix) <- traits_matrix$code
 
@@ -403,7 +417,10 @@ gg_cwm_sampling <-
 ggplot(pca_sampling, aes(x = PC1, y = PC2, color = treatment, shape = treatment)) +
   geom_path(aes(group = treatment), linewidth = 0.5, alpha = 0.2) +  # Conecta puntos del mismo tratamiento
   geom_point(size = 1.5) +
-  #geom_text_repel(aes(label = sampling, color = treatment), size = 3, max.overlaps = Inf)  +  # Números de sampling
+  geom_text_repel(aes(label = sampling, color = treatment),
+                  size = 3,
+                  max.overlaps = Inf,
+                  show.legend = F)  +  # Números de sampling
   stat_ellipse(aes(fill = treatment, color = treatment),
                alpha = 0.12,
                geom = "polygon",
@@ -448,7 +465,7 @@ ggplot(pca_sampling, aes(x = PC1, y = PC2, color = treatment, shape = treatment)
     legend.position = "bottom"
   )
 print(gg_cwm_sampling)
-#ggsave("results/Plots/protofinal/FT_cwm_sampling.png", plot = gg_cwm_sampling, dpi = 300)
+ggsave("results/Plots/protofinal/FT_cwm_sampling.png", plot = gg_cwm_sampling, dpi = 300)
 
   }
 
@@ -463,7 +480,7 @@ cum_var   <- cumsum(var_exp)                                     # cumulative va
 k_retener <- which(cum_var >= 0.80)[1]      # first index at or above 80 %
 print(k_retener)
 
-inclu# 2. Build a scores data frame and add the treatment factor
+# 2. Build a scores data frame and add the treatment factor
 # ---------------------------------------------------------
 pc_scores <- as.data.frame(pca_sampling0$x[, 1:k_retener])       # PC coordinates for each sample
 pc_scores$treatment <- cwm_sampling$treatment                    # metadata: treatment as factor
@@ -739,14 +756,14 @@ cwm_plot_db <- cwm_plot %>%
 cwm_plot_db %>%  write.csv("data/cwm_plot_db.csv")
 
 
-trait_levels <- c("LDMC", "leafN", "SLA", "LA", "vegetation.height", "seed.mass")
+trait_levels <- c("LDMC", "leafN", "SLA")
 
 source("code/meta_function/meta_function.R")
 source("code/meta_function/RR_TREATMENT_c.R")
 source("code/meta_function/RR_TREATMENT_wp.R")
 
 palette <- palette_CB
-labels <- labels3
+labels <- labels2
 
 
 list_c <- list()
@@ -762,83 +779,147 @@ list_wp[[i]] <- RR_wp_vs_treatment
 
 }
 
-RR_c <- do.call(rbind, list_c)
+RR_c <- do.call(rbind, list_c) %>% 
+  select(RR_descriptor, RR, se_RR, variable)
 RR_wp <- do.call(rbind, list_wp)
 
+RR_whole_aggregated <- rbind(RR_c, RR_wp) %>% 
+  mutate(
+  variable = as.factor(variable)
+) %>% 
+  mutate(
+    upper_limit = RR + se_RR * 1.96,   # calculating interval of confidence
+    lower_limit = RR - se_RR * 1.96
+  ) %>% 
+  mutate(
+    null_effect = ifelse(lower_limit <= 0 & upper_limit >= 0, "YES","NO"))
+
+scales_data <- list()
+for(i in seq_along(trait_levels)){
+  
+  scale_i <- RR_whole_aggregated %>% 
+    filter(variable == trait_levels[i]) %>% 
+    mutate(
+      scale = (max(abs(upper_limit)) + max(abs(lower_limit)))
+    )
+  
+  scales_data[[i]] <- scale_i
+  
+}
+
+RR_whole_aggregated <- do.call(rbind, scales_data)
 
 
 
 
-z = 1.96
+
+limits_variables <- c("LDMC", "leafN", "SLA")
+labels_variables <- c("LDMC", "Leaf N", "SLA")
+
+
 
 {gg_RR_cwm <- 
-RR_c %>% 
-  ## Multiplying by -1 gamma zipf in order to have positive values and being able to read the plots as
-  ## evenness
-  ggplot(aes(x = variable, y = RR, color = RR_descriptor)) + 
+    
+RR_whole_aggregated %>% 
+    filter(RR_descriptor %in% c("p_vs_c", "w_vs_c", "wp_vs_c")) %>%
+    mutate(variable = factor(variable, 
+                             levels = limits_variables, 
+                             labels = labels_variables)) %>% 
+    mutate( variable = fct_rev(variable)) %>% 
+  ggplot(aes(y = variable, x = RR, color = RR_descriptor)) + 
   geom_errorbar(
-    aes(ymin = RR - z * se_RR,
-        ymax = RR + z * se_RR),
+    aes(xmin = lower_limit,
+        xmax = upper_limit),
     linewidth = 0.5,
     position = position_dodge(width = 0.2),
     width = 0.1
   ) +  
   geom_point(position = position_dodge(width = 0.2)) + 
-  scale_color_manual(values = palette_RR_CB, labels = labels_RR) +
-  scale_x_discrete(
-    limits = trait_levels,
-    labels = c(
-      "LDMC" = "LDMC",
-      "leafN" = "Leaf N",
-      "SLA" = "SLA",
-      "LA" = "LA",
-      "vegetation.height" = "Height",
-      "seed.mass" = "Seed mass"
-    )
-  ) +
-  geom_hline(yintercept = 0, linetype = "dashed", color = "gray40") +
-  labs(x = NULL, y = "RR of CWM mean values at plot level", color = NULL) +
-  theme(legend.position = "bottom")
+    
+  scale_color_manual(values = palette_RR_CB, labels = labels_RR2) +
+    
+  geom_vline(xintercept = 0, linetype = "dashed", color = "gray40") +
+    
+    geom_text(
+      aes(
+        y = variable,
+        x = ifelse(RR < 0, lower_limit - scale/600,  upper_limit + scale/600),
+        label = ifelse(null_effect == "NO", "*", NA_character_),
+        color = RR_descriptor,
+        size = 13,
+      ),
+      position = position_dodge2(width = 0.2, preserve = "single"),
+      show.legend = F
+    )+
+    
+  labs(y = NULL,
+       x = NULL,
+       color = NULL) +
+    
+  gg_RR_theme
+  
 print(gg_RR_cwm)
-ggsave("results/Plots/protofinal/FT_cwm_treatment_effects.png", plot = gg_RR_cwm, dpi = 300)}
+}
 
+
+
+#ggsave("results/Plots/protofinal/FT_cwm_treatment_effects.png", plot = gg_RR_cwm, dpi = 300)
 
 {gg_RR_cwm_wp <- 
-RR_wp %>% 
-    filter(RR_descriptor == "wp_vs_p") %>% 
-  ## Multiplying by -1 gamma zipf in order to have positive values and being able to read the plots as
-  ## evenness
-  ggplot(aes(x = variable, y = RR, color = RR_descriptor)) + 
-  geom_errorbar(
-    aes(ymin = RR - z * se_RR,
-        ymax = RR + z * se_RR),
-    linewidth = 0.5,
-    position = position_dodge(width = 0.2),
-    width = 0.1
-  ) +  
-  geom_point(position = position_dodge(width = 0.2)) + 
-  scale_color_manual(values = palette_RR_wp, labels = labels_RR_wp) +
-  scale_x_discrete(
-    limits = trait_levels,
-    labels = c(
-      "LDMC" = "LDMC",
-      "leafN" = "Leaf N",
-      "SLA" = "SLA",
-      "LA" = "LA",
-      "vegetation.height" = "Height",
-      "seed.mass" = "Seed mass"
-    )
-  ) +
-  geom_hline(yintercept = 0, linetype = "dashed", color = "gray40") +
-  labs(x = NULL, y = "RR of CWM mean values at plot level", color = NULL) +
-  theme(legend.position = "bottom")
-print(gg_RR_cwm_wp)
-#ggsave("results/Plots/protofinal/FT_cwm_globalchange_effects.png", plot = gg_RR_cwm_wp, dpi = 300)
+    
+    RR_whole_aggregated %>% 
+    filter(RR_descriptor %in% c("wp_vs_p")) %>% 
+    mutate(variable = factor(variable, 
+                             levels = limits_variables, 
+                             labels = labels_variables)) %>% 
+    
+    mutate( variable = fct_rev(variable)) %>% 
+    
+    ggplot(aes(y = variable, x = RR, color = RR_descriptor)) + 
+    geom_errorbar(
+      aes(xmin = lower_limit,
+          xmax = upper_limit),
+      linewidth = 0.5,
+      position = position_dodge(width = 0.2),
+      width = 0.1
+    ) +  
+    geom_point(position = position_dodge(width = 0.2)) + 
+    
+    scale_color_manual(values = palette_RR_wp, labels = labels_RR2) +
+    
+    scale_y_discrete(
+      limits = trait_levels,
+      labels = trait_labels
+    ) +
+    
+    geom_vline(xintercept = 0, linetype = "dashed", color = p_CB) +
+    
+    geom_text(
+      aes(
+        y = variable,
+        x = ifelse(RR < 0, lower_limit - scale/600,  upper_limit + scale/600),
+        label = ifelse(null_effect == "NO", "*", NA_character_),
+        color = RR_descriptor,
+        size = 13,
+      ),
+      position = position_dodge2(width = 0.2, preserve = "single"),
+      show.legend = F
+    )+
+    
+    labs(y = NULL,
+         x = NULL,
+         color = NULL) +
+    
+    gg_RR_theme
+  
+  print(gg_RR_cwm_wp)
 }
 
 
 
 
+## DYNAMIS
+{
 list_dyn_c <- list()
 list_dyn_wp <- list()
 
@@ -851,70 +932,187 @@ list_dyn_wp[[i]] <- RR_wp_vs_treatment
 }
 
 
-RR_dyn_c <- do.call(rbind, list_dyn_c)
-RR_dyn_wp <- do.call(rbind, list_dyn_wp)
+RR_dyn_c <- do.call(rbind, list_dyn_c) %>% 
+  select(sampling, date, RR_descriptor, variable, delta_RR, se_delta_RR)
+RR_dyn_wp <- do.call(rbind, list_dyn_wp) %>% 
+  select(sampling, date, RR_descriptor, variable, delta_RR, se_delta_RR)
 
 
-z = 1.96
+
+RR_whole_dynamics <- rbind(RR_dyn_c, RR_dyn_wp) %>% 
+  mutate(
+    variable = as.factor(variable)
+  ) %>% 
+  mutate(
+    upper_limit = delta_RR + se_delta_RR * 1.96,   # calculating interval of confidence
+    lower_limit = delta_RR - se_delta_RR * 1.96
+  ) %>% 
+  mutate(
+    null_effect = ifelse(lower_limit <= 0 & upper_limit >= 0, "YES","NO"))
+
+scales_data <- list()
+for(i in seq_along(trait_levels)){
+  
+  scale_i <- RR_whole_dynamics %>% 
+    filter(variable == trait_levels[i]) %>% 
+    mutate(
+      scale = (max(abs(upper_limit)) + max(abs(lower_limit)))
+    )
+  
+  scales_data[[i]] <- scale_i
+  
+}
+
+RR_whole_dynamics <- do.call(rbind, scales_data)
+
+
+}
+
+
+
 
 {gg_cwm_dynamics <- 
-RR_dyn_c %>% 
-  mutate(variable = as.factor(variable)) %>% 
-  mutate(
-    variable = fct_recode(variable,
-                          "LDMC" = "LDMC",
-                          "Leaf N" = "leafN",
-                          "SLA" = "SLA",
-                          "LA" = "LA",
-                          "Height" = "vegetation.height",
-                          "Seed mass" = "seed.mass")) %>% 
+    RR_whole_dynamics %>% 
+    filter(RR_descriptor %in% c("p_vs_c", "w_vs_c", "wp_vs_c")) %>%
+    mutate(variable = factor(variable, 
+                             levels = limits_variables, 
+                             labels = labels_variables)) %>% 
+    mutate(RR_descriptor = factor(RR_descriptor,
+                                  levels = c("wp_vs_c", "w_vs_c", "p_vs_c"))) %>%
+    
       ggplot(aes(x = date, y = delta_RR)) + 
       
       facet_grid(variable ~ RR_descriptor, scales = "free_y",
              labeller = labeller(
-               RR_descriptor = as_labeller(labels_RR))) +  
-      geom_errorbar(aes(ymin = delta_RR - z * se_delta_RR,
-                    ymax = delta_RR + z * se_delta_RR,
-                    color = RR_descriptor), alpha = 0.5) +
-      geom_point(aes(color = RR_descriptor), size = 1.2) + 
-      geom_line(aes(color = RR_descriptor)) +
+               RR_descriptor = as_labeller(labels_RR2))) + 
+    
+      geom_errorbar(aes(
+        ymin = lower_limit,
+        ymax = upper_limit,
+        color = RR_descriptor),
+        alpha = 0.5,
+        linewidth = 0.5) +
+    
+      geom_point(aes(color = RR_descriptor), size = 1.1) + 
+    
+      geom_line(aes(color = RR_descriptor), linewidth = 0.5) +
+    
       scale_color_manual(values = palette_RR_CB) + 
-      geom_hline(yintercept= 0, linetype = "dashed", color = "gray40") +
+    
+    geom_text(aes(
+      x = date,
+      y = ifelse(delta_RR < 0, lower_limit -  scale/9, upper_limit +  scale/9),
+      label = ifelse(null_effect == "NO", "*", NA_character_),
+      color = RR_descriptor
+    ),
+    position = position_dodge2(width = 0.7, preserve = "single"),
+    size = 5,
+    show.legend = FALSE
+    ) +
+    
+      geom_hline(yintercept= 0, linetype = "dashed", color = "gray40", linewidth = 0.5) +
+    
       geom_vline(xintercept = as.Date("2023-05-11"), linetype = "dashed", color = "gray40") +
-      theme(legend.position = "none")
+    
+    scale_y_continuous(breaks = scales::breaks_pretty(n = 3)) +
+    
+    gg_RR_theme +
+  
+    labs(x = NULL, y = NULL) +
+    
+    theme(
+      strip.text.y            = element_blank(),
+      strip.background        = element_blank(),
+      strip.text.x = element_blank())
+  
 print(gg_cwm_dynamics)
 #ggsave("results/Plots/protofinal/FT_cwm_dynamics.png", plot = gg_cwm_dynamics, dpi = 300)
 }
 
-
-{gg_cwm_dynamics_wp <- 
-RR_dyn_wp %>% 
-    filter(RR_descriptor == "wp_vs_p") %>% 
-  mutate(variable = as.factor(variable)) %>% 
-  mutate(
-    variable = fct_recode(variable,
-                          "LDMC" = "LDMC",
-                          "Leaf N" = "leafN",
-                          "SLA" = "SLA",
-                          "LA" = "LA",
-                          "Height" = "vegetation.height",
-                          "Seed mass" = "seed.mass")) %>% 
-  ggplot(aes(x = date, y = delta_RR)) + 
+{gg_cwm_wp_dynamics <- 
+    RR_whole_dynamics %>% 
+    filter(RR_descriptor %in% c("wp_vs_p")) %>%
+    mutate(variable = factor(variable, 
+                             levels = trait_limits, 
+                             labels = trait_labels)) %>% 
+    
+    ggplot(aes(x = date, y = delta_RR)) + 
+    
+    facet_grid(variable ~ RR_descriptor, scales = "free_y",
+               labeller = labeller(
+                 RR_descriptor = as_labeller(labels_RR2))) + 
+    
+    geom_errorbar(aes(
+      ymin = lower_limit,
+      ymax = upper_limit,
+      color = RR_descriptor),
+      alpha = 0.5, 
+      linewidht = 0.5) +
+    
+    geom_point(aes(color = RR_descriptor), size = 1.1) + 
+    
+    geom_line(aes(color = RR_descriptor), linewidht = 0.5) +
+    
+    scale_color_manual(values = palette_RR_wp) + 
+    
+    geom_text(aes(
+      x = date,
+      y = ifelse(delta_RR < 0, lower_limit -  scale/9, upper_limit +  scale/9),
+      label = ifelse(null_effect == "NO", "*", NA_character_),
+      color = RR_descriptor
+    ),
+    position = position_dodge2(width = 0.7, preserve = "single"),
+    size = 5,
+    show.legend = FALSE
+    ) +
+    
+    geom_hline(yintercept= 0, linetype = "dashed", color = p_CB, linewidht = 0.5) +
+    
+    geom_vline(xintercept = as.Date("2023-05-11"), linetype = "dashed", color = "gray40") +
+    
+    scale_y_continuous(breaks = scales::breaks_pretty(n = 3)) +
+    
+    gg_RR_theme +
+    
+    labs(x = NULL, y = NULL) +
+    
+    theme(
+      strip.text.y            = element_blank(),
+      strip.background        = element_blank(),
+      strip.text.x = element_blank())
   
-  facet_grid(variable ~ RR_descriptor, scales = "free_y",
-             labeller = labeller(
-               RR_descriptor = as_labeller(labels_RR_wp))) +  
-  geom_errorbar(aes(ymin = delta_RR - z * se_delta_RR,
-                    ymax = delta_RR + z * se_delta_RR,
-                    color = RR_descriptor), alpha = 0.5) +
-  geom_point(aes(color = RR_descriptor), size = 1.2) + 
-  geom_line(aes(color = RR_descriptor)) +
-  scale_color_manual(values = palette_RR_wp) + 
-  geom_hline(yintercept= 0, linetype = "dashed", color = "gray40") +
-  geom_vline(xintercept = as.Date("2023-05-11"), linetype = "dashed", color = "gray40") +
-  theme(legend.position = "none")
-print(gg_cwm_dynamics_wp)
-#ggsave("results/Plots/protofinal/FT_cwm_globalchange_dynamics.png", plot = gg_cwm_dynamics_wp, dpi = 300)
+  print(gg_cwm_wp_dynamics)
+  #ggsave("results/Plots/protofinal/FT_cwm_dynamics.png", plot = gg_cwm_dynamics, dpi = 300)
 }
 
     
+
+
+## JOINING
+library(ggpubr)
+
+gg_Warming_Effect <- 
+  ggarrange(
+    gg_RR_cwm_wp   + theme(plot.margin = margin(5,5,5,5)),   # margen uniforme
+    gg_cwm_wp_dynamics + theme(plot.margin = margin(5,5,5,5)),
+    #labels   = c("A","B"),
+    ncol     = 2, 
+    widths   = c(1, 4)    # A ocupará 1/(1+2)=1/3 del ancho, B 2/3
+  )
+print(gg_Warming_Effect)
+ggsave("results/Plots/protofinal/1.Warming_Effect.png", plot = gg_Warming_Effect, dpi = 300)
+
+
+
+
+gg_Results_traits <- 
+  ggarrange(
+    gg_RR_cwm   + theme(plot.margin = margin(5,5,5,5)),   # margen uniforme
+    gg_cwm_dynamics + theme(plot.margin = margin(5,5,5,5)),
+    #labels   = c("A","B"),
+    ncol     = 2, 
+    widths   = c(1, 5)    # A ocupará 1/(1+2)=1/3 del ancho, B 2/3
+  )
+print(gg_Results_traits)
+ggsave("results/Plots/protofinal/1.Results.png", plot = gg_Results, dpi = 300)
+
