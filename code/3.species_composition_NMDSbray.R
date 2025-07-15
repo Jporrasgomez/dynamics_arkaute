@@ -315,17 +315,17 @@ ggnmds_alltreatments <-
     
     geom_vline(xintercept = 0, color = "gray52", linetype = "dashed") +
   
-    #geom_segment(data = sp_scores,
-    #             aes(x = 0, y = 0, xend = NMDS1, yend = NMDS2),
-    #             arrow = arrow(length = unit(0.1, "cm")),
-    #             colour = "black", 
-    #             alpha = 0.5) +
-    #
-    #geom_text(data = sp_scores,
-    #          aes(x = NMDS1, y = NMDS2, label = species),
-    #          hjust = 0.5, vjust = -0.3, size = 3,
-    #          colour = "black",
-    #          alpha = 0.5)
+    geom_segment(data = sp_scores,
+                 aes(x = 0, y = 0, xend = NMDS1, yend = NMDS2),
+                 arrow = arrow(length = unit(0.1, "cm")),
+                 colour = "black", 
+                 alpha = 0.5) +
+    
+    geom_text(data = sp_scores,
+              aes(x = NMDS1, y = NMDS2, label = species),
+              hjust = 0.5, vjust = -0.3, size = 3,
+              colour = "black",
+              alpha = 0.5) +
    
     scale_color_manual(values = palette_CB, labels = labels, guide = "legend") +
     
@@ -349,7 +349,7 @@ print(ggnmds_alltreatments)
 
 }
 
-#ggsave("results/Plots/protofinal/species_composition_sampling.png", plot = ggnmds_alltreatments, dpi = 300)
+#ggsave("results/Plots/protofinal/species_composition_sampling_LABELS.png", plot = ggnmds_alltreatments, dpi = 300)
 
 
 
@@ -493,11 +493,12 @@ fit_plot <- vegan::envfit(nmds_bc_plot, as.data.frame(abundance_plot_list[[i]]),
 sp_scores_plot <- as.data.frame(fit$vectors$arrows) %>%
   mutate(p = fit_plot$vectors$pvals,
          R2 = fit_plot$vectors$r,
-         species = rownames(.)) %>%
+         species = rownames(.)
+       )%>%
   filter(p < 0.05, R2 > 0.15) %>%    # Filter significant and high correlation scores                             
   mutate(NMDS1 = NMDS1 * R2 * 3,     # Scaling arrows
          NMDS2 = NMDS2 * R2 * 3)     # Scaling arrows
-
+  
 
 
 ggNMDS12_allplots <-
@@ -514,17 +515,17 @@ ggNMDS12_allplots <-
     
   geom_vline(xintercept = 0, color = "gray52", linetype = "dashed") +
     
-   # geom_segment(data = sp_scores_plot,
-   #              aes(x = 0, y = 0, xend = NMDS1, yend = NMDS2),
-   #              arrow = arrow(length = unit(0.1, "cm")),
-   #              colour = "black", 
-   #              alpha = 0.5) +
-   # 
-   # geom_text(data = sp_scores_plot,
-   #           aes(x = NMDS1, y = NMDS2, label = species),
-   #           hjust = 0.5, vjust = -0.3, size = 3,
-   #           colour = "black",
-   #           alpha = 0.5) +
+    geom_segment(data = sp_scores_plot,
+                 aes(x = 0, y = 0, xend = NMDS1, yend = NMDS2),
+                 arrow = arrow(length = unit(0.1, "cm")),
+                 colour = "black", 
+                 alpha = 0.5) +
+    
+    geom_text(data = sp_scores_plot,
+              aes(x = NMDS1, y = NMDS2, label = species),
+              hjust = 0.5, vjust = -0.3, size = 3,
+              colour = "black",
+              alpha = 0.5) +
     
     
   scale_color_manual(values = palette_CB, labels = labels, guide = "legend") +
@@ -550,26 +551,27 @@ print(ggNMDS12_allplots)
 
 }
 
-ggsave("results/Plots/protofinal/species_composition_plot.png", plot = ggNMDS12_allplots, dpi = 300)
+ggsave("results/Plots/protofinal/species_composition_plot_LABELS.png", plot = ggNMDS12_allplots, dpi = 300)
 
 
 
 
 
-## Arrange by sampling order
-#
-#min(nmds_df_plot$NMDS1)
-#min(nmds_df_plot$NMDS2)
-#min(nmds_df_plot$NMDS3)
+# Arrange by sampling order
 
-# Changes on NMDS values to avoid pressence of 0 and negative values since log(RR) do not work with those
+min(nmds_df_plot$NMDS1)
+min(nmds_df_plot$NMDS2)
+min(nmds_df_plot$NMDS3)
 
-#nmds_df_plot<- nmds_df_plot %>% 
-#  mutate(NMDS1 = NMDS1 + abs(min(nmds_df_plot$NMDS1)) + 1,
-#         NMDS2 = NMDS2 + abs(min(nmds_df_plot$NMDS2)) + 1,
-#         NMDS3 = NMDS3 + abs(min(nmds_df_plot$NMDS3)) + 1)
-#
-#nmds_df_plot %>%  write.csv("data/nmds_df_plot.csv", row.names = F)
+#Changes on NMDS values to avoid pressence of 0 and negative values since log(RR) do not work with those
+
+
+nmds_df_plot<- nmds_df_plot %>% 
+  mutate(NMDS1 = NMDS1 + abs(min(nmds_df_plot$NMDS1)) + 1,
+         NMDS2 = NMDS2 + abs(min(nmds_df_plot$NMDS2)) + 1,
+         NMDS3 = NMDS3 + abs(min(nmds_df_plot$NMDS3)) + 1)
+
+nmds_df_plot %>%  write.csv("data/nmds_df_plot_hellinger.csv", row.names = F)
 
 
 ####################### 2.2. STATISTICAL ANALYSIS: PERMANOVA ##############################

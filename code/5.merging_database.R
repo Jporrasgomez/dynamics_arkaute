@@ -45,3 +45,4 @@ na_rows <- arkaute %>%
   filter(is.na(biomass))
 
 arkaute %>%  write.csv("data/arkaute.csv", row.names = F)
+

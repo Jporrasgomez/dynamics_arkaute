@@ -77,12 +77,12 @@ for (i in seq_along(plots_list)) {
     
 }
 
-}
+
 
 ## Arranging data
 # ~ 30 secs
 
-{control_list <- c(plots_list["c2"],  plots_list["p3"], plots_list["p6"], plots_list["c7"]
+control_list <- c(plots_list["c2"],  plots_list["p3"], plots_list["p6"], plots_list["c7"]
                  , plots_list["p10"], plots_list["c11"], plots_list["c14"], plots_list["p15"])
 
 controls <- do.call(rbind, control_list)
@@ -116,6 +116,8 @@ data_long <- data %>%
   
 
 }
+
+
 ## SENSOR DATA FOR DAYS OF SAMPLINGS - for arkaute.csv ##
 
 sampling_dates <- read.csv("data/sampling_dates.csv") %>% 
@@ -182,26 +184,29 @@ source("code/palettes_labels.R")
 
 # MEAN DIFFERENCE
 
+daylight_hours <- c(7:19)
+growth_season <- c("Apr", "May", "Jun", "Jul", "Aug", "Sep")
+
 data <- data %>% 
   mutate(
     data = "All year - 24h"
   )
 
 data_daylight  <- data %>% 
-  filter(hour %in% c(8:20)) %>% 
+  filter(hour %in% daylight_hours) %>%   
   mutate(
     data = "All year - daylight"
   )
 
 data_growth <- data %>% 
-  filter(month %in% c("Apr", "May", "Jun", "Jul", "Aug", "Sep")) %>% 
+  filter(month %in% growth_season) %>% 
   mutate(
     data = "Growth season - 24h"
   )
 
 data_growth_daylight <- data %>% 
-  filter(month %in% c("Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct")) %>% 
-  filter(hour %in% c(8:20)) %>% 
+  filter(month %in% growth_season) %>% 
+  filter(hour %in% daylight_hours) %>% 
   mutate(
     data = "Growth season - daylight"
   )
@@ -318,7 +323,7 @@ data_long %>%
 
 print(gg_allvariables_sensor)
 
-ggsave("results/Plots/protofinal/OTC_effect_allvariables.png", plot = gg_allvariables_sensor, dpi = 300)
+#ggsave("results/Plots/protofinal/OTC_effect_allvariables.png", plot = gg_allvariables_sensor, dpi = 300)
 
 
 
@@ -567,7 +572,7 @@ gg_year_diff <-
   
   scale_x_date(
     date_breaks  = "3 month",            # intervalos de 1 mes
-    date_labels  = "%Y-%m",              # ej. "Jan 2024"
+    date_labels  = "%Y-%m-%d",              # ej. "Jan 2024"
     expand       = expansion(add = c(0, 0))  # ajusta márgenes si hace falta
   ) +
   
@@ -596,7 +601,9 @@ gg_year_diff <-
   
   
   print(gg_24h_diff)
-  ggsave("results/Plots/protofinal/OTC_effect_24h_ttop.png", plot = gg_24h_diff, dpi = 300)   
+  #ggsave("results/Plots/protofinal/OTC_effect_24h_ttop.png", plot = gg_24h_diff, dpi = 300)   
+  
+  
   
   print(gg_year_diff)
   ggsave("results/Plots/protofinal/OTC_effect_year_ttop.png", plot = gg_year_diff, dpi = 300) 

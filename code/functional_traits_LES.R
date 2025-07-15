@@ -1,6 +1,9 @@
 
 
 
+
+
+
 rm(list = ls(all.names = TRUE))  #Se limpia el environment
 pacman::p_unload(pacman::p_loaded(), character.only = TRUE) #se quitan todos los paquetes (limpiamos R)
 pacman::p_load(dplyr, tidyr, tidyverse, ggplot2, BIEN, ape, maps, sf, rtry, ggrepel)
@@ -28,8 +31,9 @@ traits <- traits %>%
   mutate(across(where(is.character), as.factor))
 
 species_code <- read.csv("data/species_code.csv") %>% 
-  mutate(species = recode(species, "CAPSELLA BURSA-PASTORIS" = "Capsella bursa-pastoris"))
   
+  mutate(species = recode(species, "CAPSELLA BURSA-PASTORIS" = "Capsella bursa-pastoris"))
+
 
 ## Checking which species are absent
 checking <- anti_join(traits, species_code, by = "species") %>% 
@@ -41,7 +45,7 @@ traits <- traits %>%
   filter(species != "Medicago polymorpha") %>%
   mutate(species = droplevels(species)) %>% 
   left_join(species_code, by = "species") %>% 
-   select(c("code", "species", "trait_name", "trait_ID", "database", "trait_value")) %>% 
+  select(c("code", "species", "trait_name", "trait_ID", "database", "trait_value")) %>% 
   group_by(species, trait_name) %>% 
   mutate(n_observations = n()) %>% 
   ungroup() %>% 
@@ -59,6 +63,13 @@ flora_abrich <- flora_abrich %>%
 traits <- traits %>% 
   filter(!code %in% c("chsp", "amsp")) #Actually we have no trait info about "cisp" and "casp"
 
+
+######## WE WILL FOCUS ON LEAF ECONOMIC SPECTRUM #########
+
+traits <- traits %>% 
+  filter(
+    trait_name %in% c("LDMC", "leafN", "SLA.ex", "SLA.inc")
+  )
 
 
 # Remove outliers based on Z-scores
@@ -218,7 +229,7 @@ traits_mean_wide %>%
        title = "Number of traits without data per species (n traits = 10)") +
   geom_hline(yintercept = 5, color = "red", linetype = "dashed", linewidth = 1) +
   theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1))
-  
+
 ## According to Carmona et al. 2021, we have to remove the species with less than the 50% of the traits. 
 # These are: libi and rapa. 
 # Before deleting them, we can check the relevance of these species (in checking.results we can do it)
@@ -240,7 +251,7 @@ data.frame(
   mutate(
     variable = factor(variable, levels = variable[order(missing_perc, decreasing = TRUE)])
   ) %>% 
-ggplot(aes(x = variable, y = missing_perc)) +
+  ggplot(aes(x = variable, y = missing_perc)) +
   geom_col(fill = "seagreen") +
   geom_hline(yintercept = 50, color = "red", linetype = "dashed", linewidth = 1) +
   labs(x = "Trait", y = "% Missing data", 
@@ -260,7 +271,7 @@ traits_final <- traits_mean_wide %>%
            #"LA", 
            #"seed.mass", 
            #"vegetation.height"
-           ))  ### Choose here the FUNCTIONAL TRAITS WE WANT
+  ))  ### Choose here the FUNCTIONAL TRAITS WE WANT
 
 #################################################################################################################
 
@@ -359,7 +370,7 @@ cwm_sampling %>%
   select(-treatment, - sampling) %>% 
   prcomp(center = T, scale. = T) %>% 
   fviz_pca_biplot(geom = "point", repel = T, title = " ",
-                                     ggthem = theme_test())
+                  ggthem = theme_test())
 
 ### PCA
 ##cwm_sampling %>% 
@@ -381,92 +392,92 @@ cwm_sampling %>%
 ##        legend.title = element_blank(),        # Elimina el título de la leyenda
 ##        legend.key = element_blank()) +        # Elimina las claves de la leyenda de color/forma
 ##  labs(title = "PCA mean abundance values at sampling level")
- 
+
 {
-# PCA on CWM data (excluding metadata columns)
-pca_sampling0 <- cwm_sampling %>%
-  select(-sampling, -treatment) %>%
-  prcomp(center = TRUE, scale. = TRUE)
-
-# Individual coordinates (scores) + treatment info
-pca_sampling <- as.data.frame(pca_sampling0$x)
-pca_sampling$treatment <- cwm_sampling$treatment
-
-# Loadings (trait vectors)
-loadings_df <- as.data.frame(pca_sampling0$rotation)
-loadings_df$trait <- rownames(loadings_df)
-loadings_df <- loadings_df %>%
-  mutate(PC1 = PC1 * 4, PC2 = PC2 * 4)  # scale factor can be adjusted (lenth of arrows)
-
-loadings_df <- loadings_df %>%
-  mutate(trait = recode(trait,
-                        "leafN"     = "Leaf-Nitrogen",
-                        "seed.mass" = "Seed mass",
-                        "vegetation.height" = "Height"
-  ))
-# Explained variance
-eig_values <- pca_sampling0$sdev^2
-var_explained <- round(100 * eig_values / sum(eig_values), 1)
-
-# Final PCA plot
-# Añade la columna de sampling
-pca_sampling$sampling <- cwm_sampling$sampling
-
-# Gráfico PCA final con numeración y líneas
-gg_cwm_sampling <- 
-ggplot(pca_sampling, aes(x = PC1, y = PC2, color = treatment, shape = treatment)) +
-  geom_path(aes(group = treatment), linewidth = 0.5, alpha = 0.2) +  # Conecta puntos del mismo tratamiento
-  geom_point(size = 1.5) +
-  geom_text_repel(aes(label = sampling, color = treatment),
-                  size = 3,
-                  max.overlaps = Inf,
-                  show.legend = F)  +  # Números de sampling
-  stat_ellipse(aes(fill = treatment, color = treatment),
-               alpha = 0.12,
-               geom = "polygon",
-               level = 0.68,
-               type = "norm",
-               linewidth = 0.6, 
-               show.legend = F) +
-  geom_hline(yintercept = 0, linetype = "dashed", color = "gray50") +
+  # PCA on CWM data (excluding metadata columns)
+  pca_sampling0 <- cwm_sampling %>%
+    select(-sampling, -treatment) %>%
+    prcomp(center = TRUE, scale. = TRUE)
   
-  geom_vline(xintercept = 0, linetype = "dashed", color = "gray50") +
+  # Individual coordinates (scores) + treatment info
+  pca_sampling <- as.data.frame(pca_sampling0$x)
+  pca_sampling$treatment <- cwm_sampling$treatment
   
-  geom_segment(data = loadings_df,
-               aes(x = 0, y = 0, xend = PC1, yend = PC2),
-               inherit.aes = FALSE,
-               arrow = arrow(length = unit(0.3, "cm")),
-               color = "gray30") +
-  geom_text_repel(data = loadings_df,
-                  aes(x = PC1, y = PC2, label = trait),
-                  inherit.aes = FALSE,
-                  color = "gray30",
-                  max.overlaps = Inf) +
+  # Loadings (trait vectors)
+  loadings_df <- as.data.frame(pca_sampling0$rotation)
+  loadings_df$trait <- rownames(loadings_df)
+  loadings_df <- loadings_df %>%
+    mutate(PC1 = PC1 * 4, PC2 = PC2 * 4)  # scale factor can be adjusted (lenth of arrows)
   
-  scale_color_manual(values = palette_CB, labels = labels3) +
+  loadings_df <- loadings_df %>%
+    mutate(trait = recode(trait,
+                          "leafN"     = "Leaf-Nitrogen",
+                          "seed.mass" = "Seed mass",
+                          "vegetation.height" = "Height"
+    ))
+  # Explained variance
+  eig_values <- pca_sampling0$sdev^2
+  var_explained <- round(100 * eig_values / sum(eig_values), 1)
   
-  scale_fill_manual(values = palette_CB) +
+  # Final PCA plot
+  # Añade la columna de sampling
+  pca_sampling$sampling <- cwm_sampling$sampling
   
-  scale_shape_manual(values = point_shapes, labels = labels3) +
+  # Gráfico PCA final con numeración y líneas
+  gg_cwm_sampling <- 
+    ggplot(pca_sampling, aes(x = PC1, y = PC2, color = treatment, shape = treatment)) +
+    geom_path(aes(group = treatment), linewidth = 0.5, alpha = 0.2) +  # Conecta puntos del mismo tratamiento
+    geom_point(size = 1.5) +
+    geom_text_repel(aes(label = sampling, color = treatment),
+                    size = 3,
+                    max.overlaps = Inf,
+                    show.legend = F)  +  # Números de sampling
+    stat_ellipse(aes(fill = treatment, color = treatment),
+                 alpha = 0.12,
+                 geom = "polygon",
+                 level = 0.68,
+                 type = "norm",
+                 linewidth = 0.6, 
+                 show.legend = F) +
+    geom_hline(yintercept = 0, linetype = "dashed", color = "gray50") +
+    
+    geom_vline(xintercept = 0, linetype = "dashed", color = "gray50") +
+    
+    geom_segment(data = loadings_df,
+                 aes(x = 0, y = 0, xend = PC1, yend = PC2),
+                 inherit.aes = FALSE,
+                 arrow = arrow(length = unit(0.3, "cm")),
+                 color = "gray30") +
+    geom_text_repel(data = loadings_df,
+                    aes(x = PC1, y = PC2, label = trait),
+                    inherit.aes = FALSE,
+                    color = "gray30",
+                    max.overlaps = Inf) +
+    
+    scale_color_manual(values = palette_CB, labels = labels3) +
+    
+    scale_fill_manual(values = palette_CB) +
+    
+    scale_shape_manual(values = point_shapes, labels = labels3) +
+    
+    labs(x = paste0("PC1 (", var_explained[1], "%)"),
+         y = paste0("PC2 (", var_explained[2], "%)"),
+         #title = "CWM differences at sampling level"
+    ) +
+    guides(color = guide_legend(title = NULL),
+           shape = guide_legend(title = NULL),
+           fill = "none") +
+    #theme_test() +
+    theme(
+      panel.grid = element_blank(),
+      strip.background = element_blank(),
+      strip.text = element_text(face = "bold"),
+      text = element_text(size = 15),
+      legend.position = "bottom"
+    )
+  print(gg_cwm_sampling)
+  ggsave("results/Plots/protofinal/FT_cwm_sampling.png", plot = gg_cwm_sampling, dpi = 300)
   
-  labs(x = paste0("PC1 (", var_explained[1], "%)"),
-       y = paste0("PC2 (", var_explained[2], "%)"),
-       #title = "CWM differences at sampling level"
-       ) +
-  guides(color = guide_legend(title = NULL),
-         shape = guide_legend(title = NULL),
-         fill = "none") +
-  #theme_test() +
-  theme(
-    panel.grid = element_blank(),
-    strip.background = element_blank(),
-    strip.text = element_text(face = "bold"),
-    text = element_text(size = 15),
-    legend.position = "bottom"
-  )
-print(gg_cwm_sampling)
-ggsave("results/Plots/protofinal/FT_cwm_sampling.png", plot = gg_cwm_sampling, dpi = 300)
-
   }
 
 ##############################################################################
@@ -574,88 +585,88 @@ cwm_plot %>%
 
 {
   pca_plot0 <- cwm_plot %>%
-  select(-sampling, -treatment, -plot) %>%
-  prcomp(center = TRUE, scale. = TRUE)
-
-# Individual coordinates (scores) + treatment info
-pca_plot <- as.data.frame(pca_plot0$x)
-pca_plot <- pca_plot %>% 
-  mutate(sampling = cwm_plot$sampling, 
-         plot = cwm_plot$plot, 
-         treatment = cwm_plot$treatment)
-
-# Loadings (trait vectors)
-loadings_df_plot <- as.data.frame(pca_plot0$rotation)
-loadings_df_plot$trait <- rownames(loadings_df_plot)
-loadings_df_plot <- loadings_df_plot %>%
-  mutate(PC1 = PC1 * 4, PC2 = PC2 * 4)  # scale factor can be adjusted (lenth of arrows)
-
-loadings_df_plot <- loadings_df_plot %>%
-  mutate(trait = recode(trait,
-                        "leafN"     = "Leaf-Nitrogen",
-                        "seed.mass" = "Seed mass",
-                        "vegetation.height" = "Height"))
-# Explained variance
-eig_values <- pca_plot0$sdev^2
-var_explained <- round(100 * eig_values / sum(eig_values), 1)
-
-
-
-
-
-# Gráfico PCA final con numeración y líneas
-gg_cwm_plot <- 
-ggplot(pca_plot, aes(x = PC1, y = PC2, color = treatment, shape = treatment)) +
-  geom_point(size = 1.5) +
-  stat_ellipse(aes(fill = treatment, color = treatment),
-               alpha = 0.12,
-               geom = "polygon",
-               level = 0.68,
-               type = "norm",
-               linewidth = 0.6, 
-               show.legend = F) +
+    select(-sampling, -treatment, -plot) %>%
+    prcomp(center = TRUE, scale. = TRUE)
   
-  geom_hline(yintercept = 0, linetype = "dashed", color = "gray50") +
+  # Individual coordinates (scores) + treatment info
+  pca_plot <- as.data.frame(pca_plot0$x)
+  pca_plot <- pca_plot %>% 
+    mutate(sampling = cwm_plot$sampling, 
+           plot = cwm_plot$plot, 
+           treatment = cwm_plot$treatment)
   
-  geom_vline(xintercept = 0, linetype = "dashed", color = "gray50") +
+  # Loadings (trait vectors)
+  loadings_df_plot <- as.data.frame(pca_plot0$rotation)
+  loadings_df_plot$trait <- rownames(loadings_df_plot)
+  loadings_df_plot <- loadings_df_plot %>%
+    mutate(PC1 = PC1 * 4, PC2 = PC2 * 4)  # scale factor can be adjusted (lenth of arrows)
   
-  geom_segment(data = loadings_df_plot,
-               aes(x = 0, y = 0, xend = PC1, yend = PC2),
-               inherit.aes = FALSE,
-               arrow = arrow(length = unit(0.3, "cm")),
-               color = "gray30") +
+  loadings_df_plot <- loadings_df_plot %>%
+    mutate(trait = recode(trait,
+                          "leafN"     = "Leaf-Nitrogen",
+                          "seed.mass" = "Seed mass",
+                          "vegetation.height" = "Height"))
+  # Explained variance
+  eig_values <- pca_plot0$sdev^2
+  var_explained <- round(100 * eig_values / sum(eig_values), 1)
   
-  geom_text_repel(data = loadings_df_plot,
-                  aes(x = PC1, y = PC2, label = trait),
-                  inherit.aes = FALSE,
-                  color = "gray30",
-                  max.overlaps = Inf) +
   
-  scale_color_manual(values = palette_CB, labels = labels1) +
   
-  scale_fill_manual(values = palette_CB) +
   
-  scale_shape_manual(values = point_shapes, labels = labels1) +
   
-  labs(x = paste0("PC1 (", var_explained[1], "%)"),
-       y = paste0("PC2 (", var_explained[2], "%)"),
-       #title = "CWM differences: abundance of species at plot level"
-       ) +
+  # Gráfico PCA final con numeración y líneas
+  gg_cwm_plot <- 
+    ggplot(pca_plot, aes(x = PC1, y = PC2, color = treatment, shape = treatment)) +
+    geom_point(size = 1.5) +
+    stat_ellipse(aes(fill = treatment, color = treatment),
+                 alpha = 0.12,
+                 geom = "polygon",
+                 level = 0.68,
+                 type = "norm",
+                 linewidth = 0.6, 
+                 show.legend = F) +
+    
+    geom_hline(yintercept = 0, linetype = "dashed", color = "gray50") +
+    
+    geom_vline(xintercept = 0, linetype = "dashed", color = "gray50") +
+    
+    geom_segment(data = loadings_df_plot,
+                 aes(x = 0, y = 0, xend = PC1, yend = PC2),
+                 inherit.aes = FALSE,
+                 arrow = arrow(length = unit(0.3, "cm")),
+                 color = "gray30") +
+    
+    geom_text_repel(data = loadings_df_plot,
+                    aes(x = PC1, y = PC2, label = trait),
+                    inherit.aes = FALSE,
+                    color = "gray30",
+                    max.overlaps = Inf) +
+    
+    scale_color_manual(values = palette_CB, labels = labels1) +
+    
+    scale_fill_manual(values = palette_CB) +
+    
+    scale_shape_manual(values = point_shapes, labels = labels1) +
+    
+    labs(x = paste0("PC1 (", var_explained[1], "%)"),
+         y = paste0("PC2 (", var_explained[2], "%)"),
+         #title = "CWM differences: abundance of species at plot level"
+    ) +
+    
+    guides(color = guide_legend(title = NULL),
+           shape = guide_legend(title = NULL),
+           fill = "none") +
+    theme(
+      panel.grid = element_blank(),
+      strip.background = element_blank(),
+      strip.text = element_text(face = "bold"),
+      text = element_text(size = 15),
+      legend.position = "bottom"
+    )
+  print(gg_cwm_plot)
+  ggsave("results/Plots/protofinal/FT_cwm_plot.png", plot = gg_cwm_plot, dpi = 300)
   
-  guides(color = guide_legend(title = NULL),
-         shape = guide_legend(title = NULL),
-         fill = "none") +
-  theme(
-    panel.grid = element_blank(),
-    strip.background = element_blank(),
-    strip.text = element_text(face = "bold"),
-    text = element_text(size = 15),
-    legend.position = "bottom"
-  )
-print(gg_cwm_plot)
-ggsave("results/Plots/protofinal/FT_cwm_plot.png", plot = gg_cwm_plot, dpi = 300)
-
-}
+  }
 
 
 
@@ -733,7 +744,7 @@ pca_cwm_plot <- pca_plot %>%
 
 pca_cwm_plot$PC1 <- pca_cwm_plot$PC1 + abs(min(pca_cwm_plot$PC1)) + 1
 pca_cwm_plot$PC2 <- pca_cwm_plot$PC2 + abs(min(pca_cwm_plot$PC2)) + 1
-        
+
 
 pca_cwm_plot %>%  write.csv("data/pca_cwm_plot.csv", row.names = F)
 
@@ -767,12 +778,12 @@ list_wp <- list()
 
 for(i in seq_along(trait_levels)){
   
-RR_treatment_c(cwm_plot_db, trait_levels[i])
-list_c[[i]] <- RR_treatment
-
-RR_treatment_wp(cwm_plot_db, trait_levels[i])
-list_wp[[i]] <- RR_wp_vs_treatment 
-
+  RR_treatment_c(cwm_plot_db, trait_levels[i])
+  list_c[[i]] <- RR_treatment
+  
+  RR_treatment_wp(cwm_plot_db, trait_levels[i])
+  list_wp[[i]] <- RR_wp_vs_treatment 
+  
 }
 
 RR_c <- do.call(rbind, list_c) %>% 
@@ -781,8 +792,8 @@ RR_wp <- do.call(rbind, list_wp)
 
 RR_whole_aggregated <- rbind(RR_c, RR_wp) %>% 
   mutate(
-  variable = as.factor(variable)
-) %>% 
+    variable = as.factor(variable)
+  ) %>% 
   mutate(
     upper_limit = RR + se_RR * 1.96,   # calculating interval of confidence
     lower_limit = RR - se_RR * 1.96
@@ -816,25 +827,25 @@ labels_variables <- c("LDMC", "Leaf N", "SLA")
 
 {gg_RR_cwm <- 
     
-RR_whole_aggregated %>% 
+    RR_whole_aggregated %>% 
     filter(RR_descriptor %in% c("p_vs_c", "w_vs_c", "wp_vs_c")) %>%
     mutate(variable = factor(variable, 
                              levels = limits_variables, 
                              labels = labels_variables)) %>% 
     mutate( variable = fct_rev(variable)) %>% 
-  ggplot(aes(y = variable, x = RR, color = RR_descriptor)) + 
-  geom_errorbar(
-    aes(xmin = lower_limit,
-        xmax = upper_limit),
-    linewidth = 0.5,
-    position = position_dodge(width = 0.2),
-    width = 0.1
-  ) +  
-  geom_point(position = position_dodge(width = 0.2)) + 
+    ggplot(aes(y = variable, x = RR, color = RR_descriptor)) + 
+    geom_errorbar(
+      aes(xmin = lower_limit,
+          xmax = upper_limit),
+      linewidth = 0.5,
+      position = position_dodge(width = 0.2),
+      width = 0.1
+    ) +  
+    geom_point(position = position_dodge(width = 0.2)) + 
     
-  scale_color_manual(values = palette_RR_CB, labels = labels_RR2) +
+    scale_color_manual(values = palette_RR_CB, labels = labels_RR2) +
     
-  geom_vline(xintercept = 0, linetype = "dashed", color = "gray40") +
+    geom_vline(xintercept = 0, linetype = "dashed", color = "gray40") +
     
     scale_x_continuous(breaks = scales::breaks_pretty(n = 3)) +
     
@@ -850,13 +861,13 @@ RR_whole_aggregated %>%
       show.legend = F
     )+
     
-  labs(y = NULL,
-       x = NULL,
-       color = NULL) +
+    labs(y = NULL,
+         x = NULL,
+         color = NULL) +
     
-  gg_RR_theme
+    gg_RR_theme
   
-print(gg_RR_cwm)
+  print(gg_RR_cwm)
 }
 
 
@@ -915,56 +926,56 @@ print(gg_RR_cwm)
 
 ## DYNAMICS
 {
-list_dyn_c <- list()
-list_dyn_wp <- list()
-
-for(i in seq_along(trait_levels)){
-
-meta_function(cwm_plot_db, trait_levels[i], "treatment")
-list_dyn_c[[i]] <- RR_treatment
-list_dyn_wp[[i]] <- RR_wp_vs_treatment
-
-}
-
-
-RR_dyn_c <- do.call(rbind, list_dyn_c) %>% 
-  select(sampling, date, RR_descriptor, variable, delta_RR, se_delta_RR)
-RR_dyn_wp <- do.call(rbind, list_dyn_wp) %>% 
-  select(sampling, date, RR_descriptor, variable, delta_RR, se_delta_RR)
-
-
-
-RR_whole_dynamics <- rbind(RR_dyn_c, RR_dyn_wp) %>% 
-  mutate(
-    variable = as.factor(variable),
-    year = lubridate::year(date)
-  ) %>% 
-  mutate(
-    year_descriptor = paste0(year, "_", RR_descriptor)
-    ) %>% 
-  mutate(
-    upper_limit = delta_RR + se_delta_RR * 1.96,   # calculating interval of confidence
-    lower_limit = delta_RR - se_delta_RR * 1.96
-  ) %>% 
-  mutate(
-    null_effect = ifelse(lower_limit <= 0 & upper_limit >= 0, "YES","NO"))
-
-scales_data <- list()
-for(i in seq_along(trait_levels)){
+  list_dyn_c <- list()
+  list_dyn_wp <- list()
   
-  scale_i <- RR_whole_dynamics %>% 
-    filter(variable == trait_levels[i]) %>% 
+  for(i in seq_along(trait_levels)){
+    
+    meta_function(cwm_plot_db, trait_levels[i], "treatment")
+    list_dyn_c[[i]] <- RR_treatment
+    list_dyn_wp[[i]] <- RR_wp_vs_treatment
+    
+  }
+  
+  
+  RR_dyn_c <- do.call(rbind, list_dyn_c) %>% 
+    select(sampling, date, RR_descriptor, variable, delta_RR, se_delta_RR)
+  RR_dyn_wp <- do.call(rbind, list_dyn_wp) %>% 
+    select(sampling, date, RR_descriptor, variable, delta_RR, se_delta_RR)
+  
+  
+  
+  RR_whole_dynamics <- rbind(RR_dyn_c, RR_dyn_wp) %>% 
     mutate(
-      scale = (max(abs(upper_limit)) + max(abs(lower_limit)))
-    )
+      variable = as.factor(variable),
+      year = lubridate::year(date)
+    ) %>% 
+    mutate(
+      year_descriptor = paste0(year, "_", RR_descriptor)
+    ) %>% 
+    mutate(
+      upper_limit = delta_RR + se_delta_RR * 1.96,   # calculating interval of confidence
+      lower_limit = delta_RR - se_delta_RR * 1.96
+    ) %>% 
+    mutate(
+      null_effect = ifelse(lower_limit <= 0 & upper_limit >= 0, "YES","NO"))
   
-  scales_data[[i]] <- scale_i
+  scales_data <- list()
+  for(i in seq_along(trait_levels)){
+    
+    scale_i <- RR_whole_dynamics %>% 
+      filter(variable == trait_levels[i]) %>% 
+      mutate(
+        scale = (max(abs(upper_limit)) + max(abs(lower_limit)))
+      )
+    
+    scales_data[[i]] <- scale_i
+    
+  }
   
-}
-
-RR_whole_dynamics <- do.call(rbind, scales_data)
-
-
+  RR_whole_dynamics <- do.call(rbind, scales_data)
+  
+  
 }
 
 
@@ -979,37 +990,37 @@ RR_whole_dynamics <- do.call(rbind, scales_data)
     mutate(RR_descriptor = factor(RR_descriptor,
                                   levels = c("wp_vs_c", "w_vs_c", "p_vs_c"))) %>%
     
-      ggplot(aes(x = date, y = delta_RR)) + 
-      
-      #facet_grid(variable ~ RR_descriptor, scales = "free_y",
-      #       labeller = labeller(
-      #         RR_descriptor = as_labeller(labels_RR2))) + 
+    ggplot(aes(x = date, y = delta_RR)) + 
+    
+    #facet_grid(variable ~ RR_descriptor, scales = "free_y",
+    #       labeller = labeller(
+    #         RR_descriptor = as_labeller(labels_RR2))) + 
     
     
-      facet_grid(variable ~ year, scales = "free",
+    facet_grid(variable ~ year, scales = "free",
                labeller = labeller(
                  RR_descriptor = as_labeller(labels_RR2))) + 
     
-      #facet_wrap(~ variable, scales = "free_y",
-      #           ncol = 1, nrow = 3, 
-      #       labeller = labeller(
-      #         RR_descriptor = as_labeller(labels_RR2))) + 
+    #facet_wrap(~ variable, scales = "free_y",
+    #           ncol = 1, nrow = 3, 
+    #       labeller = labeller(
+    #         RR_descriptor = as_labeller(labels_RR2))) + 
     
-      geom_errorbar(aes(
-        ymin = lower_limit,
-        ymax = upper_limit,
-        color = RR_descriptor),
-        alpha = 0.5,
-        linewidth = 0.5, 
-        position = position_dodge2(width = 12, preserve = "single")
-        ) +
+    geom_errorbar(aes(
+      ymin = lower_limit,
+      ymax = upper_limit,
+      color = RR_descriptor),
+      alpha = 0.5,
+      linewidth = 0.5, 
+      position = position_dodge2(width = 12, preserve = "single")
+    ) +
     
-      geom_point(aes(color = RR_descriptor), size = 1.1,
-                 position = position_dodge2(width = 12, preserve = "single")) + 
+    geom_point(aes(color = RR_descriptor), size = 1.1,
+               position = position_dodge2(width = 12, preserve = "single")) + 
     
-      geom_line(aes(color = RR_descriptor, group = year_descriptor), linewidth = 0.5) +
+    geom_line(aes(color = RR_descriptor, group = year_descriptor), linewidth = 0.5) +
     
-      scale_color_manual(values = palette_RR_CB) + 
+    scale_color_manual(values = palette_RR_CB) + 
     
     geom_text(aes(
       x = date,
@@ -1025,16 +1036,16 @@ RR_whole_dynamics <- do.call(rbind, scales_data)
     scale_x_date(
       date_breaks = "2 months",
       date_labels = "%Y-%m"
-      ) + 
+    ) + 
     
-      geom_hline(yintercept= 0, linetype = "dashed", color = "gray40", linewidth = 0.5) +
+    geom_hline(yintercept= 0, linetype = "dashed", color = "gray40", linewidth = 0.5) +
     
-      geom_vline(xintercept = as.Date("2023-05-11"), linetype = "dashed", color = "gray40") +
+    geom_vline(xintercept = as.Date("2023-05-11"), linetype = "dashed", color = "gray40") +
     
     scale_y_continuous(breaks = scales::breaks_pretty(n = 3)) +
     
     gg_RR_theme +
-  
+    
     labs(x = NULL, y = NULL) +
     
     theme(
@@ -1042,8 +1053,8 @@ RR_whole_dynamics <- do.call(rbind, scales_data)
       strip.background        = element_blank(),
       strip.text.x = element_blank())
   
-print(gg_cwm_dynamics)
-#ggsave("results/Plots/protofinal/FT_cwm_dynamics.png", plot = gg_cwm_dynamics, dpi = 300)
+  print(gg_cwm_dynamics)
+  #ggsave("results/Plots/protofinal/FT_cwm_dynamics.png", plot = gg_cwm_dynamics, dpi = 300)
 }
 
 {gg_cwm_wp_dynamics <- 
@@ -1107,7 +1118,7 @@ print(gg_cwm_dynamics)
   #ggsave("results/Plots/protofinal/FT_cwm_dynamics.png", plot = gg_cwm_dynamics, dpi = 300)
 }
 
-    
+
 
 
 ## JOINING

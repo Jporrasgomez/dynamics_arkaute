@@ -238,13 +238,8 @@ ggplot(rad_treat_db, aes(x = rank, y = abundance_s)) +
   geom_text(aes(x = max(rank) * 0.7, y = max(abundance_s) * 0.9, 
                 label = paste("Gamma:", round(zipf_gamma, 4))), size = 3.2) +
     
-    theme(
-      panel.grid = element_blank(),
-      strip.background = element_blank(),
-      strip.text = element_text(face = "bold"),
-      text = element_text(size = 15),
-      legend.position = "none"
-    )
+    theme3 +
+    theme(legend.position = "none")
   
 print(gg_rads_treatment)
 ggsave("results/Plots/protofinal/RADs_treatment.png", plot = gg_rads_treatment, dpi = 300)

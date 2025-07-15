@@ -350,8 +350,9 @@ labels_variables <- c(
       color = wp_CB)  +
  
     scale_x_date(
-      date_labels = "%Y-%m-%d"  
-    ) + 
+      date_breaks = "2 months",
+      date_labels = "%Y-%m"
+    ) +
     
     scale_y_continuous(
       breaks      = scales::pretty_breaks(n = 2),
@@ -380,72 +381,7 @@ labels_variables <- c(
 
 
 
-{gg_RR_dynamics <- 
-    RR_whole_dynamics %>% 
-    filter(RR_descriptor %in% c("w_vs_c", "p_vs_c", "wp_vs_c")) %>% 
-    filter(variable != "biomass") %>% 
-    # 1) re-defino el factor con el orden deseado:
-    mutate(
-      RR_descriptor = factor(RR_descriptor, 
-                             levels = c("wp_vs_c", "w_vs_c", "p_vs_c")),
-      variable = factor(variable, 
-                        levels = limits_variables, 
-                        labels = labels_variables)
-    ) %>%
-    ggplot(aes(x = date, y = delta_RR, color = RR_descriptor, group = RR_descriptor)) + 
-    
-    facet_grid(
-      variable ~ RR_descriptor, 
-      scales = "free_y",
-      labeller = labeller(RR_descriptor = as_labeller(labels_RR2))
-    ) +  
-    
-    geom_hline(yintercept = 0, linetype="dashed", color = "gray25", linewidth=0.5) +
-    geom_vline(xintercept = as.Date("2023-05-11"),
-               linetype = "dashed",
-               color="gray40",
-               linewidth = 0.7) +
-    
-    geom_errorbar(aes(ymin = lower_limit,
-                      ymax = upper_limit),
-                  alpha = 0.5,
-                  linewidth = 0.5) +
-    
-    geom_point(position = position_dodge2(width = 0.7, preserve = "single"),
-               size = 1.1) +
-    
-    #geom_line(aes(group = year), linewidth = 0.5) +
-    geom_line(linewidth = 0.5) +
-    
-    geom_text(aes(
-      x = date,
-      y = ifelse(delta_RR < 0, lower_limit - 8* scale, upper_limit  + 8 * scale),
-      label = ifelse(null_effect == "NO", "*", NA_character_)
-    ),
-    position = position_dodge2(width = 0.7, preserve = "single"),
-    size = 5,
-    show.legend = FALSE
-    ) +
-    
-    scale_color_manual(values = palette_RR_CB) +
-    
-    scale_y_continuous(breaks = scales::breaks_pretty(n = 2)) +
-    
-    labs(x = NULL, y = "Log Response Ratio") +
-    
-    gg_theme +
-    
-    theme(
-      strip.text.y            = element_blank(),
-      strip.background        = element_blank(),
-      strip.text.x = element_blank()) + 
-    
-    labs(x = NULL, y = NULL)
-  
-  print(gg_RR_dynamics)
-  #ggsave("results/Plots/protofinal/2.dynamics.png", plot = gg_dynamics, dpi = 300)
-  #saveRDS(gg_dynamics, file = "results/plots/gg_dynamics_wp.rds")
-}
+
 
 
 
@@ -500,14 +436,15 @@ labels_variables <- c(
     ) +
     
     scale_x_date(
-      date_labels = "%Y-%m-%d"  
-    ) + 
+      date_breaks = "2 months",
+      date_labels = "%Y-%m"
+    ) +
     
     scale_color_manual(values = palette_RR_CB) +
     
     scale_y_continuous(breaks = scales::breaks_pretty(n = 2)) +
     
-    labs(x = NULL, y = "Log Response Ratio") +
+    labs(x = NULL, y = "Log Response Ratio")  +
     
     gg_theme +
     
@@ -547,23 +484,11 @@ ggsave("results/Plots/protofinal/1.Warming_Effect.png", plot = gg_Warming_Effect
 gg_Results <- 
   ggarrange(
     gg_RR_agg_c   + theme(plot.margin = margin(5,5,5,5)),   # margen uniforme
-    gg_RR_dynamics + theme(plot.margin = margin(5,5,5,5)),
+    gg_RR_dynamics_together + theme(plot.margin = margin(5,5,5,5)),
     #labels   = c("A","B"),
     ncol     = 2, 
-    widths   = c(1, 5)    # A ocupará 1/(1+2)=1/3 del ancho, B 2/3
+    widths   = c(1, 4)    # A ocupará 1/(1+2)=1/3 del ancho, B 2/3
   )
 print(gg_Results)
 ggsave("results/Plots/protofinal/1.Results.png", plot = gg_Results, dpi = 300)
-
-
-gg_Results_2 <- 
-  ggarrange(
-    gg_RR_agg_c   + theme(plot.margin = margin(5,5,5,5)),   # margen uniforme
-    gg_RR_dynamics_together_gap + theme(plot.margin = margin(5,5,5,5)),
-    #labels   = c("A","B"),
-    ncol     = 2, 
-    widths   = c(1, 5)    # A ocupará 1/(1+2)=1/3 del ancho, B 2/3
-  )
-print(gg_Results_2)
-ggsave("results/Plots/protofinal/1.Results_3.png", plot = gg_Results_2, dpi = 300)
 
