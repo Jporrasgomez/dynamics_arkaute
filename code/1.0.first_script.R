@@ -80,7 +80,11 @@ theme_set(theme_bw() +
   
  
   #At the first samplings, we were collecting information of all possible species. With the pass of time, we
-  # realized we could not identify every species at every sampling, 
+  # realized we could not identify every species at every sampling,
+  
+  # "poaceae" here stands for the code we use for all those species from family Poaceae that we could not track across time
+  # Same for "asteraceae" and "orchidaceae"
+  
   taxongroups <- flora_rare %>%
     filter(code %in% c("poaceae", "asteraceae", "tosp", "orchidaceae"))%>%
     group_by(code, sampling, one_month_window, omw_date, plot, treatment, date, month, species, family, genus_level, species_level) %>%
@@ -88,6 +92,8 @@ theme_set(theme_bw() +
               height = mean(height, na.rm = T),
               Ah = mean(Ah, na.rm = T),
               Ab = mean(Ab, na.rm = T))
+  
+  
   
   
   species <- anti_join(flora_rare, taxongroups, by = "code") %>%

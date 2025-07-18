@@ -28,11 +28,15 @@ flora_abrich <- flora_abrich %>%
   filter(!is.na(code))
 
 traits <- traits %>%
-  mutate(across(where(is.character), as.factor))
+  mutate(across(where(is.character), as.factor)) %>% 
+  mutate(species = recode(species, "Anagallis arvensis" = "Lysimachia arvensis"))%>%
+  filter(species != "Medicago polymorpha") %>%
+  mutate(species = droplevels(species))
 
 species_code <- read.csv("data/species_code.csv") %>% 
   
-  mutate(species = recode(species, "CAPSELLA BURSA-PASTORIS" = "Capsella bursa-pastoris"))
+  mutate(species = recode(species, "CAPSELLA BURSA-PASTORIS" = "Capsella bursa-pastoris")) %>% 
+  mutate(across(where(is.character), as.factor))
 
 
 ## Checking which species are absent
@@ -40,10 +44,7 @@ checking <- anti_join(traits, species_code, by = "species") %>%
   distinct(species, .keep_all = T) %>% 
   print()#Anagallis arvensis = Lysimachia arvensis
 
-traits <- traits %>% 
-  mutate(species = recode(species, "Anagallis arvensis" = "Lysimachia arvensis"))%>%
-  filter(species != "Medicago polymorpha") %>%
-  mutate(species = droplevels(species)) %>% 
+traits <- traits  %>% 
   left_join(species_code, by = "species") %>% 
   select(c("code", "species", "trait_name", "trait_ID", "database", "trait_value")) %>% 
   group_by(species, trait_name) %>% 
@@ -162,6 +163,7 @@ setdiff(unique(traits_mean$code), unique(flora_abrich$code))
 setdiff(unique(flora_abrich$code), unique(traits_mean$code))
 
 
+
 setdiff(unique(species_code$code), unique(traits_mean$code))
 setdiff(unique(species_code$code), unique(traits$code))
 
@@ -206,12 +208,9 @@ traits_mean_wide <- traits_mean %>%
 
 traits_mean_wide <- traits_mean_wide %>% 
   mutate(SLA.inc = ifelse(is.na(SLA.inc), SLA.ex, SLA.inc)) %>% 
-  mutate(LA.inc = ifelse(is.na(LA.inc), LA.ex, LA.inc)) %>% 
-  mutate(LA.inc = ifelse(is.na(LA.inc), LA.un, LA.inc)) %>% 
-  mutate(LA.inc = ifelse(is.na(LA.inc), LA, LA.inc)) %>% 
-  select(!c("SLA.ex","LA.ex", "LA.un", "LA")) %>% 
-  rename(SLA = SLA.inc ) %>% 
-  rename(LA = LA.inc)
+  select(!"SLA.ex") %>% 
+  rename(SLA = SLA.inc ) 
+
 
 ##  ---REMOVING SPECIES WITH LOW NUMBER OF TRAITS AVAILABLE---
 
@@ -372,26 +371,6 @@ cwm_sampling %>%
   fviz_pca_biplot(geom = "point", repel = T, title = " ",
                   ggthem = theme_test())
 
-### PCA
-##cwm_sampling %>% 
-##  select(-sampling, -treatment) %>% 
-##  prcomp(center = TRUE, scale. = TRUE) %>% 
-##  fviz_pca_biplot(geom.ind = "point",
-##                  habillage = cwm_sampling$treatment,
-##                  addEllipses = TRUE,
-##                  ellipse.level = 0.68,
-##                  palette = palette5,
-##                  repel = TRUE,  # Evita la superposición de etiquetas
-##                  ggtheme = theme_test()) +
-##  scale_shape_manual(values = point_shapes, labels = labels3) +
-##  scale_color_manual(values = palette5, labels = labels3) +
-##  guides(color = guide_legend(title = NULL),    # Leyenda de color
-##         shape = guide_legend(title = NULL),    # Leyenda de forma
-##         fill = "none") +                      # Elimina la leyenda de las elipses (relleno)
-##  theme(legend.position = "bottom",
-##        legend.title = element_blank(),        # Elimina el título de la leyenda
-##        legend.key = element_blank()) +        # Elimina las claves de la leyenda de color/forma
-##  labs(title = "PCA mean abundance values at sampling level")
 
 {
   # PCA on CWM data (excluding metadata columns)
@@ -454,11 +433,11 @@ cwm_sampling %>%
                     color = "gray30",
                     max.overlaps = Inf) +
     
-    scale_color_manual(values = palette_CB, labels = labels3) +
+    scale_color_manual(values = palette_CB, labels = labels1) +
     
     scale_fill_manual(values = palette_CB) +
     
-    scale_shape_manual(values = point_shapes, labels = labels3) +
+    scale_shape_manual(values = point_shapes, labels = labels1) +
     
     labs(x = paste0("PC1 (", var_explained[1], "%)"),
          y = paste0("PC2 (", var_explained[2], "%)"),
@@ -476,8 +455,8 @@ cwm_sampling %>%
       legend.position = "bottom"
     )
   print(gg_cwm_sampling)
-  ggsave("results/Plots/protofinal/FT_cwm_sampling.png", plot = gg_cwm_sampling, dpi = 300)
-  
+  #ggsave("results/Plots/protofinal/FT_cwm_sampling.png", plot = gg_cwm_sampling, dpi = 300)
+
   }
 
 ##############################################################################

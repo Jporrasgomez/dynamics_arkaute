@@ -452,6 +452,7 @@ sp_wide_plot <- species_ab_plot %>%
               values_fill = list(abundance = 0)) %>%
   mutate(across(everything(), ~ replace_na(., 0)))
 
+sp_wide_plot %>% write.csv("data/relative_abudance_species_time.csv")
 
 abundance_data_plot <- sp_wide_plot %>% select(-treatment, -sampling, -date, -plot)
 
@@ -493,12 +494,12 @@ fit_plot <- vegan::envfit(nmds_bc_plot, as.data.frame(abundance_plot_list[[i]]),
 sp_scores_plot <- as.data.frame(fit$vectors$arrows) %>%
   mutate(p = fit_plot$vectors$pvals,
          R2 = fit_plot$vectors$r,
-         species = rownames(.)
-       )%>%
-  filter(p < 0.05, R2 > 0.15) %>%    # Filter significant and high correlation scores                             
-  mutate(NMDS1 = NMDS1 * R2 * 3,     # Scaling arrows
-         NMDS2 = NMDS2 * R2 * 3)     # Scaling arrows
-  
+         species = rownames(.))
+  #     )%>%
+  #filter(p < 0.05, R2 > 0.15) %>%    # Filter significant and high correlation scores                             
+  #mutate(NMDS1 = NMDS1 * R2 * 3,     # Scaling arrows
+  #       NMDS2 = NMDS2 * R2 * 3)     # Scaling arrows
+  #
 
 
 ggNMDS12_allplots <-
@@ -521,7 +522,7 @@ ggNMDS12_allplots <-
                  colour = "black", 
                  alpha = 0.5) +
     
-    geom_text(data = sp_scores_plot,
+    geom_text_repel(data = sp_scores_plot,
               aes(x = NMDS1, y = NMDS2, label = species),
               hjust = 0.5, vjust = -0.3, size = 3,
               colour = "black",
@@ -551,7 +552,7 @@ print(ggNMDS12_allplots)
 
 }
 
-ggsave("results/Plots/protofinal/species_composition_plot_LABELS.png", plot = ggNMDS12_allplots, dpi = 300)
+#ggsave("results/Plots/protofinal/species_composition_plot_LABELS.png", plot = ggNMDS12_allplots, dpi = 300)
 
 
 
@@ -748,3 +749,4 @@ print(gg_samplings)
 }
 
 ggsave("results/Plots/protofinal/species_composition_allsamplings.png", plot = gg_samplings, dpi = 300)
+
