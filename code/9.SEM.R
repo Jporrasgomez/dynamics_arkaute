@@ -3,6 +3,8 @@
 # To do's
 
 
+
+
 ## PROBAR CON BIOMASS 012!!
 
 # multigroups function 
@@ -60,6 +62,18 @@ arkaute_norm <- read.csv("data/arkaute_norm.csv") %>%
     sampling = as.factor(sampling),
     plot = as.factor(plot),
     treatment = as.factor(treatment))
+
+
+arkaute <- read.csv("data/arkaute.csv") %>% 
+  mutate(
+    year = as.factor(year),
+    date = ymd(date),
+    omw_date = as.factor(omw_date),
+    one_month_window = as.factor(one_month_window),
+    sampling = as.factor(sampling),
+    plot = as.factor(plot),
+    treatment = as.factor(treatment))
+
 
 arkaute_long <- arkaute_norm %>% 
   pivot_longer(
@@ -317,7 +331,7 @@ plot(global_model, title = paste0(unique(data_list[[i]]$treat_label)))
 
 {
   mod1 = lme(biomass ~ richness + Y_zipf + PC2, random = ~ 1 | plot,  data_list[[i]])
-  mod2 = lme(PC2 ~ richness + Y_zipf,  random = ~ 1 | plot, data_list[[i]])
+  mod2 = lme(PC2 ~  Y_zipf ,  random = ~ 1 | plot, data_list[[i]])
   mod3 = lme(Y_zipf ~ richness, random = ~ 1 | plot, data_list[[i]])
   
   global_model <- psem(

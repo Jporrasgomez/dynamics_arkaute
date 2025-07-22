@@ -45,7 +45,7 @@ explanatory_var <- c("year", "date", "omw_date", "one_month_window", "sampling",
 
 gglist_hist <- list()
 gglist_tests <- list()
-normality_list <- list()
+normality_list1 <- list()
 
 for(i in seq_along(variables)){
   z <- arkaute_long %>% 
@@ -55,7 +55,7 @@ for(i in seq_along(variables)){
   gglist_hist[[i]] <- gg_stats
   gglist_tests[[i]] <- gg_normality_tests
   
-  normality_list[[i]] <- normality_df
+  normality_list1[[i]] <- normality_df
   
 }
 
@@ -64,7 +64,7 @@ gglist_hist[[i]]
 
 normality_df <- do.call(rbind, normality_list)
 
-do.call(rbind, normality_list) %>% 
+do.call(rbind, normality_list1) %>% 
   ggplot(aes(y = variable, x = p_value)) +
   facet_grid(~ normality_test) + 
   geom_point() + 
@@ -185,7 +185,7 @@ for(i in seq_along(variables)){
   
 }
 
-i = 1
+i = 9
 gglist_hist[[i]] 
 
 
@@ -453,5 +453,5 @@ normality_treat_df %>%
   labs(x = "Shapiro p-value after transformation")
 
 
-arkaute_norm %>%  write.csv("data/arkaute_norm.csv", row.names = F)
+arkaute_norm%>%  write.csv("data/arkaute_norm_treatment.csv", row.names = F)
 
