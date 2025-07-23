@@ -567,10 +567,10 @@ min(nmds_df_plot$NMDS3)
 #Changes on NMDS values to avoid pressence of 0 and negative values since log(RR) do not work with those
 
 
-nmds_df_plot<- nmds_df_plot %>% 
-  mutate(NMDS1 = NMDS1 + abs(min(nmds_df_plot$NMDS1)) + 1,
-         NMDS2 = NMDS2 + abs(min(nmds_df_plot$NMDS2)) + 1,
-         NMDS3 = NMDS3 + abs(min(nmds_df_plot$NMDS3)) + 1)
+#nmds_df_plot<- nmds_df_plot %>% 
+#  mutate(NMDS1 = NMDS1 + abs(min(nmds_df_plot$NMDS1)) + 1,
+#         NMDS2 = NMDS2 + abs(min(nmds_df_plot$NMDS2)) + 1,
+#         NMDS3 = NMDS3 + abs(min(nmds_df_plot$NMDS3)) + 1)
 
 nmds_df_plot %>%  write.csv("data/nmds_df_plot_hellinger.csv", row.names = F)
 

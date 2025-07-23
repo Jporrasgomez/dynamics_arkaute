@@ -643,11 +643,10 @@ cwm_plot %>%
       legend.position = "bottom"
     )
   print(gg_cwm_plot)
-  ggsave("results/Plots/protofinal/FT_cwm_plot.png", plot = gg_cwm_plot, dpi = 300)
   
   }
 
-
+#ggsave("results/Plots/protofinal/FT_cwm_plot.png", plot = gg_cwm_plot, dpi = 300)
 
 
 ##############################################################################
@@ -721,8 +720,8 @@ sampling_dates <- read.csv("data/sampling_dates.csv") %>%
 pca_cwm_plot <- pca_plot %>%
   merge(sampling_dates)
 
-pca_cwm_plot$PC1 <- pca_cwm_plot$PC1 + abs(min(pca_cwm_plot$PC1)) + 1
-pca_cwm_plot$PC2 <- pca_cwm_plot$PC2 + abs(min(pca_cwm_plot$PC2)) + 1
+#pca_cwm_plot$PC1 <- pca_cwm_plot$PC1 + abs(min(pca_cwm_plot$PC1)) + 1
+#pca_cwm_plot$PC2 <- pca_cwm_plot$PC2 + abs(min(pca_cwm_plot$PC2)) + 1
 
 
 pca_cwm_plot %>%  write.csv("data/pca_cwm_plot.csv", row.names = F)
