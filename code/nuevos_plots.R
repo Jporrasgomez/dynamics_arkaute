@@ -33,8 +33,19 @@ labels <- labels3
 variables <- c("richness", "abundance", "Y_zipf", "biomass", "biomass012", "NMDS1", "NMDS2", "PC1", "PC2")
 
 
-# 1) dejar estas lineas de código como función a parte
-# 2) hacer un condicional: si es NMDS1, NMDS2, PC1 o PC2, hacer Hedges's. Si no, hacer LRR. 
+source("code/eff_size_function.R")
+
+list_eff <- list()
+for (i in seq_along(variables)){
+  
+  effect_size(arkaute_no0, variables[i])
+  
+  list_eff[[i]] <- effsize_data
+}
+
+effect_size_treatment <- do.call(rbind, list_eff)
+
+
 
 
 
