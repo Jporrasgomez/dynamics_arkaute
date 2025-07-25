@@ -1,9 +1,7 @@
 
 
-data <- arkaute
-variable <- "richness"
 
-RR_dynamics_c <- function(data, variable){
+effect_size_dynamics <- function(data, variable){
   
   
   data <- data %>% 
@@ -17,9 +15,16 @@ RR_dynamics_c <- function(data, variable){
       n = n(),
       mean := mean(value),
       sd := sd(value)
-    ) 
+    ) %>% 
+    as.data.frame() %>% 
+    mutate(
+      date = ymd(date)
+    )
   
   
+  RR_data <- NULL
+  
+  if (!variable %in% c("NMDS1", "NMDS2", "PC1", "PC2")) {
   
   ## Log Response Ratio ## 
   
@@ -79,9 +84,6 @@ RR_dynamics_c <- function(data, variable){
           (sd_c^4) / (n^2 * mean_c^4)
       ),
       se_delta_RR = sqrt(var_delta_RR)
-      )%>% 
-    mutate(
-      variable = variable
     )  %>% 
     filter(! RR == "-Inf") %>% 
     rename(eff_descriptor = treatment) %>% 
@@ -91,7 +93,7 @@ RR_dynamics_c <- function(data, variable){
                                  "p_vs_c" = "p", 
                                  "wp_vs_c" = "wp")
     ) %>% 
-    select(eff_descriptor, date, sampling, delta_RR, se_delta_RR, variable)
+    select(eff_descriptor, date, sampling, delta_RR, se_delta_RR)
   
   
   
@@ -125,10 +127,9 @@ RR_dynamics_c <- function(data, variable){
     filter(!RR == "-Inf") %>% 
     filter(!RR == "NaN") %>% 
     mutate(
-      variable = variable,
       eff_descriptor = paste0("wp_vs_p")
     )  %>% 
-    select(eff_descriptor, date, sampling, delta_RR, se_delta_RR, variable)
+    select(eff_descriptor, date, sampling, delta_RR, se_delta_RR)
   
   
   
@@ -136,84 +137,179 @@ RR_dynamics_c <- function(data, variable){
     mutate(
       upper_limit = delta_RR + se_delta_RR * 1.96, 
       lower_limit = delta_RR - se_delta_RR * 1.96,
+      variable = variable,
       analysis = paste0("LRR")
     ) %>% 
+    rename(
+      eff_value = delta_RR
+    ) %>% 
     
-    select(eff_descriptor, date, sampling, delta_RR, lower_limit, 
+    select(eff_descriptor, sampling, date, eff_value, lower_limit, 
            upper_limit, variable, analysis)
     
+  }
+  
   
   
   ## Cohen with Hedges'g correction for small sample size ## 
-  
-  ## Cohen's D analysis ##
+
   
   samps <- unique(data$sampling)
   
-  
+  {
   a <- data.frame(
-    eff_descriptor = c(rep(NA, length(samps))),
-    sampling = c(rep(NA, length(samps))),
-    date = c(rep(NA, length(samps))), 
-    eff_value  = c(rep(NA, length(samps))),
-    lower_limit = c(rep(NA, length(samps))),
-    upper_limit = c(rep(NA, length(samps))))
+    eff_descriptor = rep(NA_character_, length(samps)),
+    sampling       = rep(NA_character_, length(samps)),
+    date           = rep(as.Date(NA),       length(samps)),  # Date NA
+    eff_value      = rep(NA_real_,      length(samps)),
+    lower_limit    = rep(NA_real_,      length(samps)),
+    upper_limit    = rep(NA_real_,      length(samps))
+  )
   
   counter = 0
   for(i in seq_along(samps)){
-    
-    date_value <- data %>% filter(sampling == samps[i]) %>% ungroup() %>% select(date) %>% distinct()
     
     z <- 
       cohen.d(
         (data %>% filter(treatment == "w" & sampling == samps[i]) %>% pull(value)),
         (data %>% filter(treatment == "c" & sampling == samps[i]) %>% pull(value)),
-        hedges.coRR_effection = TRUE
+        hedges.correction = TRUE
       )
    counter = counter + 1 
    
     a$eff_descriptor[counter] <- paste0("w_vs_c")
     a$sampling[counter] <- paste0(samps[i])
-    a$date[counter] <- lubridate::date(date_value$date) ################### no funciona date
+    a$date[counter] <- subset(data, sampling == samps[i])$date[1]
     a$eff_value[counter] <- z$estimate
     a$lower_limit[counter] <- z$conf.int[1]
     a$upper_limit[counter] <- z$conf.int[2]
     
   } 
-  ##########################seguir aqui
-  
-  b <- 
-    cohen.d(
-      (data %>% filter(treatment == "p") %>% pull(value)),
-      (data %>% filter(treatment == "c") %>% pull(value)),
-      hedges.coRR_effection = FALSE
-    )
-  
-  c <- 
-    cohen.d(
-      (data %>% filter(treatment == "wp") %>% pull(value)),
-      (data %>% filter(treatment == "c") %>% pull(value)),
-      hedges.coRR_effection = FALSE
-    )
-  
-  d <- 
-    cohen.d(
-      (data %>% filter(treatment == "wp") %>% pull(value)),
-      (data %>% filter(treatment == "p") %>% pull(value)),
-      hedges.coRR_effection = FALSE
-    )
+
   
   
-  variable_name <- unique(data$variable)
-  cohen_data <- data.frame(
-    eff_descriptor = c("w_vs_c", "p_vs_c", "wp_vs_c", "wp_vs_p"),
-    eff_value  = c(a$estimate, b$estimate, c$estimate, d$estimate),
-    upper_limit = c(a$conf.int[2], b$conf.int[2], c$conf.int[2], d$conf.int[2]),
-    lower_limit = c(a$conf.int[1], b$conf.int[1], c$conf.int[1], d$conf.int[1]),
-    variable    = rep(variable_name, 4),
-    analysis    = rep("cohen's_d", 4)
+  b <- data.frame(
+    eff_descriptor = rep(NA_character_, length(samps)),
+    sampling       = rep(NA_character_, length(samps)),
+    date           = rep(as.Date(NA),       length(samps)),  # Date NA
+    eff_value      = rep(NA_real_,      length(samps)),
+    lower_limit    = rep(NA_real_,      length(samps)),
+    upper_limit    = rep(NA_real_,      length(samps))
   )
- 
+  
+  counter = 0
+  for(i in seq_along(samps)){
+    
+    z <- 
+      cohen.d(
+        (data %>% filter(treatment == "p" & sampling == samps[i]) %>% pull(value)),
+        (data %>% filter(treatment == "c" & sampling == samps[i]) %>% pull(value)),
+        hedges.correction = TRUE
+      )
+    counter = counter + 1 
+    
+    b$eff_descriptor[counter] <- paste0("p_vs_c")
+    b$sampling[counter] <- paste0(samps[i])
+    b$date[counter] <- subset(data, sampling == samps[i])$date[1]
+    b$eff_value[counter] <- z$estimate
+    b$lower_limit[counter] <- z$conf.int[1]
+    b$upper_limit[counter] <- z$conf.int[2]
+    
+  } 
+  
+  
+  c <- data.frame(
+    eff_descriptor = rep(NA_character_, length(samps)),
+    sampling       = rep(NA_character_, length(samps)),
+    date           = rep(as.Date(NA),       length(samps)),  # Date NA
+    eff_value      = rep(NA_real_,      length(samps)),
+    lower_limit    = rep(NA_real_,      length(samps)),
+    upper_limit    = rep(NA_real_,      length(samps))
+  )
+  
+  counter = 0
+  for(i in seq_along(samps)){
+    
+    z <- 
+      cohen.d(
+        (data %>% filter(treatment == "wp" & sampling == samps[i]) %>% pull(value)),
+        (data %>% filter(treatment == "c" & sampling == samps[i]) %>% pull(value)),
+        hedges.correction = TRUE
+      )
+    counter = counter + 1 
+    
+    c$eff_descriptor[counter] <- paste0("wp_vs_c")
+    c$sampling[counter] <- paste0(samps[i])
+    c$date[counter] <- subset(data, sampling == samps[i])$date[1]
+    c$eff_value[counter] <- z$estimate
+    c$lower_limit[counter] <- z$conf.int[1]
+    c$upper_limit[counter] <- z$conf.int[2]
+    
+  } 
+  
+  
+  d <- data.frame(
+    eff_descriptor = rep(NA_character_, length(samps)),
+    sampling       = rep(NA_character_, length(samps)),
+    date           = rep(as.Date(NA),       length(samps)),  # Date NA
+    eff_value      = rep(NA_real_,      length(samps)),
+    lower_limit    = rep(NA_real_,      length(samps)),
+    upper_limit    = rep(NA_real_,      length(samps))
+  )
+  
+  counter = 0
+  for(i in seq_along(samps)){
+    
+    z <- 
+      cohen.d(
+        (data %>% filter(treatment == "wp" & sampling == samps[i]) %>% pull(value)),
+        (data %>% filter(treatment == "p" & sampling == samps[i]) %>% pull(value)),
+        hedges.correction = TRUE
+      )
+    counter = counter + 1 
+    
+    d$eff_descriptor[counter] <- paste0("wp_vs_p")
+    d$sampling[counter] <- paste0(samps[i])
+    d$date[counter] <- subset(data, sampling == samps[i])$date[1]
+    d$eff_value[counter] <- z$estimate
+    d$lower_limit[counter] <- z$conf.int[1]
+    d$upper_limit[counter] <- z$conf.int[2]
+    
+  } 
+  
+  
+  hedges_data <- do.call(rbind, list(a,b,c,d)) %>% 
+    mutate(
+      variable = variable, 
+      analysis = paste0("hedge's_g")
+    ) %>% 
+    filter(!eff_value == "NaN")
+  }
+  
+  
+  
+  
+  if (!is.null(RR_data)) {
+    effsize_dynamics_data <- bind_rows(RR_data, hedges_data)
+  } else {
+    effsize_dynamics_data <- hedges_data
+  }
+  
+  effsize_dynamics_data <- effsize_dynamics_data %>% 
+    mutate(
+      null_effect = ifelse(lower_limit <= 0 & upper_limit >= 0, "YES","NO")) %>% 
+    select(
+      eff_descriptor, sampling, date, eff_value, lower_limit, upper_limit, null_effect, 
+      variable, analysis
+    )
+  
+  
+  
+  effsize_dynamics_data <<- effsize_dynamics_data
+  
+  
+  
+  
   
 }
   
