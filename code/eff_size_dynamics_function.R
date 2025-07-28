@@ -5,7 +5,7 @@ effect_size_dynamics <- function(data, variable){
   
   
   data <- data %>% 
-    select(treatment, date, sampling, plot, .data[[variable]]) %>% 
+    select(treatment, date, sampling, plot, all_of(variable)) %>% 
     filter(!is.na(.data[[variable]])) %>% 
     rename(
       value = all_of(variable)
@@ -297,10 +297,12 @@ effect_size_dynamics <- function(data, variable){
   
   effsize_dynamics_data <- effsize_dynamics_data %>% 
     mutate(
-      null_effect = ifelse(lower_limit <= 0 & upper_limit >= 0, "YES","NO")) %>% 
+      null_effect = ifelse(lower_limit <= 0 & upper_limit >= 0, "YES","NO"),
+      scale = (max(abs(upper_limit)) + max(abs(lower_limit)))/100
+      ) %>% 
     select(
       eff_descriptor, sampling, date, eff_value, lower_limit, upper_limit, null_effect, 
-      variable, analysis
+      scale, variable, analysis
     )
   
   

@@ -41,11 +41,16 @@ for (i in seq_along(variables)){
   effect_size(arkaute_no0, variables[i])
   
   list_eff[[i]] <- effsize_data
+  
+  rm(effsize_data)
 }
 
-effect_size_aggregated <- do.call(rbind, list_eff) %>% 
-  mutate(
-    eff_value = if_else(variable == "Y_zipf" & analysis == "LRR", -1 * eff_value, eff_value))
+effect_size_aggregated <- do.call(rbind, list_eff) 
+
+
+
+
+
 
 
 
@@ -57,146 +62,201 @@ for (i in seq_along(variables)){
   effect_size_dynamics(arkaute, variables[i])
   
   list_eff_dyn[[i]] <- effsize_dynamics_data
+  
+  rm(effsize_dynamics_data)
 }
 
 effect_size_dynamics <- do.call(rbind, list_eff_dyn) %>% 
 mutate(
-  eff_value = if_else(variable == "Y_zipf" & analysis == "LRR", -1 * eff_value, eff_value))
+  eff_value = if_else(variable == "Y_zipf" & analysis == "LRR", -1 * eff_value, eff_value),
+  upper_limit = if_else(variable == "Y_zipf" & analysis == "LRR", -1 * upper_limit, upper_limit),
+  lower_limit = if_else(variable == "Y_zipf" & analysis == "LRR", -1 * lower_limit, lower_limit),
+  year = year(date))
+
+
 
 
 
 
 # Plots #
 
-
-limits_variables <- c("richness",
-                      "abundance",
-                      "Y_zipf",
-                      #"biomass",
-                      "biomass012",
-                      "NMDS1",
-                      "NMDS2",
-                      "PC1",
-                      "PC2")
-
-labels_variables <- c("richness" = "Richness",
-                      "abundance" = "Cover",
-                      "Y_zipf" = "Evenness",
-                      #"biomass" = "Biomass",
-                      "biomass012" = "Biomass",
-                      "NMDS1" = "SC1",
-                      "NMDS2" = "SC2",
-                      "PC1" = "FT1", 
-                      "PC2" = "FT2")
-                      
+source("code/gg_aggregated_function.R")
 
 
+## All Cohen's d
 
+cohens_data <- effect_size_aggregated %>% 
+  filter(analysis == "cohen's_d")
 
-
-{gg_RR_agg_c <- 
-    effect_size_aggregated %>% 
-    filter(analysis == "cohen's_d") %>% 
+gg_eff_agg_c <- cohens_data %>% 
     filter(eff_descriptor %in% c("p_vs_c", "w_vs_c", "wp_vs_c")) %>% 
     filter(variable != "biomass") %>%
     mutate(eff_descriptor = factor(eff_descriptor,
-                                  levels = c("p_vs_c", "w_vs_c", "wp_vs_c"))) %>%
-    
-    ggplot(aes(y = variable, x = eff_value, color = eff_descriptor)) + 
-    
-    geom_vline(xintercept = 0, linetype = "dashed",
-               #color = c_CB,
-               color = "grey20",
-               linewidth = 0.6) +
-    
-    geom_errorbar(
-      aes(xmin = lower_limit,
-          xmax = upper_limit),
-      linewidth = 0.5,
-      position = position_dodge(width = 0.5),
-      width = 0.1
-    ) +  
-    
-    geom_point(position = position_dodge(width = 0.5), size = 1.5) + 
-    
-   # geom_text(
-   #   aes(
-   #     y = variable,
-   #     x = ifelse(eff_value < 0, lower_limit - scale/8,  upper_limit + scale/8),
-   #     label = ifelse(null_effect == "NO", "*", NA_character_),
-   #     color = eff_descriptor,
-   #     size = 13
-   #   ),
-   #   position = position_dodge2(width = 0.45, preserve = "single")
-   # )+
-    
-    scale_color_manual(values = palette_RR_CB, labels = labels_RR2) +
-    
-    scale_y_discrete(
-      limits = rev(limits_variables),
-      labels = labels_variables
-    ) +
-    
-    scale_x_continuous(breaks = scales::breaks_pretty(n = 3)) +
-    
-    labs(x = NULL, y = NULL) +
-    
-    gg_RR_theme
+                                  levels = c("p_vs_c", "w_vs_c", "wp_vs_c"))
+           ) %>% 
+  ggagg(palette_RR_CB, # using my function
+        labels_RR2,
+        "grey20",
+        position   = position_dodge2(width = 0.5, preserve = "single")) 
   
-  
-  print(gg_RR_agg_c)
-  
-  #ggsave("results/Plots/protofinal/1.treatment_effects_vertical.png", plot = gg_RR_c, dpi = 300)
-}
-
-
-
-{gg_RR_agg_wp <- 
-    effect_size_aggregated %>% 
-    filter(analysis == "cohen's_d") %>% 
+gg_eff_agg_wp <- cohens_data %>% 
     filter(eff_descriptor == "wp_vs_p") %>% 
     filter(variable != "biomass") %>%
-    
-    ggplot(aes(y = variable, x = eff_value, color = eff_descriptor)) + 
-    
-    geom_vline(xintercept = 0,
-               linetype = "dashed",
-               color = p_CB, 
-               linewidth = 0.6) +
-    
-    geom_errorbar(
-      aes(xmin = lower_limit,
-          xmax = upper_limit),
-      linewidth = 0.6,
-      width = 0.1
-    ) +  
-    
-    geom_point(size = 1.5) + 
-    
-   # geom_text(
-   #   aes(
-   #     y = variable,
-   #     x = lower_limit - scale/8,     
-   #     label = ifelse(null_effect == "NO", "*", NA_character_),
-   #     color = eff_descriptor,
-   #     size = 13
-   #   ))+
-   # 
-    scale_color_manual(values = palette_RR_wp, labels = labels_RR_wp) +
-    
-    scale_y_discrete(
-      limits = rev(limits_variables),
-      labels = labels_variables
-    ) +
-    
-    scale_x_continuous(breaks = scales::breaks_pretty(n = 2)) +
-    
-    labs(x = NULL, y = NULL) +
-    
-    gg_RR_theme 
-  
-  
-  print(gg_RR_agg_wp)
-  
-  #ggsave("results/Plots/protofinal/1.treatment_effects_vertical.png", plot = gg_RR_c, dpi = 300)
-}
+  ggagg(palette_RR_wp,
+      labels_RR_wp,
+      p_CB, 
+      position   = position_dodge2(width = 0.2, preserve = "single"))
+
+
+source("code/gg_dynamics_function.R")
+
+hedges_data <-  effect_size_dynamics %>% 
+  filter(analysis == "hedge's_g")
+
+
+gg_eff_dynamics_c <- hedges_data %>% 
+  filter(eff_descriptor %in% c("w_vs_c", "p_vs_c", "wp_vs_c")) %>% 
+  filter(variable != "biomass") %>% 
+  mutate(
+    variable = factor(variable, 
+                      levels = limits_variables, 
+                      labels = labels_variables)) %>% 
+  ggdyn(palette_RR_CB,
+        labels_RR2, 
+        "grey20",
+        position = position_dodge2(width = 12, preserve = "single")) 
+
+gg_eff_dynamics_wp <- hedges_data %>% 
+  filter(eff_descriptor %in% c("wp_vs_p")) %>% 
+  filter(!variable == "biomass") %>% 
+  mutate(variable = factor(variable, 
+                           levels = limits_variables, 
+                           labels = labels_variables)) %>% 
+  ggdyn(palette_RR_wp,
+      labels_RR_wp2,
+      p_CB,
+      position = position_dodge2(width = 4, preserve = "single"))
+
+library(patchwork)
+
+gg_Warming_Effect_cohens <- 
+  (gg_eff_agg_wp   + theme(plot.margin = margin(5,5,5,5))) +
+  (gg_eff_dynamics_wp + theme(plot.margin = margin(5,5,5,5))) +
+  plot_layout(
+    ncol   = 2,
+    widths = c(1, 4)) +
+  plot_annotation(
+    title = "Effect size: Cohen's d with Hedge's g correction for dynamics",
+    theme = theme(
+      plot.title = element_text(face = "bold", size = 10, hjust = 0.5)))
+
+print(gg_Warming_Effect_cohens)
+ggsave("results/Plots/protofinal/1.Warming_Effect_cohen.png", plot = gg_Warming_Effect_cohens, dpi = 300)
+
+
+gg_Results_cohens <- 
+  ggarrange(
+    gg_eff_agg_c   + theme(plot.margin = margin(5,5,5,5)),   # margen uniforme
+    gg_eff_dynamics_c + theme(plot.margin = margin(5,5,5,5)),
+    #labels   = c("A","B"),
+    ncol   = 2, 
+    widths = c(1, 4)) +
+  plot_annotation(
+    title = "Effect size: Cohen's d with Hedge's g correction for dynamics",
+    theme = theme( plot.title = element_text(face = "bold", size = 10, hjust = 0.5)))
+print(gg_Results_cohens)
+ggsave("results/Plots/protofinal/1.Results_cohen.png", plot = gg_Results_cohens, dpi = 300)
+
+
+
+
+
+
+
+## LRR + Cohens'd/Hedges'g for NMDS and PC
+
+sc_ft_var <- c("NMDS1","NMDS2","PC1","PC2")
+
+data_lrr_cohen <- effect_size_aggregated %>% 
+  filter(
+    (variable %in% sc_ft_var  & analysis == "cohen's_d") |
+      (!(variable %in% sc_ft_var) & analysis == "LRR"))
+
+gg_eff_agg_mix <- data_lrr_cohen %>% 
+  filter(eff_descriptor %in% c("p_vs_c", "w_vs_c", "wp_vs_c")) %>% 
+  filter(variable != "biomass") %>%
+  mutate(eff_descriptor = factor(eff_descriptor,
+                                 levels = c("p_vs_c", "w_vs_c", "wp_vs_c"))) %>% 
+  ggagg(palette_RR_CB,
+      labels_RR2,
+      "grey20",
+      position   = position_dodge2(width = 0.5, preserve = "single")) 
+
+gg_eff_agg_wp_mix <- 
+  data_lrr_cohen %>% 
+  filter(eff_descriptor == "wp_vs_p") %>% 
+  filter(variable != "biomass") %>% 
+  ggagg(palette_RR_wp,
+        labels_RR_wp,
+        p_CB, 
+        position   = position_dodge2(width = 0.2, preserve = "single"))
+
+
+data_lrr_hedges <- effect_size_dynamics %>% 
+  filter(
+    (variable %in% sc_ft_var  & analysis == "hedge's_g") |
+      (!(variable %in% sc_ft_var) & analysis == "LRR"))
+
+
+gg_eff_dynamics_c_mix <- data_lrr_hedges %>% 
+  filter(eff_descriptor %in% c("w_vs_c", "p_vs_c", "wp_vs_c")) %>% 
+  filter(variable != "biomass") %>% 
+  mutate(
+    variable = factor(variable, 
+                      levels = limits_variables, 
+                      labels = labels_variables)) %>% 
+  ggdyn(palette_RR_CB,
+      labels_RR2, 
+      "grey20",
+      position = position_dodge2(width = 12, preserve = "single")) 
+
+
+gg_eff_dynamics_wp_mix <- data_lrr_hedges %>% 
+  filter(eff_descriptor %in% c("wp_vs_p")) %>% 
+  filter(!variable == "biomass") %>% 
+  mutate(variable = factor(variable, 
+                           levels = limits_variables, 
+                           labels = labels_variables)) %>% 
+  ggdyn(palette_RR_wp,
+        labels_RR_wp2,
+        p_CB,
+        position = position_dodge2(width = 4, preserve = "single")) 
+
+
+gg_Warming_Effect_mix <- 
+  (gg_eff_agg_wp_mix   + theme(plot.margin = margin(5,5,5,5))) +
+  (gg_eff_dynamics_wp_mix + theme(plot.margin = margin(5,5,5,5))) +
+  plot_layout(
+    ncol   = 2,
+    widths = c(1, 4)) +
+  plot_annotation(
+    title = "Effect size: LRR for all variables but SC and FT (Cohen and Hedge)",
+    theme = theme(
+      plot.title = element_text(face = "bold", size = 10, hjust = 0.5)))
+
+print(gg_Warming_Effect_mix)
+ggsave("results/Plots/protofinal/1.Warming_Effect_mix.png", plot = gg_Warming_Effect_mix, dpi = 300)
+
+
+gg_Results_mix <- 
+  ggarrange(
+    gg_eff_agg_mix   + theme(plot.margin = margin(5,5,5,5)),   # margen uniforme
+    gg_eff_dynamics_c_mix + theme(plot.margin = margin(5,5,5,5)),
+    #labels   = c("A","B"),
+    ncol   = 2, 
+    widths = c(1, 4)) +
+  plot_annotation(
+    title = "Effect size: LRR for all variables but SC and FT (Cohen and Hedge)",
+    theme = theme( plot.title = element_text(face = "bold", size = 10, hjust = 0.5)))
+print(gg_Results_mix)
+ggsave("results/Plots/protofinal/1.Results_mix.png", plot = gg_Results_mix, dpi = 300)

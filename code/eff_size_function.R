@@ -3,7 +3,7 @@ effect_size <- function(data, variable){
   
   
   data <- data %>% 
-    select(treatment, .data[[variable]]) %>% 
+    select(treatment, all_of(variable)) %>% 
     filter(!is.na(.data[[variable]])) %>% 
     rename(
       value = all_of(variable)
@@ -72,12 +72,10 @@ effect_size <- function(data, variable){
       eff_value =  log(mean / mean_c),
       se_eff =  sqrt((sd^2) / (n * mean^2) + 
                       (sd_c^2) / (n_c * mean_c^2))
-    ) %>%
-    mutate(
-      upper_limit = eff_value +  se_eff * 1.96,
-      lower_limit = eff_value - se_eff * 1.96
     ) %>% 
-  
+    mutate(
+      eff_value = if_else(variable == "Y_zipf", -1 * eff_value, eff_value)
+    ) %>% 
     mutate(
       variable = variable
     ) %>% 
@@ -90,7 +88,7 @@ effect_size <- function(data, variable){
     mutate(
       analysis = paste0("LRR")
     ) %>% 
-    select(eff_descriptor, eff_value, upper_limit, lower_limit, variable, analysis) 
+    select(eff_descriptor, eff_value, se_eff, variable, analysis) 
   
   
   
@@ -101,10 +99,9 @@ effect_size <- function(data, variable){
       
       se_eff = sqrt((sd_wp^2) / (n_wp * mean_wp^2) + 
                      (sd_p^2) / (n_p * mean_p^2))
-    ) %>% 
+    )  %>% 
     mutate(
-      upper_limit = eff_value + se_eff * 1.96,
-      lower_limit = eff_value - se_eff * 1.96
+      eff_value = if_else(variable == "Y_zipf", -1 * eff_value, eff_value)
     ) %>% 
     mutate(
       variable = variable,
@@ -114,11 +111,15 @@ effect_size <- function(data, variable){
     mutate(
       analysis = paste0("LRR")
     ) %>% 
+    select(eff_descriptor, eff_value, se_eff, variable, analysis) 
+  
+  
+  
+  RR_data <- rbind(RR_treatment_c, RR_wp_vs_p) %>%
+    mutate(
+      upper_limit = eff_value +  se_eff * 1.96,
+      lower_limit = eff_value - se_eff * 1.96) %>% 
     select(eff_descriptor, eff_value, upper_limit, lower_limit, variable, analysis) 
-  
-  
-  
-  RR_data <- rbind(RR_treatment_c, RR_wp_vs_p)
   
   #RR_data <<- RR_data
   
@@ -170,7 +171,6 @@ effect_size <- function(data, variable){
   
   
   
-  
   if (!is.null(RR_data)) {
     effsize_data <- bind_rows(RR_data, cohen_data)
   } else {
@@ -179,9 +179,11 @@ effect_size <- function(data, variable){
   
  effsize_data <- effsize_data %>% 
     mutate(
-      null_effect = ifelse(lower_limit <= 0 & upper_limit >= 0, "YES","NO")) %>% 
+      null_effect = ifelse(lower_limit <= 0 & upper_limit >= 0, "YES","NO"),
+      scale = (max(abs(upper_limit)) + max(abs(lower_limit)))/100
+      ) %>% 
    select(
-     eff_descriptor, eff_value, lower_limit, upper_limit, null_effect, 
+     eff_descriptor, eff_value, lower_limit, upper_limit, null_effect, scale,
      variable, analysis
    )
   

@@ -49,6 +49,29 @@ theme3 <-
   )
 
 
+## Variable names
+
+limits_variables <- c("richness",
+                      "abundance",
+                      "Y_zipf",
+                      #"biomass",
+                      "biomass012",
+                      "NMDS1",
+                      "NMDS2",
+                      "PC1",
+                      "PC2")
+
+labels_variables <- c("richness" = "Richness",
+                      "abundance" = "Cover",
+                      "Y_zipf" = "Evenness",
+                      #"biomass" = "Biomass",
+                      "biomass012" = "Biomass",
+                      "NMDS1" = "SC1",
+                      "NMDS2" = "SC2",
+                      "PC1" = "FT1", 
+                      "PC2" = "FT2")
+
+
 
 
 # SENSORS 
