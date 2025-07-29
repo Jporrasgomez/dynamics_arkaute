@@ -16,6 +16,9 @@ effect_size_dynamics <- function(data, variable){
       mean := mean(value),
       sd := sd(value)
     ) %>% 
+    mutate(
+      variable = variable
+    ) %>% 
     as.data.frame() %>% 
     mutate(
       date = ymd(date)
@@ -29,7 +32,7 @@ effect_size_dynamics <- function(data, variable){
   ## Log Response Ratio ## 
   
   RR_effect <- data %>% 
-    select(date, sampling, treatment, mean, sd) %>% 
+    select(date, sampling, treatment, mean, sd, variable) %>% 
     distinct()
   
   RR_effect_c <- RR_effect %>% 
@@ -68,6 +71,8 @@ effect_size_dynamics <- function(data, variable){
     filter(treatment != "c") %>% 
     left_join(RR_effect_c, by = c("date", "sampling")
               ) %>% 
+    select(-variable.x) %>% 
+    rename( variable = variable.y) %>%
     mutate(
       RR = log(mean / mean_c),
       var_RR = (sd^2) / (n * mean^2) + 
@@ -85,7 +90,8 @@ effect_size_dynamics <- function(data, variable){
       ),
       se_delta_RR = sqrt(var_delta_RR)
     )  %>% 
-    filter(! RR == "-Inf") %>% 
+
+    filter(RR != "-Inf") %>% 
     rename(eff_descriptor = treatment) %>% 
     mutate(
       eff_descriptor = fct_recode(eff_descriptor,
@@ -93,14 +99,19 @@ effect_size_dynamics <- function(data, variable){
                                  "p_vs_c" = "p", 
                                  "wp_vs_c" = "wp")
     ) %>% 
-    select(eff_descriptor, date, sampling, delta_RR, se_delta_RR)
+    select(eff_descriptor, date, sampling, delta_RR, se_delta_RR, variable)
   
   
   
   RR_wp_vs_p <- RR_effect_wp %>% 
     left_join(
       RR_effect_p, by = c("date", "sampling")
-      ) %>% 
+      ) %>%
+    select(-variable.x) %>% 
+    rename( variable = variable.y) %>% 
+    mutate(
+      variable = variable
+    ) %>% 
     mutate(
       RR = log(mean_wp / mean_p),
       
@@ -112,7 +123,7 @@ effect_size_dynamics <- function(data, variable){
     ) %>% 
     
     mutate(
-      delta_RR= RR + 0.5 * (
+      delta_RR = RR + 0.5 * (
         (sd_wp^2) / (n * mean_wp^2) - 
           (sd_p^2) / (n * mean_p^2)),
       
@@ -121,19 +132,22 @@ effect_size_dynamics <- function(data, variable){
           (sd_p^4) / (n^2 * mean_p^4)),
       
       se_delta_RR = sqrt(var_delta_RR)
-      
     ) %>% 
+
     filter(!RR == "Inf")%>% 
     filter(!RR == "-Inf") %>% 
     filter(!RR == "NaN") %>% 
     mutate(
       eff_descriptor = paste0("wp_vs_p")
     )  %>% 
-    select(eff_descriptor, date, sampling, delta_RR, se_delta_RR)
+    select(eff_descriptor, date, sampling, delta_RR, se_delta_RR, variable)
   
   
   
   RR_data <- rbind(RR_treatment_c, RR_wp_vs_p) %>% 
+    mutate(
+      delta_RR = if_else(variable == "Y_zipf", -1 * delta_RR, delta_RR) 
+    ) %>% 
     mutate(
       upper_limit = delta_RR + se_delta_RR * 1.96, 
       lower_limit = delta_RR - se_delta_RR * 1.96,
@@ -298,10 +312,11 @@ effect_size_dynamics <- function(data, variable){
   effsize_dynamics_data <- effsize_dynamics_data %>% 
     mutate(
       null_effect = ifelse(lower_limit <= 0 & upper_limit >= 0, "YES","NO"),
-      scale = (max(abs(upper_limit)) + max(abs(lower_limit)))/100
+      scale = (max(abs(upper_limit)) + max(abs(lower_limit)))/100, 
+      year = year(date)
       ) %>% 
     select(
-      eff_descriptor, sampling, date, eff_value, lower_limit, upper_limit, null_effect, 
+      eff_descriptor, sampling, date, year, eff_value, lower_limit, upper_limit, null_effect, 
       scale, variable, analysis
     )
   

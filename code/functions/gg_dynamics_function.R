@@ -59,8 +59,10 @@ ggdyn <- function(data, palette, labels, colorline, position){
     
     scale_y_continuous(
       breaks      = scales::pretty_breaks(n = 2),
-      minor_breaks = NULL
+      minor_breaks = NULL,
+      expand = expansion(mult = c(0.1, 0.1))
     ) +
+    
     
     scale_color_manual(values = palette) +
     

@@ -50,10 +50,6 @@ effect_size_aggregated <- do.call(rbind, list_eff)
 
 
 
-
-
-
-
 source("code/eff_size_dynamics_function.R")
 
 list_eff_dyn <- list()
@@ -66,12 +62,7 @@ for (i in seq_along(variables)){
   rm(effsize_dynamics_data)
 }
 
-effect_size_dynamics <- do.call(rbind, list_eff_dyn) %>% 
-mutate(
-  eff_value = if_else(variable == "Y_zipf" & analysis == "LRR", -1 * eff_value, eff_value),
-  upper_limit = if_else(variable == "Y_zipf" & analysis == "LRR", -1 * upper_limit, upper_limit),
-  lower_limit = if_else(variable == "Y_zipf" & analysis == "LRR", -1 * lower_limit, lower_limit),
-  year = year(date))
+effect_size_dynamics <- do.call(rbind, list_eff_dyn)
 
 
 
@@ -192,8 +183,7 @@ gg_eff_agg_mix <- data_lrr_cohen %>%
       "grey20",
       position   = position_dodge2(width = 0.5, preserve = "single")) 
 
-gg_eff_agg_wp_mix <- 
-  data_lrr_cohen %>% 
+gg_eff_agg_wp_mix <- data_lrr_cohen %>% 
   filter(eff_descriptor == "wp_vs_p") %>% 
   filter(variable != "biomass") %>% 
   ggagg(palette_RR_wp,
@@ -250,7 +240,7 @@ ggsave("results/Plots/protofinal/1.Warming_Effect_mix.png", plot = gg_Warming_Ef
 
 gg_Results_mix <- 
   ggarrange(
-    gg_eff_agg_mix   + theme(plot.margin = margin(5,5,5,5)),   # margen uniforme
+    gg_eff_agg_mix  + theme(plot.margin = margin(5,5,5,5)),   # margen uniforme
     gg_eff_dynamics_c_mix + theme(plot.margin = margin(5,5,5,5)),
     #labels   = c("A","B"),
     ncol   = 2, 

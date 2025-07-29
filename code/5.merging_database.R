@@ -22,6 +22,9 @@ radcoeff_db_plot <- read.csv("data/radcoeff_db_plot.csv") %>%
 temp_vwc_data <- read.csv("data/temp_vwc_data.csv")
 
 
+cwm_plot_db <-  read.csv("data/cwm_plot_db.csv") %>%  select(-X, -year)
+
+
 library(dplyr)
 
 arkaute <- abrich_db_plot %>%
@@ -30,15 +33,16 @@ arkaute <- abrich_db_plot %>%
   full_join(nmds_df_plot,        by = c("sampling", "plot", "treatment", "date")) %>%
   full_join(pca_cwm_plot,        by = c("sampling", "plot", "treatment", "date")) %>% 
   full_join(radcoeff_db_plot,    by = c("sampling", "plot", "treatment", "date")) %>% 
-  full_join(temp_vwc_data,       by = c("plot", "treatment", "date")) %>% 
+  full_join(temp_vwc_data,       by = c("plot", "treatment", "date")) %>%
+  full_join(cwm_plot_db,        by = c("sampling", "plot", "treatment", "date")) %>% 
   select(year, date, omw_date, one_month_window, sampling, plot,
          treatment, richness, abundance, biomass, biomass012, Y_zipf, 
-         NMDS1, NMDS2,PC1, PC2, mean_temperature, mean_vwc)
+         NMDS1, NMDS2,PC1, PC2, SLA, LDMC, leafN, mean_temperature, mean_vwc)
 
 arkaute <- arkaute %>% 
   mutate(OTC = ifelse(treatment %in% c("w", "wp"), paste0("YES"), paste0("NO"))) %>% 
   mutate(perturbation = ifelse(treatment %in% c("p", "wp"), paste0("YES"), paste0("NO"))) %>% 
-  select(colnames(arkaute)[1:7], "OTC", "perturbation", colnames(arkaute[8:18]))
+  select(colnames(arkaute)[1:7], "OTC", "perturbation", colnames(arkaute[8:21]))
 
 
 na_rows <- arkaute %>%

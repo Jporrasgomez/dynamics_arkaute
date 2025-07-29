@@ -47,7 +47,7 @@ ggagg <- function(data, palette, labels, colorline, position){
     
     scale_y_discrete(
       limits = rev(limits_variables),
-      labels = labels_variables
+      labels = rev(labels_variables)
     ) +
     
     scale_x_continuous(

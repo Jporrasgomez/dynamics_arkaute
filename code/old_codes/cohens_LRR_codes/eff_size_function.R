@@ -132,28 +132,28 @@ effect_size <- function(data, variable){
   cohen.d(
     (data %>% filter(treatment == "w") %>% pull(value)),
     (data %>% filter(treatment == "c") %>% pull(value)),
-    hedges.correction = FALSE
+    hedges.correction = TRUE
   )
   
   b <- 
     cohen.d(
       (data %>% filter(treatment == "p") %>% pull(value)),
       (data %>% filter(treatment == "c") %>% pull(value)),
-      hedges.correction = FALSE
+      hedges.correction = TRUE
     )
   
   c <- 
     cohen.d(
       (data %>% filter(treatment == "wp") %>% pull(value)),
       (data %>% filter(treatment == "c") %>% pull(value)),
-      hedges.coRR_effection = FALSE
+      hedges.coRR_effection = TRUE
     )
   
   d <- 
     cohen.d(
       (data %>% filter(treatment == "wp") %>% pull(value)),
       (data %>% filter(treatment == "p") %>% pull(value)),
-      hedges.correction = FALSE
+      hedges.correction = TRUE
     )
   
   
