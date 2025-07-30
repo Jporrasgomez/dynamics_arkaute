@@ -32,8 +32,6 @@ arkaute_no0 <- arkaute %>%
 
 
 
-
-
 variables <- c("richness", "abundance", "Y_zipf", "biomass", "biomass012",
                "NMDS1", "NMDS2", "PC1", "PC2", "SLA", "LDMC", "leafN")
 
@@ -74,7 +72,6 @@ effect_size_dynamics <- do.call(rbind, list_eff_dyn)
 
 
 
-
 # Plots #
 
 
@@ -96,7 +93,7 @@ gg_eff_agg_c <- agg %>%
   ggagg(palette_RR_CB, # using my function
         labels_RR2,
         "grey20",
-        position   = position_dodge2(width = 0.5, preserve = "single")) 
+        position   = position_dodge2(width = 0.3, preserve = "single")) 
 
 gg_eff_agg_wp <- agg %>% 
   filter(eff_descriptor == "wp_vs_p") %>% 
@@ -104,7 +101,7 @@ gg_eff_agg_wp <- agg %>%
   ggagg(palette_RR_wp,
         labels_RR_wp,
         p_CB, 
-        position   = position_dodge2(width = 0.2, preserve = "single"))
+        position   = position_dodge2(width = 0.1, preserve = "single"))
 
 
 
@@ -118,6 +115,7 @@ gg_eff_dynamics_c <- dyn %>%
     variable = factor(variable, 
                       levels = limits_variables, 
                       labels = labels_variables)) %>% 
+  
   ggdyn(palette_RR_CB,
         labels_RR2, 
         "grey20",
@@ -135,11 +133,11 @@ gg_eff_dynamics_wp <- dyn %>%
         position = position_dodge2(width = 4, preserve = "single"))
 
 
-gg_eff_agg_c
-gg_eff_dynamics_c + theme_minimal() + theme(legend.position = NULL)
-
-gg_eff_agg_wp
-gg_eff_dynamics_wp + theme_minimal() + theme(legend.position = NULL)
+#gg_eff_agg_c
+#gg_eff_dynamics_c + theme_minimal() + theme(legend.position = NULL)
+#
+#gg_eff_agg_wp
+#gg_eff_dynamics_wp + theme_minimal() + theme(legend.position = NULL)
 
 
 library(patchwork)
@@ -156,7 +154,7 @@ gg_Warming_Effect_hedges <-
       plot.title = element_text(face = "bold", size = 10, hjust = 0.5)))
 
 print(gg_Warming_Effect_hedges)
-#ggsave("results/Plots/protofinal/1.Warming_Effect_cohen.png", plot = gg_Warming_Effect_cohens, dpi = 300)
+ggsave("results/Plots/protofinal/1.Warming_Effect_hedges.png", plot = gg_Warming_Effect_hedges, dpi = 300)
 
 
 gg_Results_hedges <- 
@@ -170,7 +168,7 @@ gg_Results_hedges <-
     title = "Hedge's g effect size",
     theme = theme( plot.title = element_text(face = "bold", size = 10, hjust = 0.5)))
 print(gg_Results_hedges)
-#ggsave("results/Plots/protofinal/1.Results_cohen.png", plot = gg_Results_cohens, dpi = 300)
+ggsave("results/Plots/protofinal/1.Results_hedges.png", plot = gg_Results_hedges, dpi = 300)
 
 
 
@@ -178,10 +176,8 @@ print(gg_Results_hedges)
 # LES Variables
 
 
-
 limits_variables <- c("LDMC", "leafN", "SLA")
 labels_variables <- c("LDMC", "Leaf N", "SLA")
-
 
 
 agg_LES <- effect_size_aggregated %>% 
@@ -197,7 +193,7 @@ gg_eff_agg_c_LES <- agg_LES %>%
   ggagg(palette_RR_CB, # using my function
         labels_RR2,
         "grey20",
-        position   = position_dodge2(width = 0.5, preserve = "single")) 
+        position   = position_dodge2(width = 0.2, preserve = "single")) 
 
 gg_eff_agg_wp_LES <- agg_LES %>% 
   filter(eff_descriptor == "wp_vs_p") %>% 
@@ -205,7 +201,7 @@ gg_eff_agg_wp_LES <- agg_LES %>%
   ggagg(palette_RR_wp,
         labels_RR_wp,
         p_CB, 
-        position   = position_dodge2(width = 0.2, preserve = "single"))
+        position   = position_dodge2(width = 0.1, preserve = "single"))
 
 
 
