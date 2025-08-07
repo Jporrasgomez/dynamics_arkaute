@@ -37,7 +37,7 @@ arkaute_long <- arkaute %>%
 
  ######################  NORMALIZATION AT TREATMENT LEVEL ################################
 #### 1. Checking normality of variables ######
-source("code/meta_function/stats_function.R")
+source("code/functions/stats_function.R")
 
 variables <- unique(arkaute_long$variable)
 explanatory_var <- c("year", "date", "omw_date", "one_month_window", "sampling", "plot", "treatment")
@@ -59,10 +59,6 @@ for(i in seq_along(variables)){
   
 }
 
-i = 10
-gglist_hist[[i]] 
-
-normality_df <- do.call(rbind, normality_list)
 
 do.call(rbind, normality_list1) %>% 
   ggplot(aes(y = variable, x = p_value)) +
@@ -155,7 +151,11 @@ arkaute_norm_all <- arkaute %>%
     PC1              = predict(orderNorm(PC1)),
     PC2              = predict(orderNorm(PC2)),
     mean_temperature = predict(orderNorm(mean_temperature)),
-    mean_vwc         = predict(orderNorm(mean_vwc))
+    mean_vwc         = predict(orderNorm(mean_vwc)),
+    SLA              = predict(orderNorm(SLA)),
+    LDMC             = predict(orderNorm(LDMC)),
+    leafN            = predict(orderNorm(leafN)),
+  
   )
  
 
@@ -185,7 +185,7 @@ for(i in seq_along(variables)){
   
 }
 
-i = 9
+i = 12
 gglist_hist[[i]] 
 
 
@@ -251,64 +251,64 @@ library(bestNormalize) # Automatic best normalization
 
 # This takes a while: 
 
-##results <- matrix(ncol = 7, nrow = length(variables) * length(treats) * 10)
-##colnames(results) <- c("variable", "treatment", "n", "shapiro_pre",
-##                       "transformation", "shapiro_post", "n_transformation")
-##results <- as.data.frame(results, stringsAsFactors = FALSE)
-##
-##counter <- 0
-##
-##for (j in seq_along(treats)) {
-##  for (i in seq_along(variables)) {
-##    
-##    # Filtrar los datos
-##    z <- arkaute_long %>%
-##      filter(variable == variables[i],
-##             treatment == treats[j])
-##    
-##    x_clean <- na.omit(z$value)
-##    n_samples <- length(x_clean)
-##    
-##    # Calcular una única vez el p-valor original
-##    shapiro_pre_pval <- tryCatch(shapiro.test(x_clean)$p.value, error = function(e) NA)
-##    
-##    for (k in 1:15) {
-##      counter <- counter + 1
-##      
-##      # Normalización
-##      bn <- bestNormalize(x_clean)
-##      x_best <- predict(bn)
-##      shapiro_post_pval <- tryCatch(shapiro.test(x_best)$p.value, error = function(e) NA)
-##      
-##      # Guardar resultados
-##      results[counter, ] <- list(
-##        variable = variables[i],
-##        treatment = paste0(unique(z$treatment)),
-##        n = n_samples,
-##        shapiro_pre = shapiro_pre_pval,
-##        transformation = class(bn$chosen_transform)[1],
-##        shapiro_post = shapiro_post_pval,
-##        n_transformation = k
-##      )
-##    }
-##    
-##    print(paste("Done:", variables[i], "in", treats[j]))
-##  }
-##}
-##
-##
-##shapiro_check <- results %>%
-##  group_by(variable, treatment) %>%
-##  summarize(
-##    any_above_0_05 = any(as.numeric(shapiro_post) > 0.05, na.rm = TRUE),
-##    .groups = "drop"
-##  )
-##
-##possible_transformations <- results %>%
-##  mutate(shapiro_post = as.numeric(shapiro_post)) %>%
-##  group_by(variable, treatment) %>%
-##  slice_max(shapiro_post, n = 1, with_ties = FALSE) %>%  
-##  ungroup()
+results <- matrix(ncol = 7, nrow = length(variables) * length(treats) * 10)
+colnames(results) <- c("variable", "treatment", "n", "shapiro_pre",
+                       "transformation", "shapiro_post", "n_transformation")
+results <- as.data.frame(results, stringsAsFactors = FALSE)
+
+counter <- 0
+
+for (j in seq_along(treats)) {
+  for (i in seq_along(variables)) {
+    
+    # Filtrar los datos
+    z <- arkaute_long %>%
+      filter(variable == variables[i],
+             treatment == treats[j])
+    
+    x_clean <- na.omit(z$value)
+    n_samples <- length(x_clean)
+    
+    # Calcular una única vez el p-valor original
+    shapiro_pre_pval <- tryCatch(shapiro.test(x_clean)$p.value, error = function(e) NA)
+    
+    for (k in 1:15) {
+      counter <- counter + 1
+      
+      # Normalización
+      bn <- bestNormalize(x_clean)
+      x_best <- predict(bn)
+      shapiro_post_pval <- tryCatch(shapiro.test(x_best)$p.value, error = function(e) NA)
+      
+      # Guardar resultados
+      results[counter, ] <- list(
+        variable = variables[i],
+        treatment = paste0(unique(z$treatment)),
+        n = n_samples,
+        shapiro_pre = shapiro_pre_pval,
+        transformation = class(bn$chosen_transform)[1],
+        shapiro_post = shapiro_post_pval,
+        n_transformation = k
+      )
+    }
+    
+    print(paste("Done:", variables[i], "in", treats[j]))
+  }
+}
+
+
+shapiro_check <- results %>%
+  group_by(variable, treatment) %>%
+  summarize(
+    any_above_0_05 = any(as.numeric(shapiro_post) > 0.05, na.rm = TRUE),
+    .groups = "drop"
+  )
+
+possible_transformations <- results %>%
+  mutate(shapiro_post = as.numeric(shapiro_post)) %>%
+  group_by(variable, treatment) %>%
+  slice_max(shapiro_post, n = 1, with_ties = FALSE) %>%  
+  ungroup()
 ##
 ##
 ##  
@@ -330,7 +330,10 @@ arkaute_norm_c <- arkaute %>%
     PC1 = predict(orderNorm(PC1)),
     PC2 = predict(orderNorm(PC2)),
     mean_temperature = predict(orderNorm(mean_temperature)),
-    mean_vwc         = predict(orderNorm(mean_vwc))
+    mean_vwc         = predict(orderNorm(mean_vwc)), 
+    SLA  = predict(orderNorm(SLA)), 
+    LDMC = predict(yeojohnson(LDMC)), 
+    leafN = predict(yeojohnson(leafN))
   )
 
 
@@ -345,9 +348,12 @@ arkaute_norm_w <- arkaute %>%
     NMDS1 = predict(orderNorm(NMDS1)),
     NMDS2 = predict(orderNorm(NMDS2)),
     PC1 = predict(orderNorm(PC1)),
-    PC2 = predict(yeojohnson(PC2)),
+    PC2 = predict(orderNorm(PC2)),
     mean_temperature = predict(orderNorm(mean_temperature)),
-    mean_vwc         = predict(orderNorm(mean_vwc))
+    mean_vwc         = predict(orderNorm(mean_vwc)),
+    SLA  = predict(orderNorm(SLA)),
+    LDMC = predict(orderNorm(LDMC)), 
+    leafN = predict(orderNorm(leafN))
   )
 
 
@@ -365,7 +371,11 @@ arkaute_norm_p <- arkaute %>%
     PC1 = predict(orderNorm(PC1)),
     PC2 = predict(orderNorm(PC2)),
     mean_temperature = predict(orderNorm(mean_temperature)),
-    mean_vwc         = predict(orderNorm(mean_vwc))# Original transformation was yeojohnson but it was not working
+    mean_vwc         = predict(orderNorm(mean_vwc)), # Original transformation was yeojohnson but it was not working
+    SLA  = predict(boxcox(SLA)),
+    LDMC = predict(yeojohnson(LDMC)), 
+    leafN = predict(yeojohnson(leafN)),
+    leafN = predict(yeojohnson(leafN))
   )
 
 
@@ -383,7 +393,10 @@ arkaute_norm_wp <- arkaute %>%
     PC1 = predict(orderNorm(PC1)),
     PC2 = predict(orderNorm(PC2)),
     mean_temperature = predict(orderNorm(mean_temperature)),
-    mean_vwc         = predict(orderNorm(mean_vwc))
+    mean_vwc         = predict(orderNorm(mean_vwc)), 
+    SLA  = predict(orderNorm(SLA)),
+    LDMC = predict(orderNorm(LDMC)), 
+    leafN = predict(orderNorm(leafN))
   )
 
 
@@ -453,5 +466,5 @@ normality_treat_df %>%
   labs(x = "Shapiro p-value after transformation")
 
 
-arkaute_norm%>%  write.csv("data/arkaute_norm_treatment.csv", row.names = F)
+arkaute_norm %>%  write.csv("data/arkaute_norm_treatment.csv", row.names = F)
 

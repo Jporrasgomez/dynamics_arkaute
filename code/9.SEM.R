@@ -52,18 +52,7 @@ library(tidyverse)
 library(corrplot)
 
 
-arkaute_norm <- read.csv("data/arkaute_norm.csv") %>% 
-  mutate(
-    year = as.factor(year),
-    date = ymd(date),
-    omw_date = as.factor(omw_date),
-    one_month_window = as.factor(one_month_window),
-    sampling = as.factor(sampling),
-    plot = as.factor(plot),
-    treatment = as.factor(treatment))
-
-
-arkaute <- read.csv("data/arkaute.csv") %>% 
+arkaute_norm <- read.csv("data/arkaute_norm_treatment.csv") %>% 
   mutate(
     year = as.factor(year),
     date = ymd(date),
@@ -76,7 +65,7 @@ arkaute <- read.csv("data/arkaute.csv") %>%
 
 arkaute_long <- arkaute_norm %>% 
   pivot_longer(
-    cols = richness:PC2,          
+    cols = richness:mean_vwc,          
     names_to = "variable",      
     values_to = "value"          
   )
@@ -110,7 +99,7 @@ data_w <- data %>%
 data_wp <- data %>% 
   filter(treatment == "wp")%>% 
   as.data.frame() %>% 
-  mutate(treat_label = "Global Change") %>% 
+  mutate(treat_label = "Combined") %>% 
   na.omit()
 
 data_list <- list(data_c, data_w, data_p, data_wp)
@@ -120,9 +109,9 @@ data_list <- list(data_c, data_w, data_p, data_wp)
 
 # First data exploration: correlations, multi-collinearities
 
+i = 1
 
-
-{i = 1
+{i = 3
   ##| 1: Control
   ##| 2: Warming
   ##| 3: Perturbation
@@ -130,19 +119,24 @@ data_list <- list(data_c, data_w, data_p, data_wp)
 
 pairs(data_list[[i]][,variables])
 
-cor(data_list[[i]][,variables], use="pairwise.complete.obs")
+#cor(data_list[[i]][,variables], use="pairwise.complete.obs")
 
 corrplot(cor(data_list[[i]][,variables], use="pairwise.complete.obs"), method = "number")}
 
 
 
-model7_plot_list <- list()
-model7_summ_list <- list()
-  
-for (i in 1:4){
-  
-  mod1 = lme(biomass ~ richness + Y_zipf + PC2, random = ~ 1 | plot,  data_list[[i]])
-  mod2 = lme(PC2 ~ richness + Y_zipf,  random = ~ 1 | plot, data_list[[i]])
+
+
+
+#Regla de la *D* =  número de interacciones(hipótesis) * 5 < número de observaciones. 
+# EFECTOS INDIRECTOS: MULTIPICAR COEFICIENTES DE INTERACCIONES. 
+
+
+## Modelo Richness - Biomass - Evenness - LES
+
+for(i in 1:4){
+  mod1 = lme(biomass012 ~ richness + Y_zipf + PC2, random = ~ 1 | plot,  data_list[[i]])
+  mod2 = lme(PC2 ~  Y_zipf ,  random = ~ 1 | plot, data_list[[i]])
   mod3 = lme(Y_zipf ~ richness, random = ~ 1 | plot, data_list[[i]])
   
   global_model <- psem(
@@ -151,28 +145,87 @@ for (i in 1:4){
     mod3
   )
   
-  model7_summ_list[[i]] <- print(summary(global_model))
   
-  model7_plot_list[[i]] <- plot(global_model, title = paste0(unique(data_list[[i]]$treat_label)))
+  print(summary(global_model))
   
-  svg_code <- export_svg(model7_list[[i]])
-  rsvg_png(charToRaw(svg_code), file = paste0("results/Plots/SEM/model7_plot", i, ".png"), 
-           width = 1200,
-           height = 1200)
+  a <- plot(global_model, title = paste0(unique(data_list[[i]]$treat_label)))
+  print(a)
   
-  summary_text <- capture.output(summary(global_model))
-  writeLines(summary_text, con = paste0("results/Plots/SEM/model7_summary", i, ".txt"))
-
 }
 
-{i = 1
-print(model7_summ_list[[i]])
-model7_plot_list[[i]]}
+
+# Modelo con PC1 en vez de PC2
+
+for(i in 1:4){
+  mod1 = lme(biomass012 ~ richness + Y_zipf + PC1, random = ~ 1 | plot,  data_list[[i]])
+  mod2 = lme(PC1 ~  Y_zipf ,  random = ~ 1 | plot, data_list[[i]])
+  mod3 = lme(Y_zipf ~ richness, random = ~ 1 | plot, data_list[[i]])
+  
+  global_model <- psem(
+    mod1,
+    mod2,
+    mod3
+  )
+  
+  
+  print(summary(global_model))
+  
+  a <- plot(global_model, title = paste0(unique(data_list[[i]]$treat_label)))
+  print(a)
+  
+}
 
 
 
-#Regla de la *D* =  número de interacciones(hipótesis) * 5 < número de observaciones. 
-# EFECTOS INDIRECTOS: MULTIPICAR COEFICIENTES DE INTERACCIONES. 
+#MOdelo donde sustituyo PC2 por LDMC ya que covarían mucho en todos los tratamientos
+for(i in 1:4){
+  mod1 = lme(biomass012 ~ richness + Y_zipf + LDMC, random = ~ 1 | plot,  data_list[[i]])
+  mod2 = lme(LDMC ~  Y_zipf ,  random = ~ 1 | plot, data_list[[i]])
+  mod3 = lme(Y_zipf ~ richness, random = ~ 1 | plot, data_list[[i]])
+  
+  global_model <- psem(
+    mod1,
+    mod2,
+    mod3
+  )
+  
+  
+  print(summary(global_model))
+  
+  a <- plot(global_model, title = paste0(unique(data_list[[i]]$treat_label)))
+  print(a)
+}
+
+
+
+
+
+
+#
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# Otras combinaciones para el SEM
+
+
+
 
 # Model1: NMDS1, PC1 and abundance
 
@@ -198,21 +251,21 @@ model7_plot_list[[i]]}
 # Model2: NMDS2, PC2 and abundance
 
 {
-mod1 = lme(biomass ~ richness + Y_zipf + PC2 + abundance, random = ~ 1 | plot,  data_list[[i]])
-mod2 = lme(PC2 ~ richness + NMDS2, random = ~ 1 | plot, data_list[[i]])
-mod3 = lme(NMDS2 ~ richness + abundance, random = ~ 1 | plot, data_list[[i]])
-mod4 = lme(Y_zipf ~ richness + abundance, random = ~ 1 | plot, data_list[[i]])
-
-global_model <- psem(
-  mod1,
-  mod2,
-  mod3,
-  mod4
-)
-
-summary(global_model)
-
-plot(global_model, title = paste0(unique(data_list[[i]]$treat_label)))
+  mod1 = lme(biomass ~ richness + Y_zipf + PC2 + abundance, random = ~ 1 | plot,  data_list[[i]])
+  mod2 = lme(PC2 ~ richness + NMDS2, random = ~ 1 | plot, data_list[[i]])
+  mod3 = lme(NMDS2 ~ richness + abundance, random = ~ 1 | plot, data_list[[i]])
+  mod4 = lme(Y_zipf ~ richness + abundance, random = ~ 1 | plot, data_list[[i]])
+  
+  global_model <- psem(
+    mod1,
+    mod2,
+    mod3,
+    mod4
+  )
+  
+  summary(global_model)
+  
+  plot(global_model, title = paste0(unique(data_list[[i]]$treat_label)))
 }
 
 
@@ -291,7 +344,7 @@ plot(global_model, title = paste0(unique(data_list[[i]]$treat_label)))
     mod3
   )
   
- 
+  
   print(summary(global_model))
   
   plot(global_model, title = paste0(unique(data_list[[i]]$treat_label)))
@@ -322,82 +375,5 @@ plot(global_model, title = paste0(unique(data_list[[i]]$treat_label)))
   
 }
 
-
-
-
-
-# Model8: No abundance and YES PC2
-
-{
-  mod1 = lme(biomass ~ richness + Y_zipf + PC2, random = ~ 1 | plot,  data_list[[i]])
-  mod2 = lme(PC2 ~  Y_zipf ,  random = ~ 1 | plot, data_list[[i]])
-  mod3 = lme(Y_zipf ~ richness, random = ~ 1 | plot, data_list[[i]])
-  
-  global_model <- psem(
-    mod1,
-    mod2,
-    mod3
-  )
-  
-  
-  print(summary(global_model))
-  
-  plot(global_model, title = paste0(unique(data_list[[i]]$treat_label)))
-  
-}
-
-
-# Model9: No abundance and YES PC1
-
-{
-  mod1 = lme(biomass ~ richness + Y_zipf + PC1, random = ~ 1 | plot,  data_list[[i]])
-  mod2 = lme(PC1 ~ richness + Y_zipf,  random = ~ 1 | plot, data_list[[i]])
-  mod3 = lme(Y_zipf ~ richness, random = ~ 1 | plot, data_list[[i]])
-  
-  global_model <- psem(
-    mod1,
-    mod2,
-    mod3
-  )
-  
-  
-  print(summary(global_model))
-  
-  plot(global_model, title = paste0(unique(data_list[[i]]$treat_label)))
-  
-}
-
-
-
-
-
-
-
-
-
-
-# Probar quitar NMDS1 y añadir abundance
-
-{
-  mod1 = lme(biomass ~ richness + Y_zipf + PC1, random = ~ 1 | plot,  data_list[[i]])
-  mod2 = lme(PC1 ~ richness,  random = ~ 1 | plot, data_list[[i]])
-  mod3 = lme(Y_zipf ~ richness, random = ~ 1 | plot, data_list[[i]])
-  
-  global_model <- psem(
-    mod1,
-    mod2,
-    mod3
-  )
-  
-  
-  plot(global_model, title = paste0(unique(data_list[[i]]$treat_label)))
-  
-  print(summary(global_model))
-}
-
-
-
-
-# Probar quitar NMDS + abundance
 
 
