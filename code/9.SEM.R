@@ -71,11 +71,22 @@ arkaute_long <- arkaute_norm %>%
   )
 
 
-variables <- unique(arkaute_long$variable)
+
+variables <- c(
+  "richness", "abundance", 
+  #"biomass",
+  "biomass012",
+  "Y_zipf", 
+  "NMDS1", "NMDS2", "PC1", "PC2", 
+  "SLA", "LDMC", "leafN", 
+  "mean_temperature", "mean_vwc"
+)
+
 explanatory_var <- c("year", "date", "omw_date", "one_month_window", "sampling", "plot", "treatment")
 
 
-data <- arkaute_norm
+data <- arkaute_norm %>% 
+  select(-biomass)
 
 
 data_c <- data %>% 
@@ -111,7 +122,7 @@ data_list <- list(data_c, data_w, data_p, data_wp)
 
 i = 1
 
-{i = 3
+{i = 1
   ##| 1: Control
   ##| 2: Warming
   ##| 3: Perturbation
@@ -121,7 +132,8 @@ pairs(data_list[[i]][,variables])
 
 #cor(data_list[[i]][,variables], use="pairwise.complete.obs")
 
-corrplot(cor(data_list[[i]][,variables], use="pairwise.complete.obs"), method = "number")}
+corrplot(cor(data_list[[i]][,variables], use="pairwise.complete.obs"), method = "number")
+}
 
 
 
@@ -130,6 +142,38 @@ corrplot(cor(data_list[[i]][,variables], use="pairwise.complete.obs"), method = 
 
 #Regla de la *D* =  número de interacciones(hipótesis) * 5 < número de observaciones. 
 # EFECTOS INDIRECTOS: MULTIPICAR COEFICIENTES DE INTERACCIONES. 
+
+
+for(i in 1:4){
+  mod1 = lme(biomass012 ~ richness + Y_zipf + PC1 + PC2, random = ~ 1 | plot,  data_list[[i]])
+  mod2 = lme(Y_zipf ~ richness, random = ~ 1 | plot, data_list[[i]])
+  
+  global_model <- psem(
+    mod1,
+    mod2
+  )
+  
+  
+  print(summary(global_model))
+  
+  a <- plot(global_model, title = paste0(unique(data_list[[i]]$treat_label)))
+  print(a)
+  
+}
+
+
+
+hist(residuals(mod1), breaks = 20)
+hist(residuals(mod2), breaks = 10)
+
+
+
+
+
+
+
+
+
 
 
 ## Modelo Richness - Biomass - Evenness - LES
@@ -197,30 +241,7 @@ for(i in 1:4){
 }
 
 
-
-
-
-
 #
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 # Otras combinaciones para el SEM
 

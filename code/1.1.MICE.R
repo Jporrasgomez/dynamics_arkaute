@@ -99,10 +99,10 @@ for(i in seq_along(plots)){
   
 }
 
-#for (i in seq_along(plots)) {
-#  print(nalist[[i]])
-#  
-#}
+for (i in seq_along(plots)) {
+  print(nalist[[i]])
+  
+}
 
 
 # MICE #####
@@ -173,7 +173,11 @@ imput_stability_db <- imputed_db %>%
   mutate(CV = sd_imputation / nind_m2_imputed) %>% 
   as.data.frame()
 
-  imput_stability <- ggplot(imput_stability_db, aes(x = CV)) +
+mean(imput_stability_db$CV)
+sd(imput_stability_db$CV)
+
+
+imput_stability <- ggplot(imput_stability_db, aes(x = CV)) +
   geom_histogram(bins = 30, fill = "steelblue", color = "white", alpha = 0.8) +
   geom_vline(aes(xintercept = 1), color = "red3", linetype = "dashed", size = 1) +
   scale_x_continuous(
