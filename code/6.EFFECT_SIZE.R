@@ -32,7 +32,7 @@ arkaute_no0 <- arkaute %>%
 
 
 
-variables <- c("richness", "abundance", "Y_zipf", "biomass", "biomass012",
+variables <- c("richness", "abundance", "Y_zipf", "biomass", "biomass012", "biomass_lm_plot",
                "NMDS1", "NMDS2", "PC1", "PC2", "SLA", "LDMC", "leafN")
 
 LES_variables <- c("SLA", "LDMC", "leafN")
@@ -78,6 +78,14 @@ effect_size_dynamics <- do.call(rbind, list_eff_dyn)
 source("code/functions/gg_aggregated_function.R")
 source("code/functions/gg_dynamics_function.R")
 
+
+######### ! OJO con la variable de biomasa que usamos.
+# 1) biomass: datos de biomasa sin usar regesión lineal para rellenar los vacíos de los muestreos 0, 1 , 2 y 12
+# 2) biomass012: datos de biomasa en los que se ha usado una regresión lineal a nivel de especie (mirar script 1.2.lm_biomass012.R)
+# 3) biomass_lm_plot : datos de biomassa en los que se ha usado una regresión 
+# lineal a nivel de PLOT. 280 puntos para la regresión. Mirar script 5.1.biomass_lm_plot.R
+
+
 # Variables
 
 agg <- effect_size_aggregated %>% 
@@ -87,6 +95,7 @@ agg <- effect_size_aggregated %>%
 gg_eff_agg_c <- agg %>% 
   filter(eff_descriptor %in% c("p_vs_c", "w_vs_c", "wp_vs_c")) %>% 
   filter(variable != "biomass") %>%
+  filter(variable != "biomass012") %>% 
   mutate(eff_descriptor = factor(eff_descriptor,
                                  levels = c("p_vs_c", "w_vs_c", "wp_vs_c"))
   ) %>% 
@@ -98,6 +107,7 @@ gg_eff_agg_c <- agg %>%
 gg_eff_agg_wp <- agg %>% 
   filter(eff_descriptor == "wp_vs_p") %>% 
   filter(variable != "biomass") %>%
+  filter(variable != "biomass012") %>% 
   ggagg(palette_RR_wp,
         labels_RR_wp,
         p_CB, 
@@ -111,6 +121,7 @@ dyn <- effect_size_dynamics %>%
 gg_eff_dynamics_c <- dyn %>% 
   filter(eff_descriptor %in% c("w_vs_c", "p_vs_c", "wp_vs_c")) %>% 
   filter(variable != "biomass") %>% 
+  filter(variable != "biomass012") %>% 
   mutate(
     variable = factor(variable, 
                       levels = limits_variables, 
@@ -123,7 +134,8 @@ gg_eff_dynamics_c <- dyn %>%
 
 gg_eff_dynamics_wp <- dyn %>% 
   filter(eff_descriptor %in% c("wp_vs_p")) %>% 
-  filter(!variable == "biomass") %>% 
+  filter(variable != "biomass") %>% 
+  filter(variable != "biomass012") %>% 
   mutate(variable = factor(variable, 
                            levels = limits_variables, 
                            labels = labels_variables)) %>% 
@@ -154,7 +166,7 @@ gg_Warming_Effect_hedges <-
       plot.title = element_text(face = "bold", size = 10, hjust = 0.5)))
 
 print(gg_Warming_Effect_hedges)
-ggsave("results/Plots/protofinal/1.Warming_Effect_hedges.png", plot = gg_Warming_Effect_hedges, dpi = 300)
+#ggsave("results/Plots/protofinal/1.Warming_Effect_hedges.png", plot = gg_Warming_Effect_hedges, dpi = 300)
 
 
 gg_Results_hedges <- 
@@ -168,7 +180,7 @@ gg_Results_hedges <-
     title = "Hedge's g effect size",
     theme = theme( plot.title = element_text(face = "bold", size = 10, hjust = 0.5)))
 print(gg_Results_hedges)
-ggsave("results/Plots/protofinal/1.Results_hedges.png", plot = gg_Results_hedges, dpi = 300)
+#ggsave("results/Plots/protofinal/1.Results_hedges.png", plot = gg_Results_hedges, dpi = 300)
 
 
 
