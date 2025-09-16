@@ -572,7 +572,7 @@ min(nmds_df_plot$NMDS3)
 #         NMDS2 = NMDS2 + abs(min(nmds_df_plot$NMDS2)) + 1,
 #         NMDS3 = NMDS3 + abs(min(nmds_df_plot$NMDS3)) + 1)
 
-nmds_df_plot %>%  write.csv("data/nmds_df_plot_hellinger.csv", row.names = F)
+nmds_df_plot %>%  write.csv("data/nmds_df_plot.csv", row.names = F)
 
 
 ####################### 2.2. STATISTICAL ANALYSIS: PERMANOVA ##############################

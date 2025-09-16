@@ -145,6 +145,7 @@ arkaute_norm_all <- arkaute %>%
     abundance        = predict(orderNorm(abundance)),
     biomass          = predict(orderNorm(biomass)),
     biomass012       = predict(orderNorm(biomass012)),
+    biomass_lm_plot  = predict(orderNorm(biomass_lm_plot)),
     Y_zipf           = asinh(Y_zipf),  
     NMDS1            = predict(orderNorm(NMDS1)),
     NMDS2            = predict(orderNorm(NMDS2)),
@@ -324,6 +325,7 @@ arkaute_norm_c <- arkaute %>%
     abundance = predict(orderNorm(abundance)),
     biomass = predict(orderNorm(biomass)),
     biomass012 = predict(orderNorm(biomass012)),
+    biomass_lm_plot = predict(orderNorm(biomass_lm_plot)),
     Y_zipf = predict(yeojohnson(Y_zipf)),
     NMDS1 = predict(orderNorm(NMDS1)),
     NMDS2 = predict(orderNorm(NMDS2)),
@@ -344,6 +346,7 @@ arkaute_norm_w <- arkaute %>%
     abundance = predict(orderNorm(abundance)),
     biomass = predict(boxcox(biomass)),
     biomass012 = predict(boxcox(biomass012)),
+    biomass_lm_plot = predict(orderNorm(biomass_lm_plot)),
     Y_zipf = predict(yeojohnson(Y_zipf)),
     NMDS1 = predict(orderNorm(NMDS1)),
     NMDS2 = predict(orderNorm(NMDS2)),
@@ -365,6 +368,7 @@ arkaute_norm_p <- arkaute %>%
     abundance = predict(orderNorm(abundance)),
     biomass = predict(orderNorm(biomass)),   # Original transformation was yeojohnson but it was not working
     biomass012 = predict(orderNorm(biomass012)),
+    biomass_lm_plot = predict(orderNorm(biomass_lm_plot)),
     Y_zipf = predict(orderNorm(Y_zipf)),
     NMDS1 = predict(orderNorm(NMDS1)),
     NMDS2 = predict(orderNorm(NMDS2)),
@@ -387,6 +391,7 @@ arkaute_norm_wp <- arkaute %>%
     abundance = predict(orderNorm(abundance)),
     biomass = predict(orderNorm(biomass)),
     biomass012 = predict(orderNorm(biomass012)),
+    biomass_lm_plot = predict(orderNorm(biomass_lm_plot)),
     Y_zipf = predict(orderNorm(Y_zipf)),
     NMDS1 = predict(orderNorm(NMDS1)), #### Original was sqrt
     NMDS2 = predict(orderNorm(NMDS2)),
@@ -423,7 +428,7 @@ for(i in seq_along(variables)){
   
 }
 
-i = 1
+i = 5
 gglist_hist[[i]] 
 gglist_tests[[i]]
 

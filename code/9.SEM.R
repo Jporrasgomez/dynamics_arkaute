@@ -75,7 +75,8 @@ arkaute_long <- arkaute_norm %>%
 variables <- c(
   "richness", "abundance", 
   #"biomass",
-  "biomass012",
+  #"biomass012",
+  "biomass_lm_plot",
   "Y_zipf", 
   "NMDS1", "NMDS2", "PC1", "PC2", 
   "SLA", "LDMC", "leafN", 
@@ -86,7 +87,7 @@ explanatory_var <- c("year", "date", "omw_date", "one_month_window", "sampling",
 
 
 data <- arkaute_norm %>% 
-  select(-biomass)
+  select(-biomass, -biomass012)
 
 
 data_c <- data %>% 
@@ -145,7 +146,7 @@ corrplot(cor(data_list[[i]][,variables], use="pairwise.complete.obs"), method = 
 
 
 for(i in 1:4){
-  mod1 = lme(biomass012 ~ richness + Y_zipf + PC1 + PC2, random = ~ 1 | plot,  data_list[[i]])
+  mod1 = lme(biomass_lm_plot ~ richness + Y_zipf + PC1 + PC2, random = ~ 1 | plot,  data_list[[i]])
   mod2 = lme(Y_zipf ~ richness, random = ~ 1 | plot, data_list[[i]])
   
   global_model <- psem(

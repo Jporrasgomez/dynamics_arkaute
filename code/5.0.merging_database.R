@@ -49,7 +49,7 @@ arkaute <- abundance_richness %>%
 arkaute <- arkaute %>% 
   mutate(OTC = ifelse(treatment %in% c("w", "wp"), paste0("YES"), paste0("NO"))) %>% 
   mutate(perturbation = ifelse(treatment %in% c("p", "wp"), paste0("YES"), paste0("NO"))) %>% 
-  select(colnames(arkaute)[1:7], "OTC", "perturbation", colnames(arkaute[8:21]))
+  select(colnames(arkaute)[1:7], "OTC", "perturbation", colnames(arkaute[8:22]))
 
 
 na_rows <- arkaute %>%
