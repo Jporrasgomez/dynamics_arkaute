@@ -35,6 +35,21 @@ d <- arkaute %>%
          tttn2 = ttn2 + abs(min(ttn2, na.rm = T)) + 1)
 
 
+
+d %>% 
+  ggplot(aes(x = n1, y = tn1)) + 
+  geom_point()
+
+d %>% 
+  ggplot(aes(x = n2, y = tn2)) + 
+  geom_point()
+
+
+d %>% 
+  ggplot(aes(x = n2, y = tn2)) + 
+  geom_point()
+
+
 min(d$n1, na.rm = T)
 min(d$tn1, na.rm = T)
 min(d$ttn1, na.rm = T)
@@ -83,10 +98,9 @@ data <- d_mean1 %>%
 
 
 
-
-
 variable = c("tn1", "ttn1", "tttn1")
 gglist <- list()
+RRlist <- list()
 
 
 for(i in 1:3){
@@ -133,17 +147,6 @@ RR_treatment <- effect %>%
     ),
     se_delta_RR = sqrt(var_delta_RR),  # Error estándar de delta_RR
     
-    # Cálculo de sigma_RR
-    sigma_RR = 0.5 * log(
-      (mean^2 + (sd^2) / n) / 
-        (mean_c^2 + (sd_c^2) / n)
-    ),
-    
-    # Varianza de sigma_RR
-    var_sigma_RR = 2.0 * var_RR - 
-      log(1.0 + var_RR + ((sd^2) * (sd_c^2)) / 
-            (n^2 * mean^2 * mean_c^2)),
-    se_sigma_RR = sqrt(var_sigma_RR)  # Error estándar de sigma_RR
   ) %>% 
   mutate(
     variable = paste0(variable[i])
@@ -156,6 +159,10 @@ RR_treatment <- RR_treatment %>%
                                "w_vs_c" = "w",
                                "p_vs_c" = "p", 
                                "wp_vs_c" = "wp"))
+
+
+
+RRlist[[i]]<- RR_treatment
 
 z = 1.96
 
@@ -176,11 +183,57 @@ gg_RR <-
 
 gglist[[i]] <- gg_RR
 
+
 }
 
 gglist[[1]]
 gglist[[2]]
 gglist[[3]]
 
+
+RR_all <- do.call(rbind, RRlist) %>% 
+  select(date, sampling, RR_descriptor, delta_RR, se_delta_RR, variable)
+
+
+RR_try <- RR_all %>% 
+  rename(RR = delta_RR, 
+         se_RR = se_delta_RR) %>% 
+  mutate(variable = as.factor(variable))
+
+
+library(dplyr)
+library(tidyr)
+
+RR_wide <- RR_try %>%
+  pivot_wider(
+    id_cols = c(date, sampling, RR_descriptor),   # columnas que se mantienen
+    names_from = variable,                        # de aquí salen los sufijos (tn1, ttn1, tttn1)
+    values_from = c(RR, se_RR),                   # estas columnas se expanden
+    names_glue = "{.value}_{variable}"            # construye nombres como RR_tn1, se_RR_tn1
+  )
+
+
+RR_wide %>% 
+  ggplot(aes(x = RR_tn1, y = RR_ttn1)) + 
+  geom_point()
+
+
+RR_pairs <- RR_all %>%
+  filter(RR_descriptor == "p_vs_c",
+         variable %in% c("tn1", "ttn1")) %>%
+  select(date, sampling, variable, delta_RR) %>%
+  pivot_wider(names_from = variable, values_from = delta_RR) %>%
+  tidyr::drop_na(tn1, ttn1)  # opcional, para quitar pares incompletos
+
+ggplot(RR_pairs, aes(x = tn1, y = ttn1)) +
+  geom_point() +
+  geom_smooth(method = "lm") + 
+  labs(x = "LRR(tn1)", y = "LRR(tttn1)")
+
+
+ggplot(RR_pairs, aes(x = exp(tn1), y = exp(tttn1))) +
+  geom_point() +
+  geom_smooth(method = "lm") + 
+  labs(x = "exp(LRR(tn1))", y = "exp(LRR(tttn1))")
 
 
