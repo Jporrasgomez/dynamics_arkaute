@@ -1,7 +1,7 @@
 
 
 
-effect_size <- function(data, variable){
+LRR_agg <- function(data, variable){
   
   
   data <- data %>% 
@@ -17,7 +17,6 @@ effect_size <- function(data, variable){
       sd := sd(value)
     ) %>% 
     mutate(variable = variable) 
-  
   
   
   effect <- data %>% 
@@ -100,9 +99,13 @@ effect_size <- function(data, variable){
   
   effsize_data <- rbind(RR_treat_vs_c, RR_wp_vs_p) %>% 
     mutate(variable = variable, 
-           analysis = paste0("LRR"), 
-           upper_limit = RR + 1.96 * se_RR,
-           lower_limit = RR - 1.96* se_RR) %>% 
+           analysis = paste0("LRR")) %>% 
+    mutate(
+      RR = ifelse(variable == "Y_zipf", RR * -1, RR)    ## If we do not use this, we would show "Unevenness"
+    ) %>% 
+    mutate(upper_limit = RR + 1.96 * se_RR,
+           lower_limit = RR - 1.96 * se_RR
+           ) %>% 
     mutate(
       null_effect = ifelse(lower_limit <= 0 & upper_limit >= 0, "YES","NO"),
       scale = (max(abs(upper_limit)) + max(abs(lower_limit)))/100

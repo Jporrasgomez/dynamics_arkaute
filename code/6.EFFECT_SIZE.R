@@ -33,18 +33,19 @@ arkaute_no0 <- arkaute %>%
 
 
 variables <- c("richness", "abundance", "Y_zipf", "biomass", "biomass012", "biomass_lm_plot",
-               "NMDS1", "NMDS2", "PC1", "PC2", "SLA", "LDMC", "leafN")
+               #"NMDS1", "NMDS2", "PC1", "PC2",
+               "SLA", "LDMC", "leafN")
 
 LES_variables <- c("SLA", "LDMC", "leafN")
 
 
 
-source("code/functions/eff_size_function.R")
+source("code/functions/eff_size_LRR_function.R")
 
 list_eff <- list()
 for (i in seq_along(variables)){
   
-  effect_size(arkaute_no0, variables[i])
+  LRR_agg(arkaute_no0, variables[i])
   
   list_eff[[i]] <- effsize_data
   
@@ -56,12 +57,12 @@ effect_size_aggregated <- do.call(rbind, list_eff)
 
 
 
-source("code/functions/eff_size_dynamics_function.R")
+source("code/functions/eff_size_dynamics_LRR_function.R")
 
 list_eff_dyn <- list()
 for (i in seq_along(variables)){
   
-  effect_size_dynamics(arkaute, variables[i])
+  LRR_dynamics(arkaute, variables[i])
   
   list_eff_dyn[[i]] <- effsize_dynamics_data
   
@@ -88,9 +89,41 @@ source("code/functions/gg_dynamics_function.R")
 
 # Variables
 
-agg <- effect_size_aggregated %>% 
-  filter(!variable %in% LES_variables)
+limits_variables <- c("richness",
+                      "abundance",
+                      "Y_zipf",
+                      "SLA", 
+                      "LDMC", 
+                      "leafN",
+                      #"NMDS1",
+                      #"NMDS2",
+                      #"PC1",
+                      #"PC2",
+                      #"biomass",
+                      #"biomass012",
+                      "biomass_lm_plot"
+                      )
 
+labels_variables <- c("richness" = "Richness",
+                      "abundance" = "Cover",
+                      "Y_zipf" = "Evenness",
+                      "SLA" = "SLA", 
+                      "LDMC" = "LDMC",
+                      "leafN"= "Leaf-N",
+                      #"NMDS1" = "SC1",
+                      #"NMDS2" = "SC2",
+                      #"PC1" = "FT1", 
+                      #"PC2" = "FT2",
+                      #"biomass" = "Biomass",
+                      #"biomass012" = "Biomass",
+                      "biomass_lm_plot" = "Biomass")
+
+
+
+#agg <- effect_size_aggregated %>% 
+#  filter(!variable %in% LES_variables)
+
+agg <- effect_size_aggregated
 
 gg_eff_agg_c <- agg %>% 
   filter(eff_descriptor %in% c("p_vs_c", "w_vs_c", "wp_vs_c")) %>% 
@@ -115,8 +148,10 @@ gg_eff_agg_wp <- agg %>%
 
 
 
-dyn <- effect_size_dynamics %>% 
-  filter(!variable %in% LES_variables)
+#dyn <- effect_size_dynamics %>% 
+#  filter(!variable %in% LES_variables)
+
+dyn <- effect_size_dynamics
 
 gg_eff_dynamics_c <- dyn %>% 
   filter(eff_descriptor %in% c("w_vs_c", "p_vs_c", "wp_vs_c")) %>% 
@@ -152,6 +187,9 @@ gg_eff_dynamics_wp <- dyn %>%
 #gg_eff_dynamics_wp + theme_minimal() + theme(legend.position = NULL)
 
 
+
+
+
 library(patchwork)
 
 gg_Warming_Effect_hedges <- 
@@ -161,7 +199,7 @@ gg_Warming_Effect_hedges <-
     ncol   = 2,
     widths = c(1, 4)) +
   plot_annotation(
-    title = "Hedge's g effect size",
+    title = "LRR",
     theme = theme(
       plot.title = element_text(face = "bold", size = 10, hjust = 0.5)))
 
@@ -177,7 +215,7 @@ gg_Results_hedges <-
     ncol   = 2, 
     widths = c(1, 4)) +
   plot_annotation(
-    title = "Hedge's g effect size",
+    title = "LRR",
     theme = theme( plot.title = element_text(face = "bold", size = 10, hjust = 0.5)))
 print(gg_Results_hedges)
 #ggsave("results/Plots/protofinal/1.Results_hedges.png", plot = gg_Results_hedges, dpi = 300)
