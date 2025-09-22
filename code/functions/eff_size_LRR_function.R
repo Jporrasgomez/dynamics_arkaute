@@ -1,0 +1,127 @@
+
+
+
+effect_size <- function(data, variable){
+  
+  
+  data <- data %>% 
+    select(treatment, all_of(variable)) %>% 
+    filter(!is.na(.data[[variable]])) %>% 
+    rename(
+      value = all_of(variable)
+    ) %>% 
+    group_by(treatment) %>% 
+    mutate(
+      n = n(),
+      mean := mean(value),
+      sd := sd(value)
+    ) %>% 
+    mutate(variable = variable) 
+  
+  
+  
+  effect <- data %>% 
+    select(treatment, n, mean, sd) %>% 
+    distinct()
+  
+  
+  effect_c <- effect %>% 
+    filter(treatment == "c") %>% 
+    select(treatment, n, mean, sd) %>%  # Mantener treatment
+    rename(mean_c = mean,
+           sd_c = sd,
+           n_c = n)
+  
+  
+  effect_p <- effect %>% 
+    filter(treatment == "p") %>% 
+    ungroup() %>% 
+    select(n, treatment, mean, sd) %>% 
+    rename(mean_p = mean,
+           sd_p = sd,
+           n_p = n) %>% 
+    #mutate(eff_descriptor = "wp_vs_p") %>% 
+    select(-treatment)
+  
+  
+  effect_wp <- effect %>% 
+    filter(treatment == "wp") %>% 
+    ungroup() %>% 
+    select(treatment, n, mean, sd) %>% 
+    rename(mean_wp = mean,
+           sd_wp = sd, 
+           n_wp = n) %>% 
+  select(-treatment)
+  
+  ######## LRR = treatment / CONTROL ###########
+  
+  RR_treat_vs_c <- effect %>% 
+    filter(treatment != "c") %>% 
+    mutate(
+      mean_c = effect_c$mean_c,
+      sd_c = effect_c$sd_c,
+      n_c = effect_c$n_c
+    ) %>% 
+    mutate(
+      RR =  log(mean / mean_c),
+      se_RR =  sqrt((sd^2) / (n * mean^2) + 
+                      (sd_c^2) / (n_c * mean_c^2))
+    ) %>% 
+    rename(eff_descriptor = treatment) %>% 
+    mutate(
+      eff_descriptor = fct_recode(eff_descriptor,
+                                 "w_vs_c" = "w",
+                                 "p_vs_c" = "p", 
+                                 "wp_vs_c" = "wp")) %>% 
+    select(eff_descriptor, RR, se_RR)
+ 
+    
+  
+  ############ LRR = perturbation / Global change ##########
+  
+  
+  RR_wp_vs_p <- effect_wp %>% 
+    cbind(effect_p) %>% 
+    mutate(
+      RR = log(mean_wp / mean_p),
+      se_RR = sqrt((sd_wp^2) / (n_wp * mean_wp^2) + 
+                     (sd_p^2) / (n_p * mean_p^2))
+    ) %>% 
+    mutate(
+      eff_descriptor = paste0("wp_vs_p")
+      ) %>% 
+    filter(!RR == "Inf") %>% 
+    select(eff_descriptor, RR, se_RR) 
+  
+  
+  
+  ###### Binding data #####
+  
+  
+  effsize_data <- rbind(RR_treat_vs_c, RR_wp_vs_p) %>% 
+    mutate(variable = variable, 
+           analysis = paste0("LRR"), 
+           upper_limit = RR + 1.96 * se_RR,
+           lower_limit = RR - 1.96* se_RR) %>% 
+    mutate(
+      null_effect = ifelse(lower_limit <= 0 & upper_limit >= 0, "YES","NO"),
+      scale = (max(abs(upper_limit)) + max(abs(lower_limit)))/100
+    ) %>% 
+    rename(
+      eff_value = RR
+    ) %>% 
+    select(
+      eff_descriptor, eff_value, lower_limit, upper_limit, null_effect, scale,
+      variable, analysis
+    )
+  
+
+  effsize_data <<- effsize_data
+
+  
+  
+  
+  
+  
+  
+}
