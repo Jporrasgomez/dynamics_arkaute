@@ -17,8 +17,9 @@ lm_nona <- lm0 %>%
 lm_nona %>% 
   ggplot(aes(x = abundance, y = biomass)) + 
   geom_point(aes(color = treatment)) + 
-  geom_smooth(method = "lm", se = FALSE, aes(color = treatment)) + 
-  geom_smooth(method = "lm", se = FALSE, color = "black") %>% 
+  geom_smooth(method = "lm", se = TRUE, alpha = 0.05, aes(color = treatment, fill = treatment)) + 
+  geom_smooth(method = "lm", se = TRUE, alpha = 0.1, color = "black") + 
+  geom_smooth(method = "lm", se = TRUE, alpha = 0.1, color = "black") %>% 
   print()
 
 
@@ -104,7 +105,7 @@ biomass_lm <- rbind(lm_nona, lm_fill) %>%
   select(sampling, treatment, plot, biomass) %>% 
   rename(biomass_lm_plot = biomass) %>% 
   mutate(
-    biomass_lm_plot = ifelse(biomass_lm_plot < 0, 0, biomass_lm_plot)
+    biomass_lm_plot = ifelse(biomass_lm_plot < 0, 1, biomass_lm_plot)  # Adding 1 unit of biomass to those estimations under 0 
   )
 
 

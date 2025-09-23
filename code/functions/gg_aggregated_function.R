@@ -1,9 +1,9 @@
 
 
-ggagg <- function(data, palette, labels, colorline, position){
+ggagg <- function(data, palette, labels, colorline, position, asterisk, caps){
   
 
-  dodge_width <- position$width
+  #dodge_width <- position$width
   
   plot <- 
     ggplot(data, aes(
@@ -23,7 +23,7 @@ ggagg <- function(data, palette, labels, colorline, position){
     geom_errorbar(aes(xmin = lower_limit,
                       xmax = upper_limit),
                   position  = position,
-                  width     = dodge_width,
+                  width     = caps,
                   linewidth = 0.5,
                   alpha     = 0.5) +
     
@@ -33,7 +33,7 @@ ggagg <- function(data, palette, labels, colorline, position){
     
     geom_text(aes(
       y = variable,
-      x = ifelse(eff_value < 0, lower_limit - scale * 4, upper_limit + scale * 4),
+      x = ifelse(eff_value < 0, lower_limit - scale * asterisk, upper_limit + scale * asterisk),
       label = ifelse(null_effect == "NO", "*", NA_character_), 
       color = eff_descriptor
     ),

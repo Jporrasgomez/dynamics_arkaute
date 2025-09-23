@@ -79,6 +79,8 @@ effect_size_dynamics <- do.call(rbind, list_eff_dyn)
 source("code/functions/gg_aggregated_function.R")
 source("code/functions/gg_dynamics_function.R")
 
+library(patchwork)
+
 
 ######### ! OJO con la variable de biomasa que usamos.
 # 1) biomass: datos de biomasa sin usar regesión lineal para rellenar los vacíos de los muestreos 0, 1 , 2 y 12
@@ -124,6 +126,13 @@ labels_variables <- c("richness" = "Richness",
 #  filter(!variable %in% LES_variables)
 
 agg <- effect_size_aggregated
+dyn <- effect_size_dynamics
+
+
+pos_dod_c_agg <- position_dodge2(width = 0.3, preserve = "single")
+pos_dod_c_dyn <- position_dodge2(width = 12, preserve = "single")
+
+
 
 gg_eff_agg_c <- agg %>% 
   filter(eff_descriptor %in% c("p_vs_c", "w_vs_c", "wp_vs_c")) %>% 
@@ -135,23 +144,11 @@ gg_eff_agg_c <- agg %>%
   ggagg(palette_RR_CB, # using my function
         labels_RR2,
         "grey20",
-        position   = position_dodge2(width = 0.3, preserve = "single")) 
-
-gg_eff_agg_wp <- agg %>% 
-  filter(eff_descriptor == "wp_vs_p") %>% 
-  filter(variable != "biomass") %>%
-  filter(variable != "biomass012") %>% 
-  ggagg(palette_RR_wp,
-        labels_RR_wp,
-        p_CB, 
-        position   = position_dodge2(width = 0.1, preserve = "single"))
+        position   = pos_dod_c_agg,
+        asterisk = 50,
+        caps = pos_dod_c_agg$width)   # Write down 0 
 
 
-
-#dyn <- effect_size_dynamics %>% 
-#  filter(!variable %in% LES_variables)
-
-dyn <- effect_size_dynamics
 
 gg_eff_dynamics_c <- dyn %>% 
   filter(eff_descriptor %in% c("w_vs_c", "p_vs_c", "wp_vs_c")) %>% 
@@ -165,7 +162,48 @@ gg_eff_dynamics_c <- dyn %>%
   ggdyn(palette_RR_CB,
         labels_RR2, 
         "grey20",
-        position = position_dodge2(width = 12, preserve = "single")) 
+        position = pos_dod_c_dyn,
+        asterisk = 8, 
+        caps = pos_dod_c_dyn$width) 
+
+
+gg_Experiment_Results <- 
+  ggarrange(
+    gg_eff_agg_c   + theme(plot.margin = margin(5,5,5,5)),   # margen uniforme
+    gg_eff_dynamics_c + theme(plot.margin = margin(5,5,5,5)),
+    #labels   = c("A","B"),
+    ncol   = 2, 
+    widths = c(1, 4)) +
+  plot_annotation(
+    #title = "LRR",
+    theme = theme( plot.title = element_text(face = "bold", size = 10, hjust = 0.5)))
+print(gg_Experiment_Results)
+ggsave("results/Plots/protofinal/1.Results_LRR.png", plot = gg_Experiment_Results, dpi = 300)
+
+
+
+
+
+
+
+
+
+pos_dod_wp_agg <- position_dodge2(width = 0.1, preserve = "single")
+pos_dod_wp_dyn <- position_dodge2(width = 4, preserve = "single")
+
+
+
+gg_eff_agg_wp <- agg %>% 
+  filter(eff_descriptor == "wp_vs_p") %>% 
+  filter(variable != "biomass") %>%
+  filter(variable != "biomass012") %>% 
+  ggagg(palette_RR_wp,
+        labels_RR_wp,
+        p_CB, 
+        position   = pos_dod_wp_agg,
+        asterisk = 4,
+        caps = pos_dod_wp_agg$width)
+
 
 gg_eff_dynamics_wp <- dyn %>% 
   filter(eff_descriptor %in% c("wp_vs_p")) %>% 
@@ -177,48 +215,27 @@ gg_eff_dynamics_wp <- dyn %>%
   ggdyn(palette_RR_wp,
         labels_RR_wp2,
         p_CB,
-        position = position_dodge2(width = 4, preserve = "single"))
+        position = pos_dod_wp_dyn,
+        asterisk = 8, 
+        caps = pos_dod_wp_dyn$width)
 
 
-#gg_eff_agg_c
-#gg_eff_dynamics_c + theme_minimal() + theme(legend.position = NULL)
-#
-#gg_eff_agg_wp
-#gg_eff_dynamics_wp + theme_minimal() + theme(legend.position = NULL)
-
-
-
-
-
-library(patchwork)
-
-gg_Warming_Effect_hedges <- 
+gg_Warming_Effect <- 
   (gg_eff_agg_wp   + theme(plot.margin = margin(5,5,5,5))) +
   (gg_eff_dynamics_wp + theme(plot.margin = margin(5,5,5,5))) +
   plot_layout(
     ncol   = 2,
     widths = c(1, 4)) +
   plot_annotation(
-    title = "LRR",
+    #title = "LRR",
     theme = theme(
       plot.title = element_text(face = "bold", size = 10, hjust = 0.5)))
 
-print(gg_Warming_Effect_hedges)
-#ggsave("results/Plots/protofinal/1.Warming_Effect_hedges.png", plot = gg_Warming_Effect_hedges, dpi = 300)
+print(gg_Warming_Effect)
+ggsave("results/Plots/protofinal/1.Warming_Effect_LRR.png", plot = gg_Warming_Effect, dpi = 300)
 
 
-gg_Results_hedges <- 
-  ggarrange(
-    gg_eff_agg_c   + theme(plot.margin = margin(5,5,5,5)),   # margen uniforme
-    gg_eff_dynamics_c + theme(plot.margin = margin(5,5,5,5)),
-    #labels   = c("A","B"),
-    ncol   = 2, 
-    widths = c(1, 4)) +
-  plot_annotation(
-    title = "LRR",
-    theme = theme( plot.title = element_text(face = "bold", size = 10, hjust = 0.5)))
-print(gg_Results_hedges)
-#ggsave("results/Plots/protofinal/1.Results_hedges.png", plot = gg_Results_hedges, dpi = 300)
+
 
 
 

@@ -58,9 +58,4 @@ na_rows <- arkaute %>%
 arkaute %>%  write.csv("data/arkaute.csv", row.names = F)
 
 
-arkaute %>% 
-  ggplot(aes(x = sampling, y = biomass012, color = treatment)) + 
-  geom_point() + 
-  geom_path(group = plot)
-
 

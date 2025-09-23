@@ -1,9 +1,9 @@
 
 
-ggdyn <- function(data, palette, labels, colorline, position){
+ggdyn <- function(data, palette, labels, colorline, position, asterisk, caps){
   
   # extraigo el width del objeto position_dodge2
-  dodge_width <- position$width
+  #dodge_width <- position$width
   
   plot <- 
     ggplot(data, aes(
@@ -29,7 +29,7 @@ ggdyn <- function(data, palette, labels, colorline, position){
     
     geom_errorbar(aes(ymin = lower_limit, ymax = upper_limit),
                   position  = position,
-                  width     = dodge_width,
+                  width     = caps,
                   alpha     = 0.5,
                   linewidth = 0.5) +
     
@@ -42,8 +42,8 @@ ggdyn <- function(data, palette, labels, colorline, position){
     geom_text(aes(
       x = date,
       y = ifelse(eff_value < 0,
-                     lower_limit - 8 * scale,
-                     upper_limit + 8 * scale),
+                     lower_limit - asterisk * scale,
+                     upper_limit + asterisk * scale),
       label = ifelse(null_effect == "NO", "*", NA_character_),
       color = eff_descriptor
     ),
