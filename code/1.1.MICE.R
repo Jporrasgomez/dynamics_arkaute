@@ -203,6 +203,8 @@ imput_stability_boxplot <-
           panel.grid.minor = element_blank(),
           plot.title = element_text(hjust = 0.5))
   
+mean(imput_stability_db$CV)
+
   
   mice_results <-
     ggplot(imputed_db, aes( x = sampling, y = nind_m2_imputed, color = as.factor(label_imputation))) +
@@ -231,82 +233,116 @@ nind_nona <- biomass %>%
   filter(!code %in% one_ind_species) 
 
 ######### LONG TIME TO RUN LOOP : ###########################################################
-#source("code/0.2.loop_reliability.R")
-######### LONG TIME TO RUN LOOP : ###########################################################
+#source("code/1.1.1.loop_reliability.R")
 
 
 #stability_db_combined <- imap_dfr(stability_list, ~ mutate(.x, counter = .y)) 
 #stability_db_combined %>% write.csv("data/stability_test.csv", row.names = F)
-stability_test <- read.csv(here("data", "stability_test.csv"))
-
-
-ggstability_test1 <- ggplot(stability_test, aes(x = CV)) +
-  facet_wrap(~ counter, nrow = 2, ncol = 3 ) + 
-  geom_histogram(bins = 30, fill = "steelblue", color = "white", alpha = 0.8) +
-  geom_vline(aes(xintercept = 1), color = "red", linetype = "dashed", size = 1) +
-  scale_x_continuous(
-    expand = expansion(mult = c(0.05, 0.1)),
-    breaks = seq(0, max(imputed_db$sd_imputation / imputed_db$nind_m2_imputed, na.rm = TRUE), by = 0.5) # Adjust "by" as needed
-  ) +
-  labs(title = "Distribution of Coefficient of Variation for Imputed Values",
-       x = "(SD/mean) Ratio",
-       y = "Count") 
-
-ggstability_test2 <- ggplot(stability_test, aes(y = CV)) +
-  facet_wrap(~ counter, nrow = 1, ncol = 6 ) + 
-  geom_boxplot(fill = "steelblue", color = "black", alpha = 0.8) +
-  geom_hline(aes(yintercept = 1), color = "red", linetype = "dashed", size = 1) +
-  labs(title = "Distribution of Coefficient of Variation for Imputed Values",
-       x = NULL,  # Removes x-axis label
-       y = "(SD/mean) Ratio") +
-  theme(axis.text.x = element_blank(),  # Removes x-axis text
-        axis.ticks.x = element_blank()) # Removes x-axis ticks
-
 
 
 #reliability_db_combined <- imap_dfr(reliability_db_list, ~ mutate(.x, counter = .y))
 #reliability_db_combined %>% write.csv("data/reliability_test.csv", row.names = F)
 
-reliability_test <- read.csv(here("data", "reliability_test.csv")) %>% 
-  mutate(counter = as.factor(counter))
-
-ggreliability_test1 <- ggplot(reliability_test, aes(y = R2, x = p_value, color = counter)) +
-  geom_point(alpha = 0.8) +
-  #geom_hline(aes(yintercept = 1), color = "red", linetype = "dashed", size = 1) +
-  labs(title = "R2 and p_value distribution for lm(imputed ~ original)",
-       x = "p_value",  # Removes x-axis label
-       y = " R2", 
-       color = "Imputation")
-
-
-ggreliability_test2 <-ggplot(reliability_test, aes(x = R2)) +
-  geom_histogram(bins = 30, fill = "red4", color = "white", alpha = 0.8) +
-  scale_x_continuous(
-    expand = expansion(mult = c(0.05, 0.1)),
-    breaks = seq(0, max(imputed_db$sd_imputation / imputed_db$nind_m2_imputed, na.rm = TRUE), by = 0.1) # Adjust "by" as needed
-  ) +
-  labs(title = "R2 for lm(imputed ~ original)",
-       x = "R2",
-       y = "Count") 
-
 #reliability_plot_combined <- imap_dfr(reliability_plot_list, ~ mutate(.x, counter = .y))
 #reliability_plot_combined %>% write.csv("data/reliability_LM_test.csv", row.names = F)
 
-reliability_LM_test <- read.csv(here("data", "reliability_LM_test.csv")) %>% 
+######### LONG TIME TO RUN LOOP : ###########################################################
+
+
+
+stability_test <- read.csv(here("data", "stability_test.csv"))
+
+
+stability_test %>% 
+  ggplot(aes(y = CV)) + 
+  geom_boxplot() + 
+  geom_hline(aes(yintercept = 1), color = "red", linetype = "dashed", size = 1) +
+  labs(title = "Distribution of Coefficient of Variation for Imputed Values",
+       y = "(SD/mean) Ratio")
+
+mean(stability_test$CV)
+sd(stability_test$CV)
+
+
+reliability_test <- read.csv(here("data", "reliability_test.csv")) %>% 
   mutate(counter = as.factor(counter))
 
 
-ggLM_test <- ggplot(reliability_LM_test, aes(x = nind_m2_original,
-                                      y = nind_m2,
-                                      color = as.factor(.imp))) + 
-  facet_wrap(~ counter, nrow = 2, ncol = 3) +
-  geom_point(alpha = 0.6, size = 0.3) + 
-  geom_smooth(method = "lm", se = FALSE, size = 0.5) +
-  stat_cor(aes(label = paste(after_stat(rr.label), after_stat(p.label), sep = "~`,`~")),  
-           method = "pearson", 
-           label.x.npc = "left", 
-           label.y.npc = "top") + # Displays R² and p-value
-  guides(color = "none") # Improve legend label
+
+library(dplyr)
+library(tidyr)
+
+reg_tab <- reliability_LM_test %>%                    # <-- reemplaza con tu data.frame real
+  group_by(counter, .imp) %>%
+  group_modify(~{
+    dat <- .x %>%
+      select(nind_m2, nind_m2_original) %>%
+      mutate(
+        nind_m2 = as.numeric(nind_m2),
+        nind_m2_original = as.numeric(nind_m2_original)
+      ) %>%
+      drop_na()
+    
+    if (nrow(dat) < 2 || dplyr::n_distinct(dat$nind_m2_original) < 2) {
+      return(tibble(
+        intercept = NA_real_,
+        slope     = NA_real_,
+        r2        = NA_real_,
+        p_value   = NA_real_
+      ))
+    }
+    
+    fit <- lm(nind_m2 ~ nind_m2_original, data = dat)
+    s   <- summary(fit)
+    
+    tibble(
+      intercept = unname(coef(fit)[1]),
+      slope     = unname(coef(fit)[2]),
+      r2        = s$r.squared,
+      p_value   = suppressWarnings(coef(s)[2, 4])
+    )
+  }) %>%
+  ungroup() %>%
+  # Añadimos columna 'imp' (copia de .imp) y ordenamos
+  mutate(
+    counter_chr = as.character(counter),
+    counter_num = suppressWarnings(as.numeric(counter_chr)),
+    imp = .imp
+  ) %>%
+  arrange(counter_num, imp) %>%
+  select(slope, intercept, r2, p_value, counter, imp) %>%
+  mutate(across(c(slope, intercept, r2, p_value), ~round(., 6)))
+
+reg_tab
+
+
+reg_tab %>% 
+  ggplot(aes(y = slope)) + 
+  geom_boxplot()
+
+mean(reg_tab$slope)
+sd(reg_tab$slope)
+
+
+reg_tab %>% 
+  ggplot(aes(y = intercept)) + 
+  geom_boxplot()
+
+mean(reg_tab$intercept)
+sd(reg_tab$intercept)
+
+
+reg_tab %>% 
+  ggplot(aes(y = r2)) + 
+  geom_boxplot()
+
+mean(reg_tab$r2)
+sd(reg_tab$r2)
+
+
+reg_tab %>% 
+  ggplot(aes(y = p_value)) + 
+  geom_boxplot()
 
 
 
