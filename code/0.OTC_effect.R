@@ -10,7 +10,7 @@ pacman::p_load(dplyr, reshape2,tidyverse, lubridate, ggplot2, ggpubr, gridExtra,
 
 
 ########### 1. OPENING DATA ######################
-# ! it takes time ! around 1 minute
+# ! it takes time ! around 1-3 minutes
 
 {
   plots <- read.csv("data/plots.csv")
@@ -117,6 +117,125 @@ data_long <- data %>%
 
 }
 
+
+# Maximum values
+
+
+maxttop <- data %>%
+  select(plot, OTC_label, date, t_top) %>% 
+  group_by(plot, OTC_label, date) %>% 
+  summarize(daily_max_ttop = max(t_top, na.rm = TRUE), .groups = "drop") %>% 
+  arrange(desc(daily_max_ttop)) %>%
+  filter(daily_max_ttop > 35)
+
+
+maxtbottom <- data %>%
+  select(plot, OTC_label, date, t_bottom) %>% 
+  group_by(plot, OTC_label, date) %>% 
+  summarize(daily_max_tbottom = max(t_bottom, na.rm = TRUE), .groups = "drop") %>% 
+  arrange(desc(daily_max_tbottom)) %>%
+  filter(daily_max_tbottom > 35)
+
+maxtground <- data %>%
+  select(plot, OTC_label, date, t_ground) %>% 
+  group_by(plot, OTC_label, date) %>% 
+  summarize(daily_max_tground = max(t_ground, na.rm = TRUE), .groups = "drop") %>% 
+  arrange(desc(daily_max_tground)) %>%
+  filter(daily_max_tground > 35)
+
+
+max_temperatures <- full_join(maxttop, maxtbottom) %>% 
+  full_join(maxtground) %>% 
+  mutate(
+    date = ymd(date)
+  ) %>% 
+  mutate(
+    year = year(date)
+  )
+
+max_temperatures_long <- max_temperatures %>% 
+  pivot_longer(
+    cols = c(starts_with("daily")), 
+    names_to = "temperature", 
+    values_to = "value"
+  )
+
+maxttop <- max_temperatures_long %>% 
+  filter(temperature == "daily_max_ttop") %>% 
+  ggplot(aes(x = OTC_label, y = value, fill = OTC_label)) + 
+  #facet_wrap( ~ temperature, ncol = 3, nrow = 1, scales = "free_y") +
+  geom_boxplot() + 
+  scale_fill_manual(
+  name = NULL, values = palette_OTC, labels = labels_OTC) +
+  theme(legend.position = "bottom") + 
+  labs( y = "Max temperature (ºC)") + 
+  theme2
+
+#ggsave("results/Plots/protofinal/OTC_effect_maxtemperature.png", plot = maxttop, dpi = 300)
+
+maxttop_time <- 
+max_temperatures_long %>% 
+  filter(temperature == "daily_max_ttop") %>% 
+  ggplot(aes(x = date, y = value, color = OTC_label)) + 
+  facet_wrap( ~ year, ncol = 2, nrow = 1, scales = "free_x") +
+  geom_point(alpha = 0.5) + 
+  scale_color_manual(
+    name = NULL, values = palette_OTC, labels = labels_OTC) +
+  theme(legend.position = "bottom") + 
+  labs( y = "Max temperature (ºC)", x = NULL) +
+   scale_x_date(
+    date_breaks = "1 months",
+    date_labels = "%b",
+    expand = expansion(add = c(0, 15))   # 10 días extra a la derecha
+  ) +
+  theme3
+
+#ggsave("results/Plots/protofinal/OTC_effect_maxtemperature_time.png", plot = maxttop_time, dpi = 300)
+
+
+#maxttop_year_differences<- 
+  max_temperatures_long %>% 
+  filter(temperature == "daily_max_ttop") %>% 
+  filter(OTC_label == "otc") %>% 
+  ggplot(aes(x = as.factor(year), y = value, fill = as.factor(year))) + 
+  geom_boxplot() 
+  
+  
+  max_temperatures_2324 <-  max_temperatures_long %>% 
+    mutate(year = as.factor(year)) %>% 
+    filter(temperature == "daily_max_ttop") 
+  
+  
+  library(ggpubr)
+  
+  ggboxplot(max_temperatures_2324,
+            x = "year", y = "value", fill = "year", width = 0.6) +
+    facet_wrap(~OTC_label, ncol = 2, nrow = 1) +
+    stat_compare_means(
+      method = "t.test",
+      label = "p.signif",
+      comparisons = list(c("2023","2024")),
+      label.y = max(max_temperatures_2324$value, na.rm = TRUE) * 1.01
+    ) +
+    scale_y_continuous(expand = expansion(mult = c(0.02, 0.12))) +
+    labs( x = NULL, y = "Max temperature (ºC)") + 
+    theme(
+      legend.position = "none",
+      panel.grid = element_blank(),
+      strip.background = element_blank(),
+      strip.text = element_text(face = "bold"),
+      text = element_text(size = 15)
+    )
+  
+  
+
+  
+  max_temperatures %>%
+    filter(OTC_label == "otc") %>% 
+    filter(year == "2023", !is.na(daily_max_ttop)) %>%
+    nrow()
+  
+  
 
 ## SENSOR DATA FOR DAYS OF SAMPLINGS - for arkaute.csv ##
 
@@ -300,7 +419,7 @@ data_long %>%
             y       = "value",            
             fill    = "OTC_label",
             width   = 0.6) +
-  facet_wrap(~ variable, ncol = 4, nrow = 1,
+  facet_wrap(~ variable, ncol = 5, nrow = 1,
              scales = "free_y",
              labeller = labeller(variable = as_labeller(labels_variables_sensor))) +
  
@@ -434,7 +553,13 @@ gg_allyear <-
   
   geom_line() +
   
-  #geom_smooth(stat = "smooth", alpha = 0.2) +
+  geom_smooth(stat = "smooth", alpha = 0.2) +
+  
+  scale_x_date(
+    date_breaks  = "4 month",            # intervalos de 1 mes
+    date_labels  = "%Y-%m-%d",              # ej. "Jan 2024"
+    expand       = expansion(add = c(0, 0))  # ajusta márgenes si hace falta
+  ) +
   
   scale_color_manual( 
     name = NULL, values = palette_OTC, labels = labels_OTC) +
@@ -499,7 +624,7 @@ gg_24h_diff <-
     ) %>% 
 filter(variable == variables[i]) %>%                                       #### Modify in this line the variable or variables we want to see
   ggplot(aes(x = time, y = mean_diff_value, color = variable)) +
-  geom_hline(yintercept = 0, linetype = "dashed", color = "gray20") +
+  geom_hline(yintercept = 0, linetype = "dashed", color = "#1FBDC7") +
   geom_line(aes(group = variable), size = 0.5, color = "#EA6E13") +
   geom_line(aes(x = time,
                 y = mean_diff_value + sd_diff_value,
@@ -563,15 +688,15 @@ gg_year_diff <-
   
   # Plot
   ggplot(aes(x = date, y = mean_diff_value)) +
-  geom_hline(yintercept = 0, linetype = "dashed", color = "gray20") +
-  geom_line(color = "#EA6E13", size = 0.5) +
+  geom_hline(yintercept = 0, linetype = "dashed", color = "#1FBDC7") +
+  geom_line(color = "#EA6E13", linewidth = 0.5) +
   labs(
     x = NULL,
-    y = paste0(ytitle)
+    y = "Temperature difference at 40 cm (ºC)"
   ) +
   
   scale_x_date(
-    date_breaks  = "3 month",            # intervalos de 1 mes
+    date_breaks  = "4 month",            # intervalos de 1 mes
     date_labels  = "%Y-%m-%d",              # ej. "Jan 2024"
     expand       = expansion(add = c(0, 0))  # ajusta márgenes si hace falta
   ) +
@@ -606,7 +731,7 @@ gg_year_diff <-
   
   
   print(gg_year_diff)
-  ggsave("results/Plots/protofinal/OTC_effect_year_ttop.png", plot = gg_year_diff, dpi = 300) 
+  #ggsave("results/Plots/protofinal/OTC_effect_year_ttop.png", plot = gg_year_diff, dpi = 300) 
   
   
   
