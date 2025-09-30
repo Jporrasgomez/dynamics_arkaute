@@ -22,10 +22,15 @@ ggdyn <- function(data, palette, labels, colorline, position, asterisk, caps){
                color      = colorline,
                linewidth  = 0.5) +
     
-    geom_vline(xintercept = as.Date("2023-05-11"),
-               linetype   = "dashed",
-               color      = "gray40",
-               linewidth  = 0.5) +
+    geom_vline(
+      data = dplyr::filter(data, year == 2023) %>%
+        dplyr::distinct(year) %>%
+        dplyr::mutate(x = as.Date("2023-05-11")),
+      aes(xintercept = x),
+      linetype  = "dashed",
+      color     = "gray40",
+      linewidth = 0.5) +
+  
     
     geom_errorbar(aes(ymin = lower_limit, ymax = upper_limit),
                   position  = position,

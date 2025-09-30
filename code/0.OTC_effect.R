@@ -305,6 +305,7 @@ source("code/palettes_labels.R")
 
 daylight_hours <- c(7:19)
 growth_season <- c("Apr", "May", "Jun", "Jul", "Aug", "Sep")
+summer <- c("Jul", "Aug", "Sep")
 
 data <- data %>% 
   mutate(
@@ -330,27 +331,62 @@ data_growth_daylight <- data %>%
     data = "Growth season - daylight"
   )
 
+
+data_summer_24h<- data %>% 
+  filter(month %in% summer) %>% 
+  mutate(
+    data = "Summer - 24h"
+  )
+
+
+data_summer_daylight <- data %>% 
+  filter(month %in% summer) %>% 
+  filter(hour %in% daylight_hours) %>% 
+  mutate(
+    data = "Summer - daylight"
+  )
+
+
+data_august_24h<- data %>% 
+  filter(month == "Aug") %>% 
+  mutate(
+    data = "August - 24h"
+  )
+
+
+data_august_daylight <- data %>% 
+  filter(month == "Aug") %>% 
+  filter(hour %in% daylight_hours) %>% 
+  mutate(
+    data = "August - daylight"
+  )
+
+
 {data_list <- list()
 data_list[["data"]] <- data
 data_list[["data_daylight"]] <- data_daylight
 data_list[["data_growth"]] <- data_growth
 data_list[["data_growth_daylight"]] <- data_growth_daylight
+data_list[["data_summer"]] <- data_summer_24h
+data_list[["data_summer_daylight"]] <- data_summer_daylight
+data_list[["data_august"]] <- data_august_24h
+data_list[["data_august_daylight"]] <- data_august_daylight
 
 
 df_mean_difference <- data.frame(
-  data       = rep(NA, 4),
-  mean_diff  = rep(NA, 4),
-  IC_95      = rep(NA, 4),
-  mean_value_OTC = rep(NA, 4),
-  sd_value_OTC   = rep(NA, 4),
-  mean_value_control   = rep(NA, 4),
-  sd_value_control   = rep(NA, 4),
+  data       = rep(NA, 8),
+  mean_diff  = rep(NA, 8),
+  IC_95      = rep(NA, 8),
+  mean_value_OTC = rep(NA, 8),
+  sd_value_OTC   = rep(NA, 8),
+  mean_value_control   = rep(NA, 8),
+  sd_value_control   = rep(NA, 8),
   stringsAsFactors = FALSE
 )
 
 counter = 0 
 
-for ( i in 1:4) {
+for ( i in 1:8) {
   
 
   anova_result <- aov(t_top ~ OTC_label, data = data_list[[i]])
@@ -381,8 +417,9 @@ for ( i in 1:4) {
 
 metadata <- do.call(rbind, data_list)
 
-gg_OTC_temperature <- 
-ggboxplot(metadata,
+gg_OTC_temperature <- metadata %>% 
+  filter(data %in% c("All year - 24h", "All year - daylight", "Growth season - 24h", "Growth season - daylight")) %>% 
+ggboxplot(
           x       = "OTC_label", 
           y       = "t_top",            # cambiar aquí la variable
           fill    = "OTC_label",
@@ -408,7 +445,42 @@ theme2
 print(gg_OTC_temperature)
 
 
-#ggsave("results/Plots/protofinal/OTC_effect_temperature.png", plot = gg_OTC_temperature, dpi = 300)
+ggsave("results/Plots/protofinal/OTC_effect_temperature.png", plot = gg_OTC_temperature, dpi = 300)
+
+
+
+gg_OTC_temperature_summer <- metadata %>% 
+  filter(data %in% c("Summer - 24h", "Summer - daylight", "August - 24h", "August - daylight")) %>% 
+  mutate(
+    data = factor(data, levels = c("Summer - 24h", "Summer - daylight", "August - 24h", "August - daylight"))
+  ) %>% 
+  ggboxplot(
+    x       = "OTC_label", 
+    y       = "t_top",            # cambiar aquí la variable
+    fill    = "OTC_label",
+    width   = 0.6) +
+  facet_wrap(~ data, ncol = 4) +
+  stat_compare_means(
+    method       = "t.test",
+    label        = "p.signif",
+    label.y      = max(metadata$t_top) * 1.05,
+    comparisons  = list(c("control", "otc"))
+  ) +
+  scale_x_discrete(name = NULL) +
+  ylab("Temperature (ºC)") +
+  
+  scale_fill_manual( 
+    name = NULL,
+    values = palette_OTC,
+    labels = labels_OTC
+  ) +
+  scale_y_continuous(breaks = scales::pretty_breaks(n = 8)) +
+  
+  theme2
+
+print(gg_OTC_temperature_summer)
+
+ggsave("results/Plots/protofinal/OTC_effect_temperature_SUMMER.png", plot = gg_OTC_temperature_summer, dpi = 300)
 
 
 gg_allvariables_sensor <- 

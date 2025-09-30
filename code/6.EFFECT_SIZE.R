@@ -3,7 +3,6 @@
 
 
 
-
 rm(list = ls(all.names = TRUE))  #Se limpia el environment
 pacman::p_unload(pacman::p_loaded(), character.only = TRUE) #se quitan todos los paquetes (limpiamos R)
 
@@ -178,10 +177,7 @@ gg_Experiment_Results <-
     #title = "LRR",
     theme = theme( plot.title = element_text(face = "bold", size = 10, hjust = 0.5)))
 print(gg_Experiment_Results)
-ggsave("results/Plots/protofinal/1.Results_LRR.png", plot = gg_Experiment_Results, dpi = 300)
-
-
-
+#ggsave("results/Plots/protofinal/1.Results_LRR.png", plot = gg_Experiment_Results, dpi = 300)
 
 
 
@@ -232,7 +228,7 @@ gg_Warming_Effect <-
       plot.title = element_text(face = "bold", size = 10, hjust = 0.5)))
 
 print(gg_Warming_Effect)
-ggsave("results/Plots/protofinal/1.Warming_Effect_LRR.png", plot = gg_Warming_Effect, dpi = 300)
+ggsave("results/Plots/protofinal/1.Warming_Effect_LRR_smallsize.png", plot = gg_Warming_Effect, dpi = 300)
 
 
 
