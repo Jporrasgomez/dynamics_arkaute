@@ -196,7 +196,8 @@ ggplot(aes(x = sampling, y = value, color = comparison, group = comparison)) +
   labs(x = "Sampling") + 
   theme(legend.position = "bottom")
 print(gg_sorensen)
-ggsave("results/Plots/protofinal/sorensen_c.png", plot = gg_sorensen, dpi = 300)}
+#ggsave("results/Plots/protofinal/sorensen_c.png", plot = gg_sorensen, dpi = 300)
+}
 
 
 {gg_sorensen_wp <- 
@@ -216,7 +217,8 @@ sorensen_df %>%
   labs(x = "Sampling") + 
   theme(legend.position = "bottom")
 print(gg_sorensen_wp)
-ggsave("results/Plots/protofinal/sorensen_wp.png", plot = gg_sorensen_wp, dpi = 300)}
+#ggsave("results/Plots/protofinal/sorensen_wp.png", plot = gg_sorensen_wp, dpi = 300)
+}
 
 
 
@@ -273,8 +275,6 @@ nmds_df_sampling <- data.frame(
 nmds_df_sampling <- nmds_df_sampling %>% arrange(sampling)
 
 
-
-
 # Species arrows visualization
 
 set.seed(123)  # reproducibility for envfit permutations
@@ -292,7 +292,6 @@ sp_scores <- as.data.frame(fit$vectors$arrows) %>%
 
 
 
-
 # Plot NMDS results using ggplot
 
 ggnmds_alltreatments <- 
@@ -305,8 +304,8 @@ ggnmds_alltreatments <-
     geom_point(size = 1.5, aes(shape = treatment), show.legend = T) +
     
     geom_text_repel(aes(label = sampling),
-                    max.overlaps = 3,
-                    size = 3,
+                    max.overlaps = 8,
+                    size = 4.5,
                     show.legend = F) +
   
     geom_hline(yintercept = 0, color = "gray52", linetype = "dashed") +
@@ -323,7 +322,7 @@ ggnmds_alltreatments <-
     
     geom_text(data = sp_scores,
               aes(x = NMDS1, y = NMDS2, label = species),
-              hjust = 0.5, vjust = -0.3, size = 3,
+              hjust = 0.5, vjust = -0.3, size = 3.5,
               colour = "black",
               alpha = 0.5) +
    
@@ -349,7 +348,7 @@ print(ggnmds_alltreatments)
 
 }
 
-#ggsave("results/Plots/protofinal/species_composition_sampling_LABELS.png", plot = ggnmds_alltreatments, dpi = 300)
+ggsave("results/Plots/protofinal/species_composition_sampling_LABELS.png", plot = ggnmds_alltreatments, dpi = 300)
 
 
 

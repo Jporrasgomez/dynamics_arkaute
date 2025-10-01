@@ -78,7 +78,7 @@ variables <- c(
   #"biomass012",
   "biomass_lm_plot",
   "Y_zipf", 
-  "NMDS1", "NMDS2", "PC1", "PC2", 
+  #"NMDS1", "NMDS2", "PC1", "PC2", 
   "SLA", "LDMC", "leafN", 
   "mean_temperature", "mean_vwc"
 )
@@ -147,6 +147,26 @@ corrplot(cor(data_list[[i]][,variables], use="pairwise.complete.obs"), method = 
 
 for(i in 1:4){
   mod1 = lme(biomass_lm_plot ~ richness + Y_zipf + PC1 + PC2, random = ~ 1 | plot,  data_list[[i]])
+  mod2 = lme(Y_zipf ~ richness, random = ~ 1 | plot, data_list[[i]])
+  
+  global_model <- psem(
+    mod1,
+    mod2
+  )
+  
+  
+  print(summary(global_model))
+  
+  a <- plot(global_model, title = paste0(unique(data_list[[i]]$treat_label)))
+  print(a)
+  
+}
+
+
+#### WITH CWM 
+
+for(i in 1:4){
+  mod1 = lme(biomass_lm_plot ~ richness + Y_zipf + LDMC + SLA, random = ~ 1 | plot,  data_list[[i]])
   mod2 = lme(Y_zipf ~ richness, random = ~ 1 | plot, data_list[[i]])
   
   global_model <- psem(
