@@ -1,57 +1,59 @@
 
 
-ggagg <- function(data, palette, labels, colorline, position, asterisk, caps, limitvar, labelvar){
-  
 
+
+
+ggagg_ppt <- function(data, palette, labels, colorline, position, caps, limitvar, labelvar){
+  
+  
   #dodge_width <- position$width
   
   plot <- 
     ggplot(data, aes(
-      y     = variable,
-      x     = eff_value,
+      x     = variable,
+      y     = eff_value,
       color = eff_descriptor,
       group = eff_descriptor        
     )) +
     
-  
-    geom_vline(xintercept = 0,
+    
+    geom_hline(yintercept = 0,
                linetype   = "dashed",
                color      = colorline,
-               linewidth  = 0.5) +
+               linewidth  = 1) +
     
-
-    geom_errorbar(aes(xmin = lower_limit,
-                      xmax = upper_limit),
+    
+    geom_errorbar(aes(ymin = lower_limit,
+                      ymax = upper_limit),
                   position  = position,
                   width     = caps,
-                  linewidth = 0.5,
-                  alpha     = 0.5) +
+                  linewidth = 1) +
     
- 
+    
     geom_point(position = position,
-               size     = 1.5) +
+               size     = 2) +
     
     geom_text(aes(
-      y = variable,
-      x = ifelse(eff_value < 0, lower_limit - scale * asterisk, upper_limit + scale * asterisk),
+      x = variable,
+      y = ifelse(eff_value < 0, lower_limit - 0.1, upper_limit + 0.1),
       label = ifelse(null_effect == "NO", "*", NA_character_), 
       color = eff_descriptor
     ),
     position    = position,
     inherit.aes = FALSE,
-    size        = 5
+    size        = 7
     ) +
     
     scale_color_manual(values = palette,
                        labels = labels) +
     
-    scale_y_discrete(
-      limits = rev(limitvar),
-      labels = rev(labelvar)
+    scale_x_discrete(
+      limits = limitvar,
+      labels = labelvar
     ) +
     
-    scale_x_continuous(
-      breaks = scales::pretty_breaks(n = 3)
+    scale_y_continuous(
+      breaks = scales::pretty_breaks(n = 5)
     ) +
     
     labs(x = NULL, y = NULL) +

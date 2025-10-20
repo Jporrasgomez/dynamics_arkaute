@@ -96,33 +96,27 @@ limits_variables <- c("richness",
                       "SLA", 
                       "LDMC", 
                       "leafN",
-                      #"NMDS1",
-                      #"NMDS2",
-                      #"PC1",
-                      #"PC2",
                       #"biomass",
                       #"biomass012",
                       "biomass_lm_plot"
                       )
 
-labels_variables <- c("richness" = "Richness",
-                      "abundance" = "Cover",
-                      "Y_zipf" = "Evenness",
-                      "SLA" = "SLA", 
-                      "LDMC" = "LDMC",
-                      "leafN"= "Leaf-N",
-                      #"NMDS1" = "SC1",
-                      #"NMDS2" = "SC2",
-                      #"PC1" = "FT1", 
-                      #"PC2" = "FT2",
+labels_variables <- c("richness" = "Richness",            # 1
+                      "abundance" = "Cover",              # 2
+                      "Y_zipf" = "Evenness",              # 3
+                      "SLA" = "SLA",                      # 4
+                      "LDMC" = "LDMC",                    # 5
+                      "leafN"= "Leaf-N",                  # 6
                       #"biomass" = "Biomass",
                       #"biomass012" = "Biomass",
-                      "biomass_lm_plot" = "Biomass")
+                      "biomass_lm_plot" = "Biomass")      # 7
 
 
+# Choosing the variables to be displayed
+i = 1
+j = 3
 
-#agg <- effect_size_aggregated %>% 
-#  filter(!variable %in% LES_variables)
+########### ALL TREATMENTS / CONTROL ###
 
 agg <- effect_size_aggregated
 dyn <- effect_size_dynamics
@@ -135,8 +129,7 @@ pos_dod_c_dyn <- position_dodge2(width = 12, preserve = "single")
 
 gg_eff_agg_c <- agg %>% 
   filter(eff_descriptor %in% c("p_vs_c", "w_vs_c", "wp_vs_c")) %>% 
-  filter(variable != "biomass") %>%
-  filter(variable != "biomass012") %>% 
+  filter(variable %in% limits_variables[i:j]) %>% 
   mutate(eff_descriptor = factor(eff_descriptor,
                                  levels = c("p_vs_c", "w_vs_c", "wp_vs_c"))
   ) %>% 
@@ -145,18 +138,19 @@ gg_eff_agg_c <- agg %>%
         "grey20",
         position   = pos_dod_c_agg,
         asterisk = 50,
-        caps = pos_dod_c_agg$width)   # Write down 0 
+        caps = pos_dod_c_agg$width,
+        limitvar = limits_variables[i:j],
+        labelvar = labels_variables[i:j])   
 
 
 
 gg_eff_dynamics_c <- dyn %>% 
   filter(eff_descriptor %in% c("w_vs_c", "p_vs_c", "wp_vs_c")) %>% 
-  filter(variable != "biomass") %>% 
-  filter(variable != "biomass012") %>% 
+  filter(variable %in% limits_variables[i:j]) %>%  
   mutate(
     variable = factor(variable, 
-                      levels = limits_variables, 
-                      labels = labels_variables)) %>% 
+                      levels = limits_variables[i:j], 
+                      labels = labels_variables[i:j])) %>% 
   
   ggdyn(palette_RR_CB,
         labels_RR2, 
@@ -177,12 +171,12 @@ gg_Experiment_Results <-
     #title = "LRR",
     theme = theme( plot.title = element_text(face = "bold", size = 10, hjust = 0.5)))
 print(gg_Experiment_Results)
-#ggsave("results/Plots/protofinal/1.Results_LRR.png", plot = gg_Experiment_Results, dpi = 300)
+ggsave("results/Plots/protofinal/1.Results_LRR_ppt2.png", plot = gg_Experiment_Results, dpi = 300)
 
 
 
 
-
+########### COMBINED / PERTURBATION    ###
 
 pos_dod_wp_agg <- position_dodge2(width = 0.1, preserve = "single")
 pos_dod_wp_dyn <- position_dodge2(width = 4, preserve = "single")
@@ -191,23 +185,24 @@ pos_dod_wp_dyn <- position_dodge2(width = 4, preserve = "single")
 
 gg_eff_agg_wp <- agg %>% 
   filter(eff_descriptor == "wp_vs_p") %>% 
-  filter(variable != "biomass") %>%
-  filter(variable != "biomass012") %>% 
+  filter(variable %in% limits_variables[i:j]) %>% 
   ggagg(palette_RR_wp,
         labels_RR_wp,
         p_CB, 
         position   = pos_dod_wp_agg,
         asterisk = 4,
-        caps = pos_dod_wp_agg$width)
+        caps = pos_dod_wp_agg$width,
+        limitvar = limits_variables[i:j],
+        labelvar = labels_variables[i:j])   
+
 
 
 gg_eff_dynamics_wp <- dyn %>% 
   filter(eff_descriptor %in% c("wp_vs_p")) %>% 
-  filter(variable != "biomass") %>% 
-  filter(variable != "biomass012") %>% 
+  filter(variable %in% limits_variables[i:j]) %>%  
   mutate(variable = factor(variable, 
-                           levels = limits_variables, 
-                           labels = labels_variables)) %>% 
+                           levels = limits_variables[i:j], 
+                           labels = labels_variables[i:j])) %>% 
   ggdyn(palette_RR_wp,
         labels_RR_wp2,
         p_CB,
@@ -228,110 +223,132 @@ gg_Warming_Effect <-
       plot.title = element_text(face = "bold", size = 10, hjust = 0.5)))
 
 print(gg_Warming_Effect)
-ggsave("results/Plots/protofinal/1.Warming_Effect_LRR_smallsize.png", plot = gg_Warming_Effect, dpi = 300)
+ggsave("results/Plots/protofinal/1.Warming_Effect_LRR_ppt2.png", plot = gg_Warming_Effect, dpi = 300)
 
 
 
 
+########### COMBINED / WARMING    ###
+
+pos_dod_wpw_agg <- position_dodge2(width = 0.1, preserve = "single")
+pos_dod_wpw_dyn <- position_dodge2(width = 4, preserve = "single")
 
 
 
-# LES Variables
-
-
-limits_variables <- c("LDMC", "leafN", "SLA")
-labels_variables <- c("LDMC", "Leaf N", "SLA")
-
-
-agg_LES <- effect_size_aggregated %>% 
-  filter(variable %in% LES_variables)
-
-
-gg_eff_agg_c_LES <- agg_LES %>% 
-  filter(eff_descriptor %in% c("p_vs_c", "w_vs_c", "wp_vs_c")) %>% 
-  filter(variable != "biomass") %>%
-  mutate(eff_descriptor = factor(eff_descriptor,
-                                 levels = c("p_vs_c", "w_vs_c", "wp_vs_c"))
-  ) %>% 
-  ggagg(palette_RR_CB, # using my function
-        labels_RR2,
-        "grey20",
-        position   = position_dodge2(width = 0.2, preserve = "single")) 
-
-gg_eff_agg_wp_LES <- agg_LES %>% 
-  filter(eff_descriptor == "wp_vs_p") %>% 
-  filter(variable != "biomass") %>%
+gg_eff_agg_wpw <- agg %>% 
+  filter(eff_descriptor == "wp_vs_w") %>% 
+  filter(variable %in% limits_variables[i:j]) %>% 
   ggagg(palette_RR_wp,
         labels_RR_wp,
-        p_CB, 
-        position   = position_dodge2(width = 0.1, preserve = "single"))
+        w_CB, 
+        position   = pos_dod_wp_agg,
+        asterisk = 4,
+        caps = pos_dod_wp_agg$width,
+        limitvar = limits_variables[i:j],
+        labelvar = labels_variables[i:j])
 
 
-
-dyn_LES <- effect_size_dynamics %>% 
-  filter(variable %in% LES_variables)
-
-gg_eff_dynamics_c_LES <- dyn_LES %>% 
-  filter(eff_descriptor %in% c("w_vs_c", "p_vs_c", "wp_vs_c")) %>% 
-  filter(variable != "biomass") %>% 
-  mutate(
-    variable = factor(variable, 
-                      levels = limits_variables, 
-                      labels = labels_variables)) %>% 
-  ggdyn(palette_RR_CB,
-        labels_RR2, 
-        "grey20",
-        position = position_dodge2(width = 12, preserve = "single")) 
-
-gg_eff_dynamics_wp_LES <- dyn_LES %>% 
-  filter(eff_descriptor %in% c("wp_vs_p")) %>% 
-  filter(!variable == "biomass") %>% 
+gg_eff_dynamics_wpw <- dyn %>% 
+  filter(eff_descriptor %in% c("wp_vs_w")) %>% 
+  filter(variable %in% limits_variables[i:j]) %>%  
   mutate(variable = factor(variable, 
-                           levels = limits_variables, 
-                           labels = labels_variables)) %>% 
+                           levels = limits_variables[i:j], 
+                           labels = labels_variables[i:j])) %>% 
   ggdyn(palette_RR_wp,
         labels_RR_wp2,
-        p_CB,
-        position = position_dodge2(width = 4, preserve = "single")) 
-
-gg_eff_agg_c_LES
-gg_eff_dynamics_c_LES + theme_minimal() + theme(legend.position = NULL)
-
-gg_eff_agg_wp_LES
-gg_eff_dynamics_wp_LES + theme_minimal() + theme(legend.position = NULL)
+        w_CB,
+        position = pos_dod_wpw_dyn,
+        asterisk = 8, 
+        caps = pos_dod_wpw_dyn$width)
 
 
-
-
-library(patchwork)
-
-gg_Warming_Effect_hedges_LES <- 
-  (gg_eff_agg_wp_LES   + theme(plot.margin = margin(5,5,5,5))) +
-  (gg_eff_dynamics_wp_LES + theme(plot.margin = margin(5,5,5,5))) +
+gg_Perturbation_Effect <- 
+  (gg_eff_agg_wpw   + theme(plot.margin = margin(5,5,5,5))) +
+  (gg_eff_dynamics_wpw + theme(plot.margin = margin(5,5,5,5))) +
   plot_layout(
     ncol   = 2,
     widths = c(1, 4)) +
   plot_annotation(
-    title = "Hedge's g effect size",
+    #title = "LRR",
     theme = theme(
       plot.title = element_text(face = "bold", size = 10, hjust = 0.5)))
 
-print(gg_Warming_Effect_hedges_LES)
-ggsave("results/Plots/protofinal/1.Warming_Effect_hedges_LES.png", plot = gg_Warming_Effect_hedges_LES, dpi = 300)
+print(gg_Perturbation_Effect)
+#ggsave("results/Plots/protofinal/1.Perturbation_Effect_LRR_smallsize.png", plot = gg_Perturbation_Effect, dpi = 300)
 
 
-gg_Results_hedges_LES <- 
-  ggarrange(
-    gg_eff_agg_c_LES   + theme(plot.margin = margin(5,5,5,5)),   # margen uniforme
-    gg_eff_dynamics_c_LES + theme(plot.margin = margin(5,5,5,5)),
-    #labels   = c("A","B"),
-    ncol   = 2, 
-    widths = c(1, 4)) +
-  plot_annotation(
-    title = "Hedge's g effect size",
-    theme = theme( plot.title = element_text(face = "bold", size = 10, hjust = 0.5)))
-print(gg_Results_hedges_LES)
-ggsave("results/Plots/protofinal/1.Results_hedges_LES.png", plot = gg_Results_hedges_LES, dpi = 300)
+
+i = 1
+j = 7
+
+source("code/functions/gg_agg_PPT.R")
+
+gg_PPT_wp_agg <- 
+agg %>% 
+  filter(eff_descriptor == "wp_vs_p") %>% 
+  filter(variable %in% limits_variables[i:j]) %>% 
+  ggagg_ppt(palette_RR_wp,
+        labels_RR_wp,
+        p_CB, 
+        position   = pos_dod_wp_agg,
+        caps = pos_dod_wp_agg$width,
+        limitvar = limits_variables[i:j],
+        labelvar = labels_variables[i:j])
+print(gg_PPT_wp_agg)
+
+
+ggsave("results/Plots/protofinal/Warming_effect_agg_PPT.png", plot = gg_PPT_wp_agg, dpi = 300)
+
+
+
+
+
+gg_PPT_control_agg <- 
+  agg %>% 
+  filter(eff_descriptor %in% c("wp_vs_c", "w_vs_c", "p_vs_c")) %>% 
+  filter(variable %in% limits_variables[i:j]) %>% 
+  ggagg_ppt(palette_RR_CB,
+            labels_RR2,
+            "grey20", 
+            position   = position_dodge2(width = 0.2, preserve = "single"),
+            caps = position_dodge2(width = 0.2, preserve = "single")$width,
+            limitvar = limits_variables[i:j],
+            labelvar = labels_variables[i:j])
+print(gg_PPT_control_agg)
+
+
+ggsave("results/Plots/protofinal/treatment_effect_agg_PPT.png", plot = gg_PPT_control_agg, dpi = 300)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

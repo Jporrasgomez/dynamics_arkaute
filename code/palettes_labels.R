@@ -113,7 +113,7 @@ labels_RR2 <- c("w_vs_c" = "Warming vs Control", "p_vs_c" = "Perturbation vs Con
 palette_RR_CB <- c("w_vs_c" = w_CB, "p_vs_c" = p_CB, "wp_vs_c" = wp_CB)
 
 
-palette_RR_wp <- c(wp_vs_p = "#903996", wp_vs_w = "#E05050")
+palette_RR_wp <- c(wp_vs_p = "#903996", wp_vs_w = "#903996")
 
 labels_RR_wp <- c("wp_vs_w" = "Global Change vs Warming", "wp_vs_p" = "Global Change vs Perturbation")
 labels_RR_wp2 <- c("wp_vs_w" = "Perturbation effect", "wp_vs_p" = "Warming effect")

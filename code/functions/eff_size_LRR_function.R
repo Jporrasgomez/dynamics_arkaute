@@ -43,6 +43,16 @@ LRR_agg <- function(data, variable){
     select(-treatment)
   
   
+  effect_w <- effect %>% 
+    filter(treatment == "w") %>% 
+    ungroup() %>% 
+    select(n, treatment, mean, sd) %>% 
+    rename(mean_w = mean,
+           sd_w = sd,
+           n_w = n) %>% 
+    #mutate(eff_descriptor = "wp_vs_p") %>% 
+    select(-treatment)
+  
   effect_wp <- effect %>% 
     filter(treatment == "wp") %>% 
     ungroup() %>% 
@@ -76,7 +86,7 @@ LRR_agg <- function(data, variable){
  
     
   
-  ############ LRR = perturbation / Global change ##########
+  ############ LRR = Combined / Perturbation ##########
   
   
   RR_wp_vs_p <- effect_wp %>% 
@@ -94,10 +104,30 @@ LRR_agg <- function(data, variable){
   
   
   
+  ############ LRR = Combined / Warming ##########
+  
+  
+  RR_wp_vs_w <- effect_wp %>% 
+    cbind(effect_w) %>% 
+    mutate(
+      RR = log(mean_wp / mean_w),
+      se_RR = sqrt((sd_wp^2) / (n_wp * mean_wp^2) + 
+                     (sd_w^2) / (n_w * mean_w^2))
+    ) %>% 
+    mutate(
+      eff_descriptor = paste0("wp_vs_w")
+    ) %>% 
+    filter(!RR == "Inf") %>% 
+    select(eff_descriptor, RR, se_RR) 
+  
+  
+  
+  
   ###### Binding data #####
   
   
   effsize_data <- rbind(RR_treat_vs_c, RR_wp_vs_p) %>% 
+    rbind(RR_wp_vs_w) %>% 
     mutate(variable = variable, 
            analysis = paste0("LRR")) %>% 
     mutate(

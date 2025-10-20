@@ -101,7 +101,7 @@ LRR_dynamics <- function(data, variable){
       eff_descriptor, date, sampling,  delta_RR, se_delta_RR)
   
   
-  ############ LRR = perturbation / Global change ##########
+  ############ LRR = Combined / Perturbation  ##########
   
   RR_wp_vs_p <- effect_wp %>% 
     left_join(effect_p, by = c("date", "sampling")) %>% 
@@ -133,10 +133,42 @@ LRR_dynamics <- function(data, variable){
   
   
   
+  ############ LRR = Combined / Warming  ##########
+  
+  RR_wp_vs_w <- effect_wp %>% 
+    left_join(effect_w, by = c("date", "sampling")) %>% 
+    
+    mutate(
+      RR = log(mean_wp / mean_w),
+      var_RR = (sd_wp^2) / (n * mean_wp^2) + 
+        (sd_w^2) / (n * mean_w^2),
+      se_RR = sqrt(var_RR)  
+      
+    ) %>% 
+    mutate(
+      delta_RR = RR + 0.5 * (
+        (sd_wp ^2) / (n * mean_wp^2) - 
+          (sd_w^2) / (n * mean_w^2)
+      ),
+      var_delta_RR = var_RR + 0.5 * (
+        (sd_wp^4) / (n^2 * mean_wp^4) + 
+          (sd_w^4) / (n^2 * mean_w^4)
+      ),
+      se_delta_RR = sqrt(var_delta_RR)
+    ) %>% 
+    filter(!RR == "Inf")%>% 
+    filter(!RR == "-Inf") %>% 
+    filter(!RR == "NaN") %>% 
+    mutate(eff_descriptor = paste0("wp_vs_w")) %>% 
+    select(
+      eff_descriptor, date, sampling,  delta_RR, se_delta_RR)
+  
+  
   ###### Binding data #####
   
   
   effsize_dynamics_data <- rbind(RR_treat_vs_c, RR_wp_vs_p) %>% 
+    rbind(RR_wp_vs_w) %>% 
     mutate(
       variable = variable, 
       analysis = paste0("delta_LRR")
