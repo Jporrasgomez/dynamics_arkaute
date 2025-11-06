@@ -112,9 +112,9 @@ labels_variables <- c("richness" = "Richness",            # 1
                       "biomass_lm_plot" = "Biomass")      # 7
 
 
-# Choosing the variables to be displayed
+# Choosing the range of variables to be displayed (i to j)
 i = 1
-j = 3
+j = 7
 
 ########### ALL TREATMENTS / CONTROL ###
 
@@ -135,7 +135,7 @@ gg_eff_agg_c <- agg %>%
   ) %>% 
   ggagg(palette_RR_CB, # using my function
         labels_RR2,
-        "grey20",
+        "grey50",
         position   = pos_dod_c_agg,
         asterisk = 50,
         caps = pos_dod_c_agg$width,
@@ -154,7 +154,7 @@ gg_eff_dynamics_c <- dyn %>%
   
   ggdyn(palette_RR_CB,
         labels_RR2, 
-        "grey20",
+        "grey50",
         position = pos_dod_c_dyn,
         asterisk = 8, 
         caps = pos_dod_c_dyn$width) 
@@ -171,7 +171,7 @@ gg_Experiment_Results <-
     #title = "LRR",
     theme = theme( plot.title = element_text(face = "bold", size = 10, hjust = 0.5)))
 print(gg_Experiment_Results)
-ggsave("results/Plots/protofinal/1.Results_LRR_ppt2.png", plot = gg_Experiment_Results, dpi = 300)
+ggsave("results/Plots/protofinal/1.Results_LRR.png", plot = gg_Experiment_Results, dpi = 300)
 
 
 

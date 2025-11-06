@@ -1,8 +1,11 @@
 
 
+
+
+
 ggagg <- function(data, palette, labels, colorline, position, asterisk, caps, limitvar, labelvar){
   
-
+  
   #dodge_width <- position$width
   
   plot <- 
@@ -13,23 +16,32 @@ ggagg <- function(data, palette, labels, colorline, position, asterisk, caps, li
       group = eff_descriptor        
     )) +
     
-  
+    
     geom_vline(xintercept = 0,
                linetype   = "dashed",
                color      = colorline,
                linewidth  = 0.5) +
     
-
-    geom_errorbar(aes(xmin = lower_limit,
-                      xmax = upper_limit),
-                  position  = position,
-                  width     = caps,
-                  linewidth = 0.5,
-                  alpha     = 0.5) +
     
- 
+    #geom_errorbar(aes(xmin = lower_limit,
+    #                  xmax = upper_limit),
+    #              position  = position,
+    #              width     = caps,
+    #              linewidth = 0.5,
+    #              alpha     = 0.5) +
+    
+    
+    geom_linerange(
+      aes(y = variable, xmin = lower_limit, xmax = upper_limit),
+      position   = position,
+      linewidth  = 0.5,
+      alpha      = 1,
+      orientation = "y"   # important for horizontal ranges
+    ) +
+    
+    
     geom_point(position = position,
-               size     = 1.5) +
+               size     = 2) +
     
     geom_text(aes(
       y = variable,
@@ -59,3 +71,4 @@ ggagg <- function(data, palette, labels, colorline, position, asterisk, caps, li
     gg_RR_theme
   
 }
+

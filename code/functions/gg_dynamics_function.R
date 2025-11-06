@@ -23,23 +23,26 @@ ggdyn <- function(data, palette, labels, colorline, position, asterisk, caps){
                linewidth  = 0.5) +
     
     geom_vline(
-      data = dplyr::filter(data, year == 2023) %>%
-        dplyr::distinct(year) %>%
-        dplyr::mutate(x = as.Date("2023-05-11")),
+      data = filter(data, year == 2023) %>%
+        distinct(year) %>%
+        mutate(x = as.Date("2023-05-11")),
       aes(xintercept = x),
       linetype  = "dashed",
       color     = "gray40",
       linewidth = 0.5) +
-  
     
-    geom_errorbar(aes(ymin = lower_limit, ymax = upper_limit),
-                  position  = position,
-                  width     = caps,
-                  alpha     = 0.5,
-                  linewidth = 0.5) +
+    
+    #geom_errorbar(aes(ymin = lower_limit, ymax = upper_limit),
+    #              position  = position,
+    #              width     = caps,
+    #              alpha     = 0.5,
+    #              linewidth = 0.5) +
+    
+    geom_linerange(aes(ymin = lower_limit, ymax = upper_limit),
+                   position = pos_dod_c_dyn, alpha = 0.6, linewidth = 0.5) +
     
     geom_point(position = position,
-               size     = 1.1) +
+               size     = 1.2) +
     
     geom_line(position = position,
               linewidth = 0.5) +
@@ -47,8 +50,8 @@ ggdyn <- function(data, palette, labels, colorline, position, asterisk, caps){
     geom_text(aes(
       x = date,
       y = ifelse(eff_value < 0,
-                     lower_limit - asterisk * scale,
-                     upper_limit + asterisk * scale),
+                 lower_limit - asterisk * scale,
+                 upper_limit + asterisk * scale),
       label = ifelse(null_effect == "NO", "*", NA_character_),
       color = eff_descriptor
     ),
@@ -82,3 +85,7 @@ ggdyn <- function(data, palette, labels, colorline, position, asterisk, caps){
   
   
 }
+
+
+
+

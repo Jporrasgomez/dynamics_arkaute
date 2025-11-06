@@ -12,6 +12,7 @@ gg_RR_theme <-
     panel.grid      = element_blank(),
     strip.background = element_blank(),
     strip.text      = element_text(face = "bold"),
+    strip.text.y    = element_text(dace = "plain"), 
     text            = element_text(size = 13
     ),
     legend.position = "none",
