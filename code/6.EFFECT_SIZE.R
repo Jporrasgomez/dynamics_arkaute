@@ -96,9 +96,9 @@ limits_variables <- c("richness",
                       "SLA", 
                       "LDMC", 
                       "leafN",
-                      #"biomass",
-                      #"biomass012",
-                      "biomass_lm_plot"
+                      #"biomass"                 # Biomass data without imputation of samplings 0, 1, 2 and 12
+                      #"biomass012"              # Biomass data with imputation of samplings 0, 1, 2 and 12 using linear model at species level
+                      "biomass_lm_plot"          # Biomass data with imputation of samplings 0, 1, 2 and 12 using linear model at plot level
                       )
 
 labels_variables <- c("richness" = "Richness",            # 1
@@ -107,9 +107,10 @@ labels_variables <- c("richness" = "Richness",            # 1
                       "SLA" = "SLA",                      # 4
                       "LDMC" = "LDMC",                    # 5
                       "leafN"= "Leaf-N",                  # 6
-                      #"biomass" = "Biomass",
-                      #"biomass012" = "Biomass",
-                      "biomass_lm_plot" = "Biomass")      # 7
+                      #"biomass" = "Biomass"
+                      #"biomass012" = "Biomass"
+                      "biomass_lm_plot" = "Biomass"      # 7
+                      )      
 
 
 # Choosing the range of variables to be displayed (i to j)
@@ -159,7 +160,7 @@ gg_eff_dynamics_c <- dyn %>%
         asterisk = 8, 
         caps = pos_dod_c_dyn$width) 
 
-
+library(patchwork)
 gg_Experiment_Results <- 
   ggarrange(
     gg_eff_agg_c   + theme(plot.margin = margin(5,5,5,5)),   # margen uniforme

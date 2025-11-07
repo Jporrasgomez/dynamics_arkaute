@@ -354,6 +354,9 @@ flora_abrich <- bind_rows(flora_abrich, dummy_rows)%>%
          abundance = abundance_community)
 
 
+
+
+
 flora_abrich %>%  write.csv("data/flora_abrich.csv")
 
 abrich_db_plot <- flora_abrich %>% 

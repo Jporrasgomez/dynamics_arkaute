@@ -26,38 +26,42 @@ biomass$year <- year(biomass$date)
 
 ggNA_sampling <- biomass %>% 
   mutate(cell_content = case_when(is.na(nind_m2) ~ "NA",
-                                  !is.na(nind_m2)  ~ "nind_available")) %>%
+                                  !is.na(nind_m2)  ~ "Number of individuals available")) %>%
   # we create a new variable capturing cell content
   # as we are interested in defining 3 different situations, we use the case_when function
   ggplot(aes(x = as.numeric(sampling))) +
   geom_histogram(aes(fill = cell_content),
                  binwidth = .5, center = 0) +
   scale_fill_discrete(drop = F) +
-  labs(y = "Number of rows", y = "Sampling") +
+  labs(y = "Number of rows", x = "Sampling", fill = "Data availability") +
+  theme(legend.position = "bottom") + 
   scale_x_continuous(breaks = scales::breaks_extended(n = 21))
 
 
 
 ggNA_plot <- biomass %>% 
   mutate(cell_content = case_when(is.na(nind_m2) ~ "NA",
-                                  !is.na(nind_m2)  ~ "nind_available")) %>%
+                                  !is.na(nind_m2)  ~ "Number of individuals available")) %>%
   ggplot(aes(x = as.numeric(plot))) +
   geom_histogram(aes(fill = cell_content),
                  binwidth = .5, center = 0) +
   scale_fill_discrete(drop = F) +
-  labs(y = "Number of rows", x = "Plot") +
+  labs(y = "Number of rows", x = "Plot", fill = "Data availability") +
+  theme(legend.position = "bottom") + 
   scale_x_continuous(breaks = scales::breaks_extended(n = 16))
 
 
 ggNA_species <- biomass %>% 
   mutate(cell_content = case_when(is.na(nind_m2) ~ "NA",
-                                  !is.na(nind_m2)  ~ "nind_available")) %>%
+                                  !is.na(nind_m2)  ~ "Number of individuals available")) %>%
   # we create a new variable capturing cell content
   # as we are interested in defining 3 different situations, we use the case_when function
-  ggplot(aes(y = code)) +
+  ggplot(aes(x = code)) +
   geom_bar(aes(fill = cell_content)) +
   scale_fill_discrete(drop = F) +
-  labs(x = "Number of rows")
+  theme(legend.position = "bottom",
+        axis.text.x = element_text(angle = 45, vjust = 0.9, hjust = 1)) + 
+  labs(y = "Number of rows", x = "Species code", fill = "Data availablity")
 
 #NA's seem to be concentrated in the first year, as we already knew
 # NA's are randomly distributed across plots
@@ -179,7 +183,7 @@ sd(imput_stability_db$CV)
 
 imput_stability <- ggplot(imput_stability_db, aes(x = CV)) +
   geom_histogram(bins = 30, fill = "steelblue", color = "white", alpha = 0.8) +
-  geom_vline(aes(xintercept = 1), color = "red3", linetype = "dashed", size = 1) +
+  geom_vline(aes(xintercept = 1), color = "red3", linetype = "dashed", linewidth = 1) +
   scale_x_continuous(
     expand = expansion(mult = c(0.05, 0.1)),
     breaks = seq(0, max(imputed_db$sd_imputation / imputed_db$nind_m2_imputed, na.rm = TRUE), by = 0.2) # Adjust "by" as needed
@@ -272,6 +276,8 @@ reliability_test <- read.csv(here("data", "reliability_test.csv")) %>%
 library(dplyr)
 library(tidyr)
 
+reliability_LM_test <- read.csv(here("data", "reliability_LM_test.csv"))
+
 reg_tab <- reliability_LM_test %>%                    # <-- reemplaza con tu data.frame real
   group_by(counter, .imp) %>%
   group_modify(~{
@@ -343,6 +349,9 @@ sd(reg_tab$r2)
 reg_tab %>% 
   ggplot(aes(y = p_value)) + 
   geom_boxplot()
+
+mean(reg_tab$p_value)
+sd(reg_tab$p_value)
 
 
 
