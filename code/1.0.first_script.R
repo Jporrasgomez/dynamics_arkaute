@@ -87,7 +87,8 @@ theme_set(theme_bw() +
   
   taxongroups <- flora_rare %>%
     filter(code %in% c("poaceae", "asteraceae", "tosp", "orchidaceae"))%>%
-    group_by(code, sampling, one_month_window, omw_date, plot, treatment, date, month, species, family, genus_level, species_level) %>%
+    group_by(code, sampling, one_month_window, omw_date, plot, treatment, date,
+             month, species, family, genus_level, species_level) %>%
     summarize(abundance = sum(unique(abundance), na.rm = T), #here we sum abundances 
               height = mean(height, na.rm = T),
               Ah = mean(Ah, na.rm = T),
@@ -95,9 +96,9 @@ theme_set(theme_bw() +
   
   
   
-  
   species <- anti_join(flora_rare, taxongroups, by = "code") %>%
-    group_by(code, sampling, one_month_window, omw_date, plot, treatment, date, month, species, family, genus_level, species_level) %>%
+    group_by(code, sampling, one_month_window, omw_date, plot, treatment, date,
+             month, species, family, genus_level, species_level) %>%
     summarize(abundance = mean(abundance, na.rm = T), #here we mean abundances (fake mean, species in the same plot and sampling have the same abundance info)
               height = mean(height, na.rm = T),
               Ah = mean(Ah, na.rm = T),
@@ -153,6 +154,7 @@ f_5_200 <- flora_medium %>%
   filter(!(height > 5 & height < 200)) %>% 
   nrow() # Only 187 datapoints are lost
 
+(f_5_200/nrow(flora_medium)) * 100
 
 length(unique(flora_biomass_raw$code))
 

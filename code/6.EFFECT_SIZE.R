@@ -76,6 +76,7 @@ effect_size_dynamics <- do.call(rbind, list_eff_dyn)
 
 
 source("code/functions/gg_aggregated_function.R")
+source("code/functions/gg_aggregated_function_2.R")
 source("code/functions/gg_dynamics_function.R")
 
 library(patchwork)
@@ -134,14 +135,35 @@ gg_eff_agg_c <- agg %>%
   mutate(eff_descriptor = factor(eff_descriptor,
                                  levels = c("p_vs_c", "w_vs_c", "wp_vs_c"))
   ) %>% 
-  ggagg(palette_RR_CB, # using my function
+  ggagg2(palette_RR_CB, # using my function
         labels_RR2,
         "grey50",
-        position   = pos_dod_c_agg,
+        #position   = pos_dod_c_agg,
         asterisk = 50,
-        caps = pos_dod_c_agg$width,
+        #caps = pos_dod_c_agg$width,
         limitvar = limits_variables[i:j],
-        labelvar = labels_variables[i:j])   
+        labelvar = labels_variables[i:j])  
+
+lvls <- limits_variables[i:j]
+labs <- unname(labels_variables[lvls])
+
+
+gg_eff_agg_c <- agg %>% 
+  filter(eff_descriptor %in% c("p_vs_c", "w_vs_c", "wp_vs_c"),
+                variable %in% lvls) %>% 
+  mutate(
+    eff_descriptor = factor(eff_descriptor, levels = c("p_vs_c","w_vs_c","wp_vs_c")),
+    variable       = factor(variable, levels = lvls, labels = labs)
+  ) %>% 
+  ggagg2(
+    palette   = palette_RR_CB,
+    labels    = labels_RR2,
+    colorline = "grey50",
+    #nudge     = 0.08,   # ajusta separación si quieres
+    asterisk  = 50,
+    limitvar  = lvls,
+    labelvar  = labels_variables[lvls]
+  )
 
 
 
