@@ -62,7 +62,9 @@ flora_abrich <- flora_abrich %>%
   filter(!code %in% c("chsp", "amsp", "cisp", "casp"))
 
 traits <- traits %>% 
-  filter(!code %in% c("chsp", "amsp")) #Actually we have no trait info about "cisp" and "casp"
+  filter(!code %in% c("chsp", "amsp")) %>% 
+  filter(!species %in% c("Erophila verna", "Stellaria media",
+                      "Lotus corniculatus")) # I remove also Erophila, Stellaria and Lotus because we did not measured them in the field
 
 
 ######## WE WILL FOCUS ON LEAF ECONOMIC SPECTRUM #########
@@ -78,9 +80,11 @@ traits_cleaned <- traits %>%
   group_by(trait_name, species) %>% 
   mutate(
     mean_trait = mean(trait_value, na.rm = TRUE),
-    sd_trait = sd(trait_value, na.rm = TRUE),
-    z_score = (trait_value - mean_trait) / sd_trait
+    sd_trait = sd(trait_value, na.rm = TRUE)
   ) %>%
+  mutate(
+    z_score = (trait_value - mean_trait) / sd_trait
+  ) %>% 
   filter(
     n_observations <= 5 | abs(z_score) <= 4  # Do not filter outliers for n_observations <= 5
   ) %>%
@@ -94,77 +98,110 @@ outliers <- anti_join(traits, traits_cleaned)
 ## CALCULATING MEAN VALUES FOR TRAITS
 #######################################
 
+
 #Calculating the average traits per taxonomic groups: torilis sp, poaceae, asteraceae and orchidaceae
 sp_poaceae <- c("Avena sterilis", "Bromus hordeaceus", "Bromus sterilis", "Cynosurus echinatus",
                 "Elymus repens", "Hordeum murinum", "Poa annua", "Poa bulbosa",
                 "Lolium perenne", "Gaudinia fragilis")
-traits_poaceae <- traits_cleaned %>% 
-  filter(species %in% sp_poaceae) %>% 
-  group_by(trait_name) %>% 
-  summarize(trait_mean = mean(trait_value, na.rm = T), 
-            trait_sd = sd(trait_value, na.rm = T),
-            n_obs_traits = n()) %>% 
-  mutate(code = "poaceae")
-
 
 sp_asteraceae <- c("Crepis capillaris", "Hypochaeris radicata", "Leontodon hispidus")
-traits_asteraceae <- traits_cleaned %>% 
-  filter(species %in% sp_asteraceae) %>% 
-  group_by(trait_name) %>% 
-  summarize(trait_mean = mean(trait_value, na.rm = T), 
-            trait_sd = sd(trait_value, na.rm = T),
-            n_obs_traits = n()) %>% 
-  mutate(code = "asteraceae")
-
-
-sp_torilis <- c("Torilis nodosa", "Torilis arvensis")
-traits_torilis <- traits_cleaned %>% 
-  filter(species %in% sp_torilis) %>% 
-  group_by(trait_name) %>% 
-  summarize(trait_mean = mean(trait_value, na.rm = T), 
-            trait_sd = sd(trait_value, na.rm = T),
-            n_obs_traits = n()) %>% 
-  mutate(code = "tosp")
 
 sp_orchidaceae <- c("Anacamptis pyramidalis", "Ophrys apifera")
-traits_orchidaceae <- traits_cleaned %>% 
-  filter(species %in% sp_orchidaceae) %>% 
-  group_by(trait_name) %>% 
-  summarize(trait_mean = mean(trait_value, na.rm = T), 
-            trait_sd = sd(trait_value, na.rm = T),
-            n_obs_traits = n()) %>% 
-  mutate(code = "orchidaceae")
+
+sp_torilis <- c("Torilis nodosa", "Torilis arvensis")
 
 
-sp_all <- c(sp_poaceae, sp_asteraceae, sp_orchidaceae, sp_torilis, "Erophila verna", "Stellaria media",
-            "Lotus corniculatus")
+labels_sp <- c("poaceae", "asteraceae", "orchidaceae", "tosp")
 
-#I delete all species that are aggregate within taxonomic groups and also
-#Lotus corniculatus, Erophila verna and Sterllaria media because we did not measure them in the field finally.
+list_sp <- list(sp_poaceae, sp_asteraceae, sp_orchidaceae, sp_torilis)
+# 1          # 2            # 3             # 4
+trait_values_species <- list()
+trait_values_aggtax <- list()
 
 
-traits_mean <- traits_cleaned %>% 
-  filter(!species %in% sp_all) %>% 
-  group_by(code, species, trait_name, trait_ID, database, n_observations) %>% 
-  summarize(trait_mean = mean(trait_value, na.rm = T), 
-            trait_sd = sd(trait_value, na.rm = T)) %>%
-  rename(n_obs_traits = n_observations)
+# In the case of species that we have aggregated at certain taxon levels, we have 
+# to avoid bias based on the number of trait datapoints available per each species in the online repositories (TRY and others).
+# Thus, we will FIRST calculate an average value of each trait per species and then calculate
+# the average value per trait and taxonomical aggregation. 
 
-traits_mean <- bind_rows(traits_mean, traits_poaceae, traits_asteraceae, traits_torilis, traits_orchidaceae)
+for (i in c(1:4)){
+  
+  # First: calculating average value of trait per species
+  data1 <- traits_cleaned %>% 
+    filter(species %in% list_sp[[i]]) %>% 
+    group_by(trait_name, species, code) %>% 
+    summarize(species_mean_trait = mean(trait_value, na.rm = T),
+              species_sd_trait   = sd(trait_value, na.rm = T), 
+              n_obs_sp           = n())
+  
+  
+  trait_values_species[[i]] <- data1 
+  
+  # Second: calculating average value of trait at aggregated level using previous calculation (means of means)
+  data2 <- data1 %>% 
+    group_by(trait_name) %>% 
+    summarize(trait_mean       = mean(species_mean_trait, na.rm = T),
+              trait_sd = sd(species_mean_trait, na.rm = T),
+    ) %>% 
+    mutate(code = labels_sp[i])
+  
+  trait_values_aggtax[[i]] <- data2
+  
+  
+}
 
-#trait_na <- traits_mean %>% 
-#  filter(if_any(everything(), is.na)) %>% 
-#  print()
 
+trait_means_poaceae_splevel <- trait_values_species[[1]] %>%  print()
+trait_means_asteraceae_splevel <- trait_values_species[[2]] %>%  print()
+trait_means_orchidaceae_splevel <- trait_values_species[[3]] %>%  print()
+trait_means_tosp_splevel <- trait_values_species[[4]] %>%  print()
+
+
+trait_means_poaceae <- trait_values_aggtax[[1]] %>%  print()
+trait_means_asteraceae <- trait_values_aggtax[[2]] %>%  print()
+trait_means_orchidaceae <- trait_values_aggtax[[3]] %>%  print()
+trait_means_tosp <- trait_values_aggtax[[4]] %>%  print()
+
+
+
+
+sp_all <- c(sp_poaceae, sp_asteraceae, sp_orchidaceae, sp_torilis)
+
+sp_others <- setdiff(unique(traits_cleaned$species), sp_all)
+
+# Here we do not need to perform 2 steps, since we directly calculate one trait value per species using
+# all available data in the repositories
+
+trait_means_others0 <- traits_cleaned %>% 
+  filter(species %in% sp_others) %>% 
+  group_by(trait_name, species, code) %>% 
+  summarize(trait_mean = mean(trait_value, na.rm = T),
+            trait_sd   = sd(trait_value, na.rm = T), 
+            n_obs_sp           = n(), 
+  )
+
+
+trait_means_others <- trait_means_others0 %>% 
+  ungroup() %>%
+  select(trait_name, trait_mean, trait_sd, code)
+
+
+
+
+trait_means <- bind_rows(trait_means_others,
+                         trait_means_poaceae,
+                         trait_means_asteraceae,
+                         trait_means_orchidaceae,
+                         trait_means_tosp)
 
 
 #The function checks which species are present in traits_mean$species but not present in flora$species.
-setdiff(unique(traits_mean$code), unique(flora_abrich$code))
-setdiff(unique(flora_abrich$code), unique(traits_mean$code))
+setdiff(unique(trait_means$code), unique(flora_abrich$code))
+setdiff(unique(flora_abrich$code), unique(trait_means$code))
 
 
 
-setdiff(unique(species_code$code), unique(traits_mean$code))
+setdiff(unique(species_code$code), unique(trait_means$code))
 setdiff(unique(species_code$code), unique(traits$code))
 
 # I have to check on Myosotis, Sonchus and Cirsium. 
@@ -190,9 +227,9 @@ library(psych)
 
 ####### TRAIT MATRIX: 
 
-traits_mean_wide <- traits_mean %>%
+traits_mean_wide <- trait_means %>%
   ungroup() %>%                           # Remove grouping structure
-  select(-trait_sd, -database, -n_obs_traits, -trait_ID, -species) %>%  # Remove unnecessary columns
+  select(-trait_sd) %>%  # Remove unnecessary columns
   pivot_wider(
     names_from = trait_name,              # Columns will be based on trait_name levels
     values_from = trait_mean              # Values will come from trait_mean
@@ -212,6 +249,12 @@ traits_mean_wide <- traits_mean_wide %>%
   rename(SLA = SLA.inc ) 
 
 
+traits_data_final <- traits_mean_wide %>% 
+  left_join(species_code) %>% 
+  select(species, family, sampling_level, code, SLA, LDMC, leafN)
+
+traits_data_final %>%  write.csv("results/traits_data_final.csv")
+
 ##  ---REMOVING SPECIES WITH LOW NUMBER OF TRAITS AVAILABLE---
 
 traits_mean_wide %>%
@@ -226,7 +269,6 @@ traits_mean_wide %>%
   geom_col(fill = "steelblue") +
   labs(x = "Species code", y = "% Missing traits data", 
        title = "Number of traits without data per species (n traits = 10)") +
-  geom_hline(yintercept = 5, color = "red", linetype = "dashed", linewidth = 1) +
   theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1))
 
 ## According to Carmona et al. 2021, we have to remove the species with less than the 50% of the traits. 
@@ -235,7 +277,7 @@ traits_mean_wide %>%
 # rapa is a species with a lot of abundance and n_observations, but not one of the highest
 
 traits_mean_wide <- traits_mean_wide %>% 
-  filter(!code %in% c("libi", "rapa")) %>% 
+  filter(code != "libi") %>% 
   droplevels()
 
 ## REMOVING TRAITS WITH HIGH NUMBER OF NA
@@ -455,7 +497,7 @@ cwm_sampling %>%
       legend.position = "bottom"
     )
   print(gg_cwm_sampling)
-  #ggsave("results/Plots/protofinal/FT_cwm_sampling.png", plot = gg_cwm_sampling, dpi = 300)
+  ggsave("results/Plots/protofinal/FT_cwm_sampling.png", plot = gg_cwm_sampling, dpi = 300)
 
   }
 

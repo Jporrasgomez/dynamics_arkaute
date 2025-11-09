@@ -31,9 +31,17 @@ arkaute_no0 <- arkaute %>%
 
 
 
-variables <- c("richness", "abundance", "Y_zipf", "biomass", "biomass012", "biomass_lm_plot",
+variables <- c("richness",                         # 1     
+               "abundance",                        # 2     
+               "Y_zipf",                           # 3     
+               "biomass",                          # 4     
+               "biomass012",                       # 5     
+               "biomass_lm_plot",                  # 6     
                #"NMDS1", "NMDS2", "PC1", "PC2",
-               "SLA", "LDMC", "leafN")
+               "SLA",                              # 7     
+               "LDMC",                             # 8     
+               "leafN"                             # 9     
+               )
 
 LES_variables <- c("SLA", "LDMC", "leafN")
 
@@ -54,7 +62,11 @@ for (i in seq_along(variables)){
 effect_size_aggregated <- do.call(rbind, list_eff) 
 
 
-
+i = 8
+effect_size_aggregated %>% 
+  filter(eff_descriptor == "p_vs_c") %>% 
+  filter(variable == variables[i]) %>% 
+  print()
 
 source("code/functions/eff_size_dynamics_LRR_function.R")
 
@@ -135,10 +147,10 @@ gg_eff_agg_c <- agg %>%
   mutate(eff_descriptor = factor(eff_descriptor,
                                  levels = c("p_vs_c", "w_vs_c", "wp_vs_c"))
   ) %>% 
-  ggagg2(palette_RR_CB, # using my function
+  ggagg(palette_RR_CB, # using my function
         labels_RR2,
         "grey50",
-        #position   = pos_dod_c_agg,
+        position   = pos_dod_c_agg,
         asterisk = 50,
         #caps = pos_dod_c_agg$width,
         limitvar = limits_variables[i:j],
@@ -148,7 +160,7 @@ lvls <- limits_variables[i:j]
 labs <- unname(labels_variables[lvls])
 
 
-gg_eff_agg_c <- agg %>% 
+gg_eff_agg_c2 <- agg %>% 
   filter(eff_descriptor %in% c("p_vs_c", "w_vs_c", "wp_vs_c"),
                 variable %in% lvls) %>% 
   mutate(
