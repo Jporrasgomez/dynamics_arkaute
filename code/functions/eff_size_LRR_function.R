@@ -133,12 +133,13 @@ LRR_agg <- function(data, variable){
     mutate(
       RR = ifelse(variable == "Y_zipf", RR * -1, RR)    ## If we do not use this, we would show "Unevenness"
     ) %>% 
-    mutate(upper_limit = RR + 1.96 * se_RR,
-           lower_limit = RR - 1.96 * se_RR
-           ) %>% 
+    mutate(
+      upper_limit = RR + 1.96 * se_RR,
+      lower_limit = RR - 1.96 * se_RR
+      ) %>% 
     mutate(
       null_effect = ifelse(lower_limit <= 0 & upper_limit >= 0, "YES","NO"),
-      scale = (max(abs(upper_limit)) + max(abs(lower_limit)))/100
+      scale = (upper_limit - lower_limit) * 0.3
     ) %>% 
     rename(
       eff_value = RR

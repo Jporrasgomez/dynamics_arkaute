@@ -1,19 +1,21 @@
 
 
-ggdyn <- function(data, palette, labels, colorline, position, asterisk, caps){
+
+
+ggdyn2 <- function(data, palette, labels, colorline, position, asterisk, caps){
   
   # extraigo el width del objeto position_dodge2
   #dodge_width <- position$width
   
   plot <- 
     ggplot(data, aes(
-      x     = date,
+      x     = sampling,
       y     = eff_value,
       group = eff_descriptor,
       color = eff_descriptor
     )) + 
     
-    facet_grid(variable ~ year, scales = "free",
+    facet_wrap(~variable, scales = "free_y", ncol = 1, nrow = 7,
                labeller = labeller(eff_descriptor = as_labeller(labels))
     ) + 
     
@@ -22,16 +24,10 @@ ggdyn <- function(data, palette, labels, colorline, position, asterisk, caps){
                color      = colorline,
                linewidth  = 0.5) +
     
-    geom_vline(
-      data = filter(data, year == 2023) %>%
-        distinct(year) %>%
-        mutate(x = as.Date("2023-05-11")),
-      aes(xintercept = x),
-      linetype  = "dashed",
-      color     = "gray40",
-      linewidth = 0.5) +
-    
-    #geom_vline(xintercept = -Inf, colour = "grey40", linewidth = 0.4) +
+    geom_vline(xintercept = 0.5,
+               linetype  = "dashed",
+               color     = "gray40",
+               linewidth = 0.5) +
     
     
     #geom_errorbar(aes(ymin = lower_limit, ymax = upper_limit),
@@ -50,7 +46,7 @@ ggdyn <- function(data, palette, labels, colorline, position, asterisk, caps){
               linewidth = 0.5) +
     
     geom_text(aes(
-      x = date,
+      x = sampling,
       y = ifelse(eff_value < 0,
                  lower_limit - asterisk * scale,
                  upper_limit + asterisk * scale),
@@ -62,16 +58,11 @@ ggdyn <- function(data, palette, labels, colorline, position, asterisk, caps){
     size          = 5
     ) +
     
-    scale_x_date(
-      date_breaks = "2 months",
-      date_labels = "%Y-%m"
-    ) +
-    
-    scale_y_continuous(
-      breaks      = scales::pretty_breaks(n = 2),
-      minor_breaks = NULL,
-      expand = expansion(mult = c(0.1, 0.1))
-    ) +
+    #scale_y_continuous(
+    #  breaks      = scales::pretty_breaks(n = 2),
+    #  minor_breaks = NULL,
+    #  expand = expansion(mult = c(0.1, 0.1))
+    #) +
     
     
     scale_color_manual(values = palette) +
@@ -87,7 +78,7 @@ ggdyn <- function(data, palette, labels, colorline, position, asterisk, caps){
       axis.text.y        = element_text(angle = 90, hjust = 0.5, face = "plain", size = 8),
       axis.text.x        = element_blank(),
       legend.position    = "none",
-      axis.ticks.x        = element_blank()
+      #axis.ticks.x        = element_blank()
     )
   
   
@@ -95,8 +86,41 @@ ggdyn <- function(data, palette, labels, colorline, position, asterisk, caps){
 
 
 
+gg_eff_dynamics_c <- dyn %>% 
+  filter(eff_descriptor %in% c("w_vs_c", "p_vs_c", "wp_vs_c")) %>% 
+  filter(variable %in% limits_variables[i:j]) %>%  
+  mutate(
+    variable = factor(variable, 
+                      levels = limits_variables[i:j], 
+                      labels = labels_variables[i:j])) %>% 
   
+  ggdyn2(palette_RR_CB,
+        labels_RR2, 
+        "grey50",
+        position = pos_dod_c_dyn,
+        asterisk = 8, 
+        caps = pos_dod_c_dyn$width) 
+
+
+print(gg_eff_dynamics_c)
 
 
 
 
+
+
+dyn %>% 
+  filter(eff_descriptor %in% c("w_vs_c")) %>% 
+  filter(variable == "richness") %>%  
+  
+  ggplot(aes(
+    x     = as.integer(sampling),
+    y     = eff_value,
+    group = eff_descriptor,
+    color = eff_descriptor
+  )) + 
+  
+  geom_point() +
+  geom_line() + 
+  geom_vline (xintercept = 0.5, lintype = 0.5)
+  

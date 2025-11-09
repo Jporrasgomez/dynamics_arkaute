@@ -62,11 +62,11 @@ for (i in seq_along(variables)){
 effect_size_aggregated <- do.call(rbind, list_eff) 
 
 
-i = 8
-effect_size_aggregated %>% 
-  filter(eff_descriptor == "p_vs_c") %>% 
-  filter(variable == variables[i]) %>% 
-  print()
+#i = 8
+#effect_size_aggregated %>% 
+#  filter(eff_descriptor == "p_vs_c") %>% 
+#  filter(variable == variables[i]) %>% 
+#  print()
 
 source("code/functions/eff_size_dynamics_LRR_function.R")
 
@@ -87,9 +87,8 @@ effect_size_dynamics <- do.call(rbind, list_eff_dyn)
 # Plots #
 
 
-source("code/functions/gg_aggregated_function.R")
-source("code/functions/gg_aggregated_function_2.R")
-source("code/functions/gg_dynamics_function.R")
+
+
 
 library(patchwork)
 
@@ -119,7 +118,7 @@ labels_variables <- c("richness" = "Richness",            # 1
                       "Y_zipf" = "Evenness",              # 3
                       "SLA" = "SLA",                      # 4
                       "LDMC" = "LDMC",                    # 5
-                      "leafN"= "Leaf-N",                  # 6
+                      "leafN"= "LN",                  # 6
                       #"biomass" = "Biomass"
                       #"biomass012" = "Biomass"
                       "biomass_lm_plot" = "Biomass"      # 7
@@ -135,11 +134,16 @@ j = 7
 agg <- effect_size_aggregated
 dyn <- effect_size_dynamics
 
+lvls <- limits_variables[i:j]
+labs <- unname(labels_variables[lvls])
+
+
+source("code/functions/gg_aggregated_function.R")
+source("code/functions/gg_aggregated_function_2.R")
+source("code/functions/gg_aggregated_function_2_wp.R")
 
 pos_dod_c_agg <- position_dodge2(width = 0.3, preserve = "single")
 pos_dod_c_dyn <- position_dodge2(width = 12, preserve = "single")
-
-
 
 gg_eff_agg_c <- agg %>% 
   filter(eff_descriptor %in% c("p_vs_c", "w_vs_c", "wp_vs_c")) %>% 
@@ -156,8 +160,7 @@ gg_eff_agg_c <- agg %>%
         limitvar = limits_variables[i:j],
         labelvar = labels_variables[i:j])  
 
-lvls <- limits_variables[i:j]
-labs <- unname(labels_variables[lvls])
+
 
 
 gg_eff_agg_c2 <- agg %>% 
@@ -171,13 +174,13 @@ gg_eff_agg_c2 <- agg %>%
     palette   = palette_RR_CB,
     labels    = labels_RR2,
     colorline = "grey50",
-    #nudge     = 0.08,   # ajusta separación si quieres
-    asterisk  = 50,
     limitvar  = lvls,
-    labelvar  = labels_variables[lvls]
+    labelvar  = labels_variables[lvls], 
+    breaks_axix_y = 2
   )
 
 
+source("code/functions/gg_dynamics_function.R")
 
 gg_eff_dynamics_c <- dyn %>% 
   filter(eff_descriptor %in% c("w_vs_c", "p_vs_c", "wp_vs_c")) %>% 
@@ -197,7 +200,7 @@ gg_eff_dynamics_c <- dyn %>%
 library(patchwork)
 gg_Experiment_Results <- 
   ggarrange(
-    gg_eff_agg_c   + theme(plot.margin = margin(5,5,5,5)),   # margen uniforme
+    gg_eff_agg_c2   + theme(plot.margin = margin(5,5,5,5)),   # margen uniforme
     gg_eff_dynamics_c + theme(plot.margin = margin(5,5,5,5)),
     #labels   = c("A","B"),
     ncol   = 2, 
@@ -205,6 +208,7 @@ gg_Experiment_Results <-
   plot_annotation(
     #title = "LRR",
     theme = theme( plot.title = element_text(face = "bold", size = 10, hjust = 0.5)))
+
 print(gg_Experiment_Results)
 ggsave("results/Plots/protofinal/1.Results_LRR.png", plot = gg_Experiment_Results, dpi = 300)
 
@@ -228,7 +232,24 @@ gg_eff_agg_wp <- agg %>%
         asterisk = 4,
         caps = pos_dod_wp_agg$width,
         limitvar = limits_variables[i:j],
-        labelvar = labels_variables[i:j])   
+        labelvar = labels_variables[i:j]
+        ) 
+
+gg_eff_agg_wp2 <- agg %>% 
+  filter(eff_descriptor == "wp_vs_p",
+         variable %in% lvls) %>% 
+  mutate(
+    variable = factor(variable, levels = lvls, labels = labs)
+  ) %>% 
+  ggagg2_wp(
+    palette   = palette_RR_wp,
+    labels    = labels_RR_wp,
+    p_CB,
+    limitvar  = lvls,
+    labelvar  = labels_variables[lvls], 
+    breaks_axix_y = 2
+  )
+
 
 
 
@@ -247,7 +268,7 @@ gg_eff_dynamics_wp <- dyn %>%
 
 
 gg_Warming_Effect <- 
-  (gg_eff_agg_wp   + theme(plot.margin = margin(5,5,5,5))) +
+  (gg_eff_agg_wp2   + theme(plot.margin = margin(5,5,5,5))) +
   (gg_eff_dynamics_wp + theme(plot.margin = margin(5,5,5,5))) +
   plot_layout(
     ncol   = 2,
@@ -258,7 +279,7 @@ gg_Warming_Effect <-
       plot.title = element_text(face = "bold", size = 10, hjust = 0.5)))
 
 print(gg_Warming_Effect)
-ggsave("results/Plots/protofinal/1.Warming_Effect_LRR_ppt2.png", plot = gg_Warming_Effect, dpi = 300)
+ggsave("results/Plots/protofinal/1.Warming_Effect_LRR.png", plot = gg_Warming_Effect, dpi = 300)
 
 
 

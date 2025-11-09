@@ -335,7 +335,7 @@ arkaute_norm_c <- arkaute %>%
     mean_vwc         = predict(orderNorm(mean_vwc)), 
     SLA  = predict(orderNorm(SLA)), 
     LDMC = predict(yeojohnson(LDMC)), 
-    leafN = predict(yeojohnson(leafN))
+    leafN = predict(orderNorm(leafN))
   )
 
 
