@@ -24,7 +24,17 @@ arkaute <- read.csv("data/arkaute.csv") %>%
     one_month_window = as.factor(one_month_window),
     sampling = as.factor(sampling),
     plot = as.factor(plot),
-    treatment = as.factor(treatment)) 
+    treatment = as.factor(treatment))  %>%
+  mutate(
+    date_label = format(date, "%d-%b-%y"),  # p.ej. "04-May-2023"
+    date_label = factor(
+      date_label,
+      levels = format(sort(unique(date)), "%d-%b-%y"),
+      ordered = TRUE
+    )
+  )
+
+
 
 arkaute_no0 <- arkaute %>% 
   filter(sampling != "0")
@@ -89,6 +99,11 @@ effect_size_dynamics <- do.call(rbind, list_eff_dyn)
 
 
 
+source("code/functions/gg_aggregated_function.R")
+source("code/functions/gg_aggregated_function_2.R")
+source("code/functions/gg_aggregated_function_2_wp.R")
+source("code/functions/gg_dynamics_function.R")
+source("code/functions/gg_dynamics_function2.R")
 
 library(patchwork)
 
@@ -138,13 +153,11 @@ lvls <- limits_variables[i:j]
 labs <- unname(labels_variables[lvls])
 
 
-source("code/functions/gg_aggregated_function.R")
-source("code/functions/gg_aggregated_function_2.R")
-source("code/functions/gg_aggregated_function_2_wp.R")
 
 pos_dod_c_agg <- position_dodge2(width = 0.3, preserve = "single")
 pos_dod_c_dyn <- position_dodge2(width = 12, preserve = "single")
 
+# Aggregated analysis vertically displayed
 gg_eff_agg_c <- agg %>% 
   filter(eff_descriptor %in% c("p_vs_c", "w_vs_c", "wp_vs_c")) %>% 
   filter(variable %in% limits_variables[i:j]) %>% 
@@ -155,14 +168,12 @@ gg_eff_agg_c <- agg %>%
         labels_RR2,
         "grey50",
         position   = pos_dod_c_agg,
-        asterisk = 50,
-        #caps = pos_dod_c_agg$width,
         limitvar = limits_variables[i:j],
         labelvar = labels_variables[i:j])  
 
 
 
-
+# Aggregated analysis horizontally displayed
 gg_eff_agg_c2 <- agg %>% 
   filter(eff_descriptor %in% c("p_vs_c", "w_vs_c", "wp_vs_c"),
                 variable %in% lvls) %>% 
@@ -180,8 +191,8 @@ gg_eff_agg_c2 <- agg %>%
   )
 
 
-source("code/functions/gg_dynamics_function.R")
 
+# Dynamics with dates
 gg_eff_dynamics_c <- dyn %>% 
   filter(eff_descriptor %in% c("w_vs_c", "p_vs_c", "wp_vs_c")) %>% 
   filter(variable %in% limits_variables[i:j]) %>%  
@@ -197,21 +208,79 @@ gg_eff_dynamics_c <- dyn %>%
         asterisk = 8, 
         caps = pos_dod_c_dyn$width) 
 
-library(patchwork)
-gg_Experiment_Results <- 
-  ggarrange(
-    gg_eff_agg_c2   + theme(plot.margin = margin(5,5,5,5)),   # margen uniforme
-    gg_eff_dynamics_c + theme(plot.margin = margin(5,5,5,5)),
-    #labels   = c("A","B"),
-    ncol   = 2, 
-    widths = c(1, 4)) +
-  plot_annotation(
-    #title = "LRR",
-    theme = theme( plot.title = element_text(face = "bold", size = 10, hjust = 0.5)))
 
-print(gg_Experiment_Results)
-ggsave("results/Plots/protofinal/1.Results_LRR.png", plot = gg_Experiment_Results, dpi = 300)
+# Dynamics with samplings
 
+gg_eff_dynamics_c2<- dyn %>% 
+  filter(eff_descriptor %in% c("w_vs_c", "p_vs_c", "wp_vs_c")) %>% 
+  filter(variable %in% limits_variables[i:j]) %>%  
+  mutate(
+    variable = factor(variable, 
+                      levels = limits_variables[i:j], 
+                      labels = labels_variables[i:j])) %>% 
+  
+  ggdyn2(palette_RR_CB,
+         labels_RR2, 
+         "grey50",
+         position = position_dodge(width = 0.5),
+         asterisk = 8, 
+         caps = position_dodge(width = 0.5)$width)
+
+
+
+
+
+
+gg_1 <-
+  (gg_eff_agg_c + 
+     gg_eff_dynamics_c + theme (legend.position = "none") + 
+     plot_layout(guides = "collect",
+                 widths = c(1, 3))) +
+  plot_annotation(theme = theme(legend.position = "bottom"))
+print(gg_1)
+
+
+ggsave("results/Plots/protofinal/1.Results_LRR_1.png", plot = gg_1, dpi = 300)
+
+
+
+gg_2 <-
+  (gg_eff_agg_c2 + 
+     gg_eff_dynamics_c + theme (legend.position = "none") + 
+     plot_layout(guides = "collect",
+                 widths = c(1, 3))) +
+  plot_annotation(theme = theme(legend.position = "bottom"))
+print(gg_2)
+
+
+ggsave("results/Plots/protofinal/1.Results_LRR_2.png", plot = gg_2, dpi = 300)
+
+
+
+gg_3 <-
+  (gg_eff_agg_c + 
+     gg_eff_dynamics_c2 + theme (legend.position = "none") + 
+     plot_layout(guides = "collect",
+                 widths = c(1, 3))) +
+  plot_annotation(theme = theme(legend.position = "bottom"))
+print(gg_3)
+
+
+ggsave("results/Plots/protofinal/1.Results_LRR_3.png", plot = gg_3, dpi = 300)
+
+
+
+
+gg_4 <-
+  (gg_eff_agg_c2 + 
+     gg_eff_dynamics_c2 + theme (legend.position = "none") + 
+     plot_layout(guides = "collect",
+                 widths = c(1, 5))) +
+  plot_annotation(theme = theme(legend.position = "bottom"))
+print(gg_4)
+
+
+ggsave("results/Plots/protofinal/1.Results_LRR_4.png", plot = gg_4, dpi = 300)
 
 
 

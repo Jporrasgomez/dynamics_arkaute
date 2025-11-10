@@ -1,12 +1,10 @@
 
 
-
-
 LRR_dynamics <- function(data, variable){
   
   
   data <- data %>% 
-    select(treatment, date, sampling, plot, all_of(variable)) %>% 
+    select(treatment, date, sampling, date_label, plot, all_of(variable)) %>% 
     filter(!is.na(.data[[variable]])) %>% 
     rename(
       value = all_of(variable)
@@ -31,32 +29,32 @@ LRR_dynamics <- function(data, variable){
   
   
   effect <- data %>% 
-    select(date, sampling, treatment, mean, sd) %>% 
+    select(date,  date_label,  sampling, treatment, mean, sd) %>% 
     distinct()
   
   effect_c <- effect %>% 
     filter(treatment == "c") %>% 
-    select(date, sampling, mean, sd) %>% 
+    select(date, sampling, date_label, mean, sd) %>% 
     rename(mean_c = mean,
            sd_c = sd)
   
   effect_wp <- data %>% 
     filter(treatment == "wp") %>% 
-    select(date, sampling, treatment,mean,sd) %>% 
+    select(date, sampling, date_label, treatment, mean, sd) %>% 
     rename(mean_wp = mean,
            sd_wp = sd) %>% 
     distinct()
   
   effect_w <- data %>% 
     filter(treatment == "w") %>% 
-    select(date, sampling,mean,sd) %>% 
+    select(date, sampling, date_label, mean, sd) %>% 
     rename(mean_w = mean,
            sd_w = sd) %>% 
     distinct()
   
   effect_p <- data %>% 
     filter(treatment == "p") %>% 
-    select(date, sampling,mean,sd) %>% 
+    select(date, sampling, date_label, mean, sd) %>% 
     rename(mean_p = mean,
            sd_p = sd) %>% 
     distinct()
@@ -71,7 +69,7 @@ LRR_dynamics <- function(data, variable){
   
   RR_treat_vs_c <- effect %>% 
     filter(treatment != "c") %>% 
-    left_join(effect_c, by = c("date", "sampling")) %>% 
+    left_join(effect_c, by = c("date", "sampling", "date_label")) %>% 
     mutate(
       RR = log(mean / mean_c),
       var_RR = (sd^2) / (n * mean^2) + 
@@ -98,13 +96,13 @@ LRR_dynamics <- function(data, variable){
                                  "p_vs_c" = "p", 
                                  "wp_vs_c" = "wp")) %>% 
     select(
-      eff_descriptor, date, sampling,  delta_RR, se_delta_RR)
+      eff_descriptor, date, sampling, date_label, delta_RR, se_delta_RR)
   
   
   ############ LRR = Combined / Perturbation  ##########
   
   RR_wp_vs_p <- effect_wp %>% 
-    left_join(effect_p, by = c("date", "sampling")) %>% 
+    left_join(effect_p, by = c("date", "sampling", "date_label")) %>% 
     
     mutate(
       RR = log(mean_wp / mean_p),
@@ -129,14 +127,14 @@ LRR_dynamics <- function(data, variable){
     filter(!RR == "NaN") %>% 
     mutate(eff_descriptor = paste0("wp_vs_p")) %>% 
     select(
-      eff_descriptor, date, sampling,  delta_RR, se_delta_RR)
+      eff_descriptor, date, sampling, date_label,  delta_RR, se_delta_RR)
   
   
   
   ############ LRR = Combined / Warming  ##########
   
   RR_wp_vs_w <- effect_wp %>% 
-    left_join(effect_w, by = c("date", "sampling")) %>% 
+    left_join(effect_w, by = c("date", "sampling", "date_label")) %>% 
     
     mutate(
       RR = log(mean_wp / mean_w),
@@ -161,7 +159,7 @@ LRR_dynamics <- function(data, variable){
     filter(!RR == "NaN") %>% 
     mutate(eff_descriptor = paste0("wp_vs_w")) %>% 
     select(
-      eff_descriptor, date, sampling,  delta_RR, se_delta_RR)
+      eff_descriptor, date, sampling, date_label,  delta_RR, se_delta_RR)
   
   
   ###### Binding data #####
@@ -190,7 +188,7 @@ LRR_dynamics <- function(data, variable){
       eff_value = delta_RR
     ) %>% 
     select(
-      eff_descriptor, sampling, date, year, eff_value, lower_limit, upper_limit, null_effect, 
+      eff_descriptor, sampling, date, date_label, year, eff_value, lower_limit, upper_limit, null_effect, 
       scale, variable, analysis
     )
   

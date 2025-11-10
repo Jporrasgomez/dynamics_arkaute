@@ -44,7 +44,7 @@ ggagg2 <- function(data, palette, labels, colorline, limitvar, labelvar, breaks_
                         expand = expansion(mult = c(0.05, 0.1)) ) +
     
     
-    labs(x = NULL, y = NULL, color = "Treatment comparison") +
+    labs(x = NULL, y = NULL, color = NULL) +
     
     gg_RR_theme +
     theme(
@@ -55,9 +55,10 @@ ggagg2 <- function(data, palette, labels, colorline, limitvar, labelvar, breaks_
       axis.text.y        = element_text(angle = 90, hjust = 0.5, face = "plain", size = 8),
       axis.text.x        = element_blank(),
       axis.ticks.x       = element_blank(),
-      legend.position    = "none"
+      legend.position    = "bottom"
     )
 }
+
 
 
 

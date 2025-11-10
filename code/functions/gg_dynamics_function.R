@@ -41,7 +41,8 @@ ggdyn <- function(data, palette, labels, colorline, position, asterisk, caps){
     #              linewidth = 0.5) +
     
     geom_linerange(aes(ymin = lower_limit, ymax = upper_limit),
-                   position = pos_dod_c_dyn, alpha = 0.6, linewidth = 0.5) +
+                   position = pos_dod_c_dyn, alpha = 0.6, linewidth = 0.5,
+                   show.legend = FALSE) +
     
     geom_point(position = position,
                size     = 1.2) +
@@ -59,7 +60,9 @@ ggdyn <- function(data, palette, labels, colorline, position, asterisk, caps){
     ),
     position      = position,
     inherit.aes   = FALSE,
-    size          = 5
+    size          = 5, 
+    show.legend = FALSE
+    
     ) +
     
     scale_x_date(
@@ -74,29 +77,26 @@ ggdyn <- function(data, palette, labels, colorline, position, asterisk, caps){
     ) +
     
     
-    scale_color_manual(values = palette) +
+    scale_color_manual(values = palette, labels = labels) +
     
-    labs(y = NULL, x = NULL) +
+    labs(y = NULL, x = NULL, color = NULL) +
     
     gg_RR_theme +
     theme(
+      text               = element_text(size = 10), 
       strip.text.y       = element_blank(),
       strip.background   = element_blank(),
       strip.text.x       = element_blank(),
       strip.text         = element_text(face = "bold", size = 10),
       axis.text.y        = element_text(angle = 90, hjust = 0.5, face = "plain", size = 8),
-      axis.text.x        = element_blank(),
-      legend.position    = "none",
-      axis.ticks.x        = element_blank()
+      axis.text.x        = element_text(hjust = 0.5, face = "plain", size = 9),
+      #axis.text.x        = element_blank(),
+      legend.position    = "bottom",
+      #axis.ticks.x        = element_blank(), 
+      legend.text        = element_text(size = 10, face = "plain")
     )
   
   
 }
-
-
-
-  
-
-
 
 
