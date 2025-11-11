@@ -284,6 +284,10 @@ ggsave("results/Plots/protofinal/1.Results_LRR_4.png", plot = gg_4, dpi = 300)
 
 
 
+
+
+
+
 ########### COMBINED / PERTURBATION    ###
 
 pos_dod_wp_agg <- position_dodge2(width = 0.1, preserve = "single")
@@ -298,11 +302,13 @@ gg_eff_agg_wp <- agg %>%
         labels_RR_wp,
         p_CB, 
         position   = pos_dod_wp_agg,
-        asterisk = 4,
+        #asterisk = 4,
         caps = pos_dod_wp_agg$width,
         limitvar = limits_variables[i:j],
         labelvar = labels_variables[i:j]
         ) 
+
+# Aggregated analysis with 
 
 gg_eff_agg_wp2 <- agg %>% 
   filter(eff_descriptor == "wp_vs_p",
@@ -321,7 +327,7 @@ gg_eff_agg_wp2 <- agg %>%
 
 
 
-
+# Dynamics with dates
 gg_eff_dynamics_wp <- dyn %>% 
   filter(eff_descriptor %in% c("wp_vs_p")) %>% 
   filter(variable %in% limits_variables[i:j]) %>%  
@@ -336,20 +342,34 @@ gg_eff_dynamics_wp <- dyn %>%
         caps = pos_dod_wp_dyn$width)
 
 
-gg_Warming_Effect <- 
-  (gg_eff_agg_wp2   + theme(plot.margin = margin(5,5,5,5))) +
-  (gg_eff_dynamics_wp + theme(plot.margin = margin(5,5,5,5))) +
-  plot_layout(
-    ncol   = 2,
-    widths = c(1, 4)) +
-  plot_annotation(
-    #title = "LRR",
-    theme = theme(
-      plot.title = element_text(face = "bold", size = 10, hjust = 0.5)))
+# Dynamics with samplings
 
-print(gg_Warming_Effect)
-ggsave("results/Plots/protofinal/1.Warming_Effect_LRR.png", plot = gg_Warming_Effect, dpi = 300)
+gg_eff_dynamics_wp2<- dyn %>% 
+  filter(eff_descriptor %in% c("wp_vs_p")) %>% 
+  filter(variable %in% limits_variables[i:j]) %>%  
+  mutate(
+    variable = factor(variable, 
+                      levels = limits_variables[i:j], 
+                      labels = labels_variables[i:j])) %>% 
+  
+  ggdyn2(palette_RR_wp,
+         labels_RR_wp2, 
+         p_CB,
+         position = position_dodge(width = 0.5),
+         asterisk = 8, 
+         caps = position_dodge(width = 0.5)$width)
 
+
+gg_wp_1 <-
+  (gg_eff_agg_wp2 + 
+     gg_eff_dynamics_wp2 + theme (legend.position = "none") + 
+     plot_layout(guides = "collect",
+                 widths = c(1, 6))) +
+  plot_annotation(theme = theme(legend.position = "bottom"))
+print(gg_wp_1)
+
+
+ggsave("results/Plots/protofinal/1.Results_Warming_Effect_LRR.png", plot = gg_wp_1, dpi = 300)
 
 
 
