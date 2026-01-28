@@ -94,9 +94,9 @@ labels_variables_sensor <- c("t_top" = "Temp. 40 cm", "t_bottom"= "Temp. 2 cm", 
 # TREATMENTS
 
 c_CB = "#12D08C" # "CB" color blind
-w_CB = "#E05050"
-p_CB = "#00CAFF"
-wp_CB = "#903996"
+w_CB = "#E4345A"
+p_CB = "#1CC4FD"
+wp_CB = "#842F8A"
 
 
 
@@ -110,9 +110,9 @@ palette_CB <- c("c" = c_CB, "w" = w_CB, "p" = p_CB, "wp" = wp_CB)
 ## Response ratio
 labels_RR <- c("w_vs_c" = "Warming vs Control", "p_vs_c" = "Perturbation vs Control", "wp_vs_c" = "Global change vs Control")
 
-labels_RR2 <- c("w_vs_c" = "Warming effects on assembly",
-                "p_vs_c" = "Recovery of ambient communities",
-                "wp_vs_c" = "Recovery of warmed communities")
+labels_RR2 <- c("w_vs_c" = "Warming effect",
+                "p_vs_c" = "Perturbation effect",
+                "wp_vs_c" = "Combined effect")
 
 palette_RR_CB <- c("w_vs_c" = w_CB, "p_vs_c" = p_CB, "wp_vs_c" = wp_CB)
 

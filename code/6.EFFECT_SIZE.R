@@ -15,7 +15,8 @@ source("code/palettes_labels.R")
 palette <- palette_CB
 labels <- labels3
 
-
+{
+  
 arkaute <- read.csv("data/arkaute.csv") %>% 
   mutate(
     year = as.factor(year),
@@ -34,7 +35,7 @@ arkaute <- read.csv("data/arkaute.csv") %>%
     )
   )
 
-
+  
 
 arkaute_no0 <- arkaute %>% 
   filter(sampling != "0")
@@ -47,15 +48,13 @@ variables <- c("richness",                         # 1
                "biomass",                          # 4     
                "biomass012",                       # 5     
                "biomass_lm_plot",                  # 6     
-               #"NMDS1", "NMDS2", "PC1", "PC2",
                "SLA",                              # 7     
                "LDMC",                             # 8     
                "leafN"                             # 9     
                )
 
-LES_variables <- c("SLA", "LDMC", "leafN")
-
-
+## 1. OPENING DATA ####
+# Aggregated data
 
 source("code/functions/eff_size_LRR_function.R")
 
@@ -71,12 +70,23 @@ for (i in seq_along(variables)){
 
 effect_size_aggregated <- do.call(rbind, list_eff) 
 
+# Storing data for checking results
 
-#i = 8
-#effect_size_aggregated %>% 
-#  filter(eff_descriptor == "p_vs_c") %>% 
-#  filter(variable == variables[i]) %>% 
-#  print()
+eff_size_agg <- effect_size_aggregated %>% 
+  mutate(
+    eff_value = round(eff_value, 2),
+    lower_limit = round(lower_limit, 2),
+    upper_limit = round(upper_limit, 2)
+  ) %>% 
+  filter(!variable %in% c("biomass", "biomass012")) %>%  # We use "biomass_lm_plot"
+  select(eff_descriptor, variable, eff_value, lower_limit, upper_limit, null_effect) %>% 
+  write.csv("results/effect_size_aggregated.csv")
+
+
+
+
+
+# Temporal data
 
 source("code/functions/eff_size_dynamics_LRR_function.R")
 
@@ -90,15 +100,24 @@ for (i in seq_along(variables)){
   rm(effsize_dynamics_data)
 }
 
-effect_size_dynamics <- do.call(rbind, list_eff_dyn)
+effect_size_dynamics <- do.call(rbind, list_eff_dyn)  %>%
+  mutate(
+    date_label_chr = as.character(date_label),
+    date_label_noyear = substr(date_label_chr, 1, nchar(date_label_chr) - 3)
+  ) %>%
+  mutate(
+    date_label_noyear = factor(
+      date_label_noyear,
+      levels = unique(date_label_noyear[order(date)]),
+      ordered = TRUE
+    )
+  )
 
+}
 
+## 2. GENERATING PLOTS ####
 
-# Plots #
-
-
-
-
+{
 source("code/functions/gg_aggregated_function.R")
 source("code/functions/gg_aggregated_function_2.R")
 source("code/functions/gg_aggregated_function_2_wp.R")
@@ -108,14 +127,14 @@ source("code/functions/gg_dynamics_function2.R")
 library(patchwork)
 
 
-######### ! OJO con la variable de biomasa que usamos.
+# Variables
+
+######### ! OJO con la variable de biomasa que usamos. Todas contienen imputación con MICE pero
+# difieren en cómo se han rellenado los huecos de los muestroes 0, 1, 2 y 12. 
 # 1) biomass: datos de biomasa sin usar regesión lineal para rellenar los vacíos de los muestreos 0, 1 , 2 y 12
 # 2) biomass012: datos de biomasa en los que se ha usado una regresión lineal a nivel de especie (mirar script 1.2.lm_biomass012.R)
 # 3) biomass_lm_plot : datos de biomassa en los que se ha usado una regresión 
 # lineal a nivel de PLOT. 280 puntos para la regresión. Mirar script 5.1.biomass_lm_plot.R
-
-
-# Variables
 
 limits_variables <- c("richness",
                       "abundance",
@@ -133,14 +152,18 @@ labels_variables <- c("richness" = "Richness",            # 1
                       "Y_zipf" = "Evenness",              # 3
                       "SLA" = "SLA",                      # 4
                       "LDMC" = "LDMC",                    # 5
-                      "leafN"= "LN",                  # 6
+                      "leafN"= "LN",                      # 6
                       #"biomass" = "Biomass"
                       #"biomass012" = "Biomass"
-                      "biomass_lm_plot" = "Biomass"      # 7
+                      "biomass_lm_plot" = "Biomass"       # 7
                       )      
 
 
+
+}
+
 # Choosing the range of variables to be displayed (i to j)
+{
 i = 1
 j = 7
 
@@ -153,28 +176,13 @@ lvls <- limits_variables[i:j]
 labs <- unname(labels_variables[lvls])
 
 
-
 pos_dod_c_agg <- position_dodge2(width = 0.3, preserve = "single")
 pos_dod_c_dyn <- position_dodge2(width = 12, preserve = "single")
 
-# Aggregated analysis vertically displayed
-gg_eff_agg_c <- agg %>% 
-  filter(eff_descriptor %in% c("p_vs_c", "w_vs_c", "wp_vs_c")) %>% 
-  filter(variable %in% limits_variables[i:j]) %>% 
-  mutate(eff_descriptor = factor(eff_descriptor,
-                                 levels = c("p_vs_c", "w_vs_c", "wp_vs_c"))
-  ) %>% 
-  ggagg(palette_RR_CB, # using my function
-        labels_RR2,
-        "grey50",
-        position   = pos_dod_c_agg,
-        limitvar = limits_variables[i:j],
-        labelvar = labels_variables[i:j])  
+}
 
 
-
-# Aggregated analysis horizontally displayed
-gg_eff_agg_c2 <- agg %>% 
+{gg_eff_agg_c2 <- agg %>% 
   filter(eff_descriptor %in% c("p_vs_c", "w_vs_c", "wp_vs_c"),
                 variable %in% lvls) %>% 
   mutate(
@@ -187,29 +195,10 @@ gg_eff_agg_c2 <- agg %>%
     colorline = "grey50",
     limitvar  = lvls,
     labelvar  = labels_variables[lvls], 
-    breaks_axix_y = 2
+    breaks_axix_y = 4
   )
 
 
-
-# Dynamics with dates
-gg_eff_dynamics_c <- dyn %>% 
-  filter(eff_descriptor %in% c("w_vs_c", "p_vs_c", "wp_vs_c")) %>% 
-  filter(variable %in% limits_variables[i:j]) %>%  
-  mutate(
-    variable = factor(variable, 
-                      levels = limits_variables[i:j], 
-                      labels = labels_variables[i:j])) %>% 
-  
-  ggdyn(palette_RR_CB,
-        labels_RR2, 
-        "grey50",
-        position = pos_dod_c_dyn,
-        asterisk = 8, 
-        caps = pos_dod_c_dyn$width) 
-
-
-# Dynamics with samplings
 
 gg_eff_dynamics_c2<- dyn %>% 
   filter(eff_descriptor %in% c("w_vs_c", "p_vs_c", "wp_vs_c")) %>% 
@@ -218,7 +207,6 @@ gg_eff_dynamics_c2<- dyn %>%
     variable = factor(variable, 
                       levels = limits_variables[i:j], 
                       labels = labels_variables[i:j])) %>% 
-  
   ggdyn2(palette_RR_CB,
          labels_RR2, 
          "grey50",
@@ -227,88 +215,30 @@ gg_eff_dynamics_c2<- dyn %>%
          caps = position_dodge(width = 0.5)$width)
 
 
-
-
-
-
-gg_1 <-
-  (gg_eff_agg_c + 
-     gg_eff_dynamics_c + theme (legend.position = "none") + 
-     plot_layout(guides = "collect",
-                 widths = c(1, 3))) +
-  plot_annotation(theme = theme(legend.position = "bottom"))
-print(gg_1)
-
-
-ggsave("results/Plots/protofinal/1.Results_LRR_1.png", plot = gg_1, dpi = 300)
-
-
-
-gg_2 <-
-  (gg_eff_agg_c2 + 
-     gg_eff_dynamics_c + theme (legend.position = "none") + 
-     plot_layout(guides = "collect",
-                 widths = c(1, 3))) +
-  plot_annotation(theme = theme(legend.position = "bottom"))
-print(gg_2)
-
-
-ggsave("results/Plots/protofinal/1.Results_LRR_2.png", plot = gg_2, dpi = 300)
-
-
-
-gg_3 <-
-  (gg_eff_agg_c + 
-     gg_eff_dynamics_c2 + theme (legend.position = "none") + 
-     plot_layout(guides = "collect",
-                 widths = c(1, 3))) +
-  plot_annotation(theme = theme(legend.position = "bottom"))
-print(gg_3)
-
-
-ggsave("results/Plots/protofinal/1.Results_LRR_3.png", plot = gg_3, dpi = 300)
-
-
-
-
-gg_4 <-
+gg_control <-
   (gg_eff_agg_c2 + 
      gg_eff_dynamics_c2 + theme (legend.position = "none") + 
      plot_layout(guides = "collect",
-                 widths = c(1, 5))) +
+                 widths = c(1, 7))) +
   plot_annotation(theme = theme(legend.position = "bottom"))
-print(gg_4)
+print(gg_control)
 
 
-ggsave("results/Plots/protofinal/1.Results_LRR_4.png", plot = gg_4, dpi = 300)
+}
 
 
-
+ggsave("results/Plots/protofinal/1.Results_LRR_4.png", plot = gg_control, dpi = 300)
+ggsave("results/Plots/protofinal/1.Results_LRR_4.svg", plot = gg_control, dpi = 300)
 
 
 
 
 ########### COMBINED / PERTURBATION    ###
-
+{
 pos_dod_wp_agg <- position_dodge2(width = 0.1, preserve = "single")
 pos_dod_wp_dyn <- position_dodge2(width = 4, preserve = "single")
 
 
-
-gg_eff_agg_wp <- agg %>% 
-  filter(eff_descriptor == "wp_vs_p") %>% 
-  filter(variable %in% limits_variables[i:j]) %>% 
-  ggagg(palette_RR_wp,
-        labels_RR_wp,
-        p_CB, 
-        position   = pos_dod_wp_agg,
-        #asterisk = 4,
-        caps = pos_dod_wp_agg$width,
-        limitvar = limits_variables[i:j],
-        labelvar = labels_variables[i:j]
-        ) 
-
-# Aggregated analysis with 
 
 gg_eff_agg_wp2 <- agg %>% 
   filter(eff_descriptor == "wp_vs_p",
@@ -327,22 +257,6 @@ gg_eff_agg_wp2 <- agg %>%
 
 
 
-# Dynamics with dates
-gg_eff_dynamics_wp <- dyn %>% 
-  filter(eff_descriptor %in% c("wp_vs_p")) %>% 
-  filter(variable %in% limits_variables[i:j]) %>%  
-  mutate(variable = factor(variable, 
-                           levels = limits_variables[i:j], 
-                           labels = labels_variables[i:j])) %>% 
-  ggdyn(palette_RR_wp,
-        labels_RR_wp2,
-        p_CB,
-        position = pos_dod_wp_dyn,
-        asterisk = 8, 
-        caps = pos_dod_wp_dyn$width)
-
-
-# Dynamics with samplings
 
 gg_eff_dynamics_wp2<- dyn %>% 
   filter(eff_descriptor %in% c("wp_vs_p")) %>% 
@@ -360,17 +274,17 @@ gg_eff_dynamics_wp2<- dyn %>%
          caps = position_dodge(width = 0.5)$width)
 
 
-gg_wp_1 <-
+gg_wp <-
   (gg_eff_agg_wp2 + 
      gg_eff_dynamics_wp2 + theme (legend.position = "none") + 
      plot_layout(guides = "collect",
-                 widths = c(1, 6))) +
+                 widths = c(1, 7))) +
   plot_annotation(theme = theme(legend.position = "bottom"))
-print(gg_wp_1)
+print(gg_wp)
+}
 
-
-ggsave("results/Plots/protofinal/1.Results_Warming_Effect_LRR.png", plot = gg_wp_1, dpi = 300)
-
+ggsave("results/Plots/protofinal/1.Results_Warming_Effect_LRR.png", plot = gg_wp, dpi = 300)
+ggsave("results/Plots/protofinal/1.Results_Warming_Effect_LRR.svg", plot = gg_wp, dpi = 300)
 
 
 ########### COMBINED / WARMING    ###

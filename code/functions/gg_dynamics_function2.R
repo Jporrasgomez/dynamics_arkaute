@@ -7,11 +7,11 @@ ggdyn2 <- function(data, palette, labels, colorline, position, asterisk, caps){
 
 pos_dod_c_dyn <- position_dodge(width = 0.5)
 
-levs  <- levels(data$date_label)
-vpos  <- match("04-May-23", levs) + 0.5 
+levs  <- levels(data$date_label_noyear)
+vpos  <- match("04-May", levs) + 0.5 
   
   plot <- 
-  ggplot(data, aes(x = date_label, y = eff_value,
+  ggplot(data, aes(x = date_label_noyear, y = eff_value,
             group = eff_descriptor, color = eff_descriptor)) +
   
   facet_wrap(~ variable, scales = "free_y", ncol = 1, nrow = 9,
@@ -19,21 +19,23 @@ vpos  <- match("04-May-23", levs) + 0.5
   ) +
   
   scale_x_discrete(drop = FALSE) +
+    
+  #scale_x_discrete( drop = FALSE, labels = data$date_label) + 
   
-  geom_hline(yintercept = 0, linetype = "dashed", color = "grey50", linewidth = 0.5) +
+  geom_hline(yintercept = 0, linetype = "dashed", color = colorline, linewidth = 0.5) +
   
   geom_vline(xintercept = vpos, linetype = "dashed", color = "grey40", linewidth = 0.5) +
   
   geom_linerange(aes(ymin = lower_limit, ymax = upper_limit),
-                 position = pos_dod_c_dyn, alpha = 0.6, linewidth = 0.5, 
+                 position = pos_dod_c_dyn, alpha = 1, linewidth = 0.8, 
                  show.legend = FALSE) +
   
-  geom_point(position = pos_dod_c_dyn, size = 1.2) +
+  geom_point(position = pos_dod_c_dyn, size = 2) +
   
   geom_line(position = pos_dod_c_dyn, linewidth = 0.5) + 
     
     geom_text(aes(
-      x = date_label,
+      x = date_label_noyear,
       y = ifelse(eff_value < 0,
                  lower_limit - asterisk * scale,
                  upper_limit + asterisk * scale),
@@ -47,10 +49,11 @@ vpos  <- match("04-May-23", levs) + 0.5
     ) +
     
     scale_y_continuous(
-      breaks      = scales::pretty_breaks(n = 3),
+      breaks      = scales::pretty_breaks(n = 4),
       minor_breaks = NULL,
       expand = expansion(mult = c(0.1, 0.1))
     ) +
+    
     
     scale_color_manual(values = palette, labels = labels) +
     
@@ -58,17 +61,17 @@ vpos  <- match("04-May-23", levs) + 0.5
     
     gg_RR_theme +
     theme(
-      text               = element_text(size = 10), 
+      text               = element_text(size = 14), 
       strip.text.y       = element_blank(),
       strip.background   = element_blank(),
       strip.text.x       = element_blank(),
-      strip.text         = element_text(face = "bold", size = 10),
-      axis.text.y        = element_text(angle = 90, hjust = 0.5, face = "plain", size = 8),
-      axis.text.x        = element_text(angle = 45, hjust = 1, face = "plain", size = 9),
+      strip.text         = element_text(face = "bold", size = 14),
+      axis.text.y        = element_text(angle = 90, hjust = 0.5, face = "plain", size = 12),
+      axis.text.x        = element_text(angle = 45, hjust = 1, face = "plain", size = 12),
       #axis.text.x        = element_blank(),
       legend.position    = "bottom",
       #axis.ticks.x        = element_blank(), 
-      legend.text        = element_text(size = 10, face = "plain")
+      legend.text        = element_text(size = 14, face = "plain")
     )
   
   
