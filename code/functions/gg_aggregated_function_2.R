@@ -33,7 +33,7 @@ ggagg2 <- function(data, palette, labels, colorline, limitvar, labelvar, breaks_
       label = ifelse(null_effect == "NO", "*", NA_character_)
     ),
     show.legend = FALSE,
-    size = 5) +
+    size = 8) +
     
     scale_color_manual(values = palette, labels = labels) +
     

@@ -8,7 +8,8 @@ ggdyn2 <- function(data, palette, labels, colorline, position, asterisk, caps){
 pos_dod_c_dyn <- position_dodge(width = 0.5)
 
 levs  <- levels(data$date_label_noyear)
-vpos  <- match("04-May", levs) + 0.5 
+v_perturbation  <- match("04-May", levs) + 0.5 
+v_year  <- match("13-Nov", levs) + 0.5 
   
   plot <- 
   ggplot(data, aes(x = date_label_noyear, y = eff_value,
@@ -24,7 +25,9 @@ vpos  <- match("04-May", levs) + 0.5
   
   geom_hline(yintercept = 0, linetype = "dashed", color = colorline, linewidth = 0.5) +
   
-  geom_vline(xintercept = vpos, linetype = "dashed", color = "grey40", linewidth = 0.5) +
+  geom_vline(xintercept = v_perturbation, linetype = "dashed", color = "grey40", linewidth = 0.5) +
+    
+  geom_vline(xintercept = v_year, linetype = "solid", color = "black", linewidth = 0.2) +
   
   geom_linerange(aes(ymin = lower_limit, ymax = upper_limit),
                  position = pos_dod_c_dyn, alpha = 1, linewidth = 0.8, 
@@ -44,7 +47,7 @@ vpos  <- match("04-May", levs) + 0.5
     ),
     position      = position,
     inherit.aes   = FALSE,
-    size          = 5, 
+    size          = 6, 
     show.legend   = FALSE
     ) +
     

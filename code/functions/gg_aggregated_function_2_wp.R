@@ -27,7 +27,7 @@ ggagg2_wp <- function(data, palette, labels, colorline, limitvar, labelvar, brea
       y = ifelse(eff_value < 0, lower_limit - scale, upper_limit + scale),
       label = ifelse(null_effect == "NO", "*", NA_character_)
     ),
-    show.legend = FALSE, size = 5) +
+    show.legend = FALSE, size = 8) +
     
     scale_color_manual(values = palette, labels = labels) +
     
