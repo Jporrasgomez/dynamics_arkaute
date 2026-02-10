@@ -15,8 +15,11 @@ sum(is.na(biomass$nind_m2))
 sum(is.na(biomass$nind_m2)) /length(biomass$code) * 100
 
 
-biomass$year <- year(biomass$date)
-
+biomass <- biomass %>% 
+  mutate(
+    year(biomass$date))
+  
+    
 
 
 #Where are the NA's?
@@ -24,44 +27,132 @@ biomass$year <- year(biomass$date)
 
 
 
-ggNA_sampling <- biomass %>% 
+NA_biomass <- biomass %>% 
   mutate(cell_content = case_when(is.na(nind_m2) ~ "NA",
-                                  !is.na(nind_m2)  ~ "Number of individuals available")) %>%
-  # we create a new variable capturing cell content
-  # as we are interested in defining 3 different situations, we use the case_when function
-  ggplot(aes(x = as.numeric(sampling))) +
-  geom_histogram(aes(fill = cell_content),
-                 binwidth = .5, center = 0) +
-  scale_fill_discrete(drop = F) +
-  labs(y = "Number of rows", x = "Sampling", fill = "Data availability") +
-  theme(legend.position = "bottom") + 
-  scale_x_continuous(breaks = scales::breaks_extended(n = 21))
+                                  !is.na(nind_m2)  ~ "Number of individuals available"))
 
 
 
-ggNA_plot <- biomass %>% 
-  mutate(cell_content = case_when(is.na(nind_m2) ~ "NA",
-                                  !is.na(nind_m2)  ~ "Number of individuals available")) %>%
-  ggplot(aes(x = as.numeric(plot))) +
-  geom_histogram(aes(fill = cell_content),
-                 binwidth = .5, center = 0) +
-  scale_fill_discrete(drop = F) +
-  labs(y = "Number of rows", x = "Plot", fill = "Data availability") +
-  theme(legend.position = "bottom") + 
-  scale_x_continuous(breaks = scales::breaks_extended(n = 16))
+
+  
 
 
-ggNA_species <- biomass %>% 
-  mutate(cell_content = case_when(is.na(nind_m2) ~ "NA",
-                                  !is.na(nind_m2)  ~ "Number of individuals available")) %>%
-  # we create a new variable capturing cell content
-  # as we are interested in defining 3 different situations, we use the case_when function
-  ggplot(aes(x = code)) +
-  geom_bar(aes(fill = cell_content)) +
-  scale_fill_discrete(drop = F) +
-  theme(legend.position = "bottom",
-        axis.text.x = element_text(angle = 45, vjust = 0.9, hjust = 1)) + 
-  labs(y = "Number of rows", x = "Species code", fill = "Data availablity")
+
+na1 <- ggplot(NA_biomass, aes(x = sampling, fill = cell_content)) +
+  geom_bar() +
+  labs(
+    y = "Number of rows",
+    x = "Plot",
+    fill = NULL
+  ) +
+  theme1
+
+
+
+  na2 <- ggplot(NA_biomass, aes(x = plot, fill = cell_content)) +
+    geom_bar() +
+    labs(
+      y = "Number of rows",
+      x = "Plot",
+      fill = NULL
+    ) +
+    theme1
+  
+
+  na3 <- ggplot(
+    NA_biomass,
+    aes(x = fct_infreq(code), fill = cell_content)
+  ) +
+    geom_bar() +
+    labs(
+      y = NULL,
+      x = "Species code",
+      fill = NULL
+    ) +
+    gg_RR_theme
+  
+  
+  gg_na <-
+    (na1 + na2 + na3) +
+       plot_layout(ncol = 1, 
+                   guides = "collect") +
+    plot_annotation(theme = theme(legend.position = "bottom"))
+  print(gg_na)
+  
+  ggsave("results/Plots/protofinal/NA_biomass.png", plot = gg_na, dpi = 300)
+  ggsave("results/Plots/protofinal/NA_biomass.png.svg", plot = gg_na, dpi = 300)
+  
+  
+  
+  
+na1_perc <- 
+  NA_biomass %>%
+    group_by(sampling) %>%
+    summarise(
+      n_NA = sum(cell_content == "NA", na.rm = TRUE),
+      n_available = sum(cell_content == "Number of individuals available", na.rm = TRUE),
+      .groups = "drop"
+    ) %>%
+    mutate(total_n = n_NA + n_available) %>% 
+    mutate(percentage = (n_NA / total_n) * 100) %>%
+    ggplot(aes(x = sampling, y = percentage)) +
+    geom_col(aes(fill = "#F8766D")) +
+    labs(
+      y = NULL,
+      x = "Sampling"
+    ) +
+    theme1
+  
+  
+na2_perc <- 
+  NA_biomass %>%
+    group_by(plot) %>%
+    summarise(
+      n_NA = sum(cell_content == "NA", na.rm = TRUE),
+      n_available = sum(cell_content == "Number of individuals available", na.rm = TRUE),
+      .groups = "drop"
+    ) %>%
+    mutate(total_n = n_NA + n_available) %>% 
+    mutate(percentage = (n_NA / total_n) * 100) %>%
+    ggplot(aes(x = reorder(plot, -percentage), y = percentage)) +
+    geom_col(aes(fill = "#F8766D")) +
+    labs(
+      y = "Missing data (%)",
+      x = "Plot"
+    ) +
+    theme1
+  
+  
+na3_perc <-  
+  NA_biomass %>%
+    group_by(code) %>%
+    summarise(
+      n_NA = sum(cell_content == "NA", na.rm = TRUE),
+      n_available = sum(cell_content == "Number of individuals available", na.rm = TRUE),
+      .groups = "drop"
+    ) %>%
+    mutate(
+      total_n = n_NA + n_available,
+      percentage = (n_NA / total_n) * 100
+    ) %>%
+    ggplot(aes(x = reorder(code, -percentage), y = percentage)) +
+    geom_col(aes(fill = "#F8766D")) +
+    labs(
+      y = NULL,
+      x = "Species code"
+    ) +
+    gg_RR_theme
+  
+  
+  gg_na_perc <-
+      (na1_perc + na2_perc + na3_perc) +
+      plot_layout(ncol = 1, 
+                  guides = "collect") +
+      plot_annotation(theme = theme(legend.position = "none"))
+    print(gg_na_perc)
+    
+    ggsave("results/Plots/protofinal/NA_perc_biomass.png", plot = gg_na_perc, dpi = 300)
+    ggsave("results/Plots/protofinal/NA_perc_biomass.png.svg", plot = gg_na_perc, dpi = 300)
 
 #NA's seem to be concentrated in the first year, as we already knew
 # NA's are randomly distributed across plots

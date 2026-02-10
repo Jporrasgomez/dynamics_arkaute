@@ -7,27 +7,74 @@
 
 
 
-gg_RR_theme <- 
-  theme(
-    panel.grid      = element_blank(),
-    strip.background = element_blank(),
-    strip.text      = element_text(face = "bold"),
-    #strip.text.y    = element_text(dace = "plain"), 
-    text            = element_text(size = 13
-    ),
-    legend.position = "none",
-    axis.text.y     = element_text(face = "bold",
-                                   angle = 90,
-                                   hjust = 0.5))
+gg_RR_theme <- theme(
+  # Panel & grid
+  panel.grid        = element_blank(),
+  
+  # Text (global)
+  text              = element_text(size = 14),
+  
+  # Facets / strips
+  strip.background  = element_blank(),
+  strip.text        = element_text(face = "bold", size = 14),
+  strip.text.x      = element_blank(),
+  strip.text.y      = element_blank(),
+  
+  # Axes
+  axis.text.y       = element_text(
+    angle = 90,
+    hjust = 0.5,
+    face  = "plain",
+    size  = 12
+  ),
+  axis.text.x       = element_text(
+    angle = 45,
+    hjust = 1,
+    face  = "plain",
+    size  = 12
+  ),
+  
+  # Legend
+  legend.position   = "bottom",
+  legend.text       = element_text(size = 14, face = "plain")
+)
+
+
 
 theme1 <- 
-theme_set(theme_bw() +
-            theme(
-              legend.position = "right",
-              panel.grid = element_blank(),
-              strip.background = element_blank(),
-              strip.text = element_text(face = "bold"),
-              text = element_text(size = 11)))
+  theme(
+    # Panel & grid
+    panel.grid        = element_blank(),
+    
+    # Text (global)
+    text              = element_text(size = 14),
+    
+    # Facets / strips
+    strip.background  = element_blank(),
+    strip.text        = element_text(face = "bold", size = 14),
+    strip.text.x      = element_blank(),
+    strip.text.y      = element_blank(),
+    
+    # Axes
+    axis.text.y       = element_text(
+      angle = 90,
+      hjust = 0.5,
+      face  = "plain",
+      size  = 12
+    ),
+    axis.text.x       = element_text(
+      angle = 0,
+      hjust = 1,
+      face  = "plain",
+      size  = 12
+    ),
+    
+    # Legend
+    legend.position   = "bottom",
+    legend.text       = element_text(size = 14, face = "plain")
+  )
+
+
 
 theme2 <- 
 theme(

@@ -62,21 +62,7 @@ v_year  <- match("13-Nov", levs) + 0.5
     
     labs(y = NULL, x = NULL, color = NULL) +
     
-    gg_RR_theme +
-    theme(
-      text               = element_text(size = 14), 
-      strip.text.y       = element_blank(),
-      strip.background   = element_blank(),
-      strip.text.x       = element_blank(),
-      strip.text         = element_text(face = "bold", size = 14),
-      axis.text.y        = element_text(angle = 90, hjust = 0.5, face = "plain", size = 12),
-      axis.text.x        = element_text(angle = 45, hjust = 1, face = "plain", size = 12),
-      #axis.text.x        = element_blank(),
-      legend.position    = "bottom",
-      #axis.ticks.x        = element_blank(), 
-      legend.text        = element_text(size = 14, face = "plain")
-    )
-  
+    gg_RR_theme 
   
 }
 

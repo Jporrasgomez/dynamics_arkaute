@@ -108,20 +108,30 @@ rad_all <- rad_all %>%
     mandelbrot_fit = total_abundance * mand_c * (rank + mand_beta)^mand_gamma
   )
 
-ggplot(rad_all, aes(x = reorder(code, -abundance_s), y = abundance_s)) +
-  geom_point() +
-  geom_line(aes(x = rank, y = preemption_fit), color = "blue") +
-  geom_line(aes(x = rank, y = log_fit), color = "red3") +
-  geom_line(aes(x = rank, y = zipf_fit), color = "green3") +
-  geom_line(aes(x = rank, y = mandelbrot_fit), color = "pink4") +
-  labs(x = "Species rank" , y = "Mean abundance",
-       title = "RAD whole experiment",
-       subtitle = paste0("AIC values: \n",
-                         "- Zipf: ", rad_all$zipf_AIC,
-                         "\n", "- Mandelbrot: ", rad_all$mand_AIC, "\n",
-                         "- Lognormal: ", rad_all$log_AIC, "\n",
-                         "- Preemption: ", rad_all$pre_AIC)) +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+rad_all_selection <- rad_all %>% 
+  select(rank, code, abundance_s, preemption_fit, log_fit, zipf_fit, mandelbrot_fit) %>% 
+  pivot_longer(cols = c(preemption_fit, log_fit, zipf_fit, mandelbrot_fit),
+               names_to = "model", 
+               values_to = "model_fit")
+
+ggplot(rad_all_selection,) +
+  geom_point( aes(x = reorder(code, -abundance_s), y = abundance_s), size = 4, color = "gray") +
+  geom_line(aes(x = rank, y = model_fit, color = model), linewidth = 1.5) + 
+
+  labs(x = "Species rank" , y = "Mean abundance") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+
+theme(
+  text               = element_text(size = 14), 
+  strip.text         = element_text(face = "bold", size = 14),
+  axis.text.y        = element_text(angle = 90, hjust = 0.5, face = "plain", size = 12),
+  axis.text.x        = element_text(angle = 45, hjust = 1, face = "plain", size = 12),
+  #axis.text.x        = element_blank(),
+  legend.position    = "bottom",
+  #axis.ticks.x        = element_blank(), 
+  legend.text        = element_text(size = 14, face = "plain")
+)
+
 
 
 #Log normal no se ajusta bien del todo porque abundance_s no es estrictamente una distribución log-normal: 
@@ -222,6 +232,7 @@ ggplot(rad_treat_db, aes(x = rank, y = abundance_s)) +
 
 # We choose ZIPF
 
+
 {gg_rads_treatment <- 
 ggplot(rad_treat_db, aes(x = rank, y = abundance_s)) +
     
@@ -242,7 +253,7 @@ ggplot(rad_treat_db, aes(x = rank, y = abundance_s)) +
     theme(legend.position = "none")
   
 print(gg_rads_treatment)
-ggsave("results/Plots/protofinal/RADs_treatment.png", plot = gg_rads_treatment, dpi = 300)
+#ggsave("results/Plots/protofinal/RADs_treatment.png", plot = gg_rads_treatment, dpi = 300)
 }
 
 
@@ -250,7 +261,7 @@ ggsave("results/Plots/protofinal/RADs_treatment.png", plot = gg_rads_treatment, 
 ggplot(rad_treat_db, aes(x = rank, y = abundance_s, color = treatment)) +
   geom_point(size = 1.5) +
   geom_line(aes(x = rank, y = zipf_fit, color = treatment), size = 1) +
-  scale_color_manual(values = palette5, name = "Treatment", labels = labels3) + 
+  scale_color_manual(values = palette_CB, name = "Treatment", labels = labels3) + 
   labs(x = "Rank", y = "Mean abundance", title = "RAD per treatment") +
   geom_text(aes(x = max(rank) * 0.7, 
                 y = max(abundance_s) * 0.99 + as.numeric(factor(treatment)) * 0.05 * max(abundance_s), 
@@ -318,8 +329,11 @@ rad_plot_AIC <- pivot_longer(rad_plot_AIC, cols = c("AIC_pree", "AIC_log","AIC_z
 ggplot(rad_plot_AIC, aes(x = model, y = AIC))+
   geom_boxplot()
 
+
 # Again, we decide to use zipf because it only has one explanatory coefficient of the curve (gamma)
 
+# Here, the estimation of ZIPF parameter is less stable for very small communities. That's why 
+# the model (loop) does not converge several times. 
 
 rad_plot_list <- list()
 count <- 0
@@ -337,7 +351,7 @@ for(i in 1:length(samps)) {
       filter(sampling == samps[i]) %>% 
       filter(plot == plots[j])
     
-    treatment <- droplevels(unique(rad_plot$treatment))
+    treat <- (unique(rad_plot$treatment))
     
       rad_plot <- rad_plot %>% 
         group_by(code) %>% 
@@ -363,7 +377,7 @@ for(i in 1:length(samps)) {
         zipf_fit = total_abundance*zipf_p1 * (rank^zipf_gamma),
       ) %>% 
       mutate(
-        treatment = treatment, 
+        treatment = treat, 
         sampling = samps[i],
         plot = plots[j]
       )
@@ -374,7 +388,7 @@ rad_plot <- do.call(rbind, rad_plot_list) %>%
   mutate(plot_treat = paste0(treatment, "-", plot))  
   #mutate(zipf_gamma = ifelse(0, is.na, zipf_gamma))
 
-{i = 10
+i = 19
 gg_rad_eg <- 
 rad_plot %>% 
   filter(sampling == samps[i]) %>% 
@@ -382,12 +396,12 @@ rad_plot %>%
   facet_wrap(~ plot_treat) + 
   geom_point() +
   geom_line(aes(x = rank, y = zipf_fit), color = "black") +
-  scale_color_manual(values = palette5)+
+  scale_color_manual(values = palette_CB)+
   labs(x = "Rank", y = "Mean abundance", title = paste0("RAD per plot at sampling ", samps[i])) +
   geom_text(aes(x = max(rank) * 0.7, y = max(abundance_s) * 0.9, 
                 label = paste("Zipf gamma:", round(zipf_gamma, 4))), size = 3.2)
 print(gg_rad_eg)
-ggsave("results/Plots/protofinal/RAD_sampling_eg.png", plot = gg_rad_eg, dpi = 300)}
+ggsave("results/Plots/protofinal/RAD_sampling_eg.png", plot = gg_rad_eg, dpi = 300)
 
 
 
