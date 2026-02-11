@@ -10,13 +10,7 @@
 rm(list = ls(all.names = TRUE))
 pacman::p_load(dplyr, reshape2, tidyverse, lubridate, ggplot2, ggpubr, rpivotTable, ggrepel, here)
 
-theme_set(theme_bw() +
-            theme(
-              legend.position = "right",
-              panel.grid = element_blank(),
-              strip.background = element_blank(),
-              strip.text = element_text(face = "bold"),
-              text = element_text(size = 11)))
+source("code/palettes_labels.R")
 {
   
   flora_raw <- read.csv("data/flora_db_raw.csv")

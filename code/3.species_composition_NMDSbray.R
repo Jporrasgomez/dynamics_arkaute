@@ -183,7 +183,7 @@ sorensen_df %>%
   filter(comparison %in% c("c-p", "c-w", "c-wp")) %>% 
 ggplot(aes(x = sampling, y = value, color = comparison, group = comparison)) + 
   facet_wrap(~ comparison, labeller = labeller(
-    RR_descriptor = as_labeller(labels_RR))) + 
+    RR_descriptor = as_labeller(labels_RR)), ncol = 1) + 
   geom_point() + 
   geom_line() +
   geom_smooth(
@@ -194,6 +194,7 @@ ggplot(aes(x = sampling, y = value, color = comparison, group = comparison)) +
   labs( y = "Beta-diversity Sorensen") + 
   scale_x_discrete(breaks = function(x) x[seq(1, length(x), by = 2)]) + 
   labs(x = "Sampling") + 
+    theme1+
   theme(legend.position = "bottom")
 print(gg_sorensen)
 #ggsave("results/Plots/protofinal/sorensen_c.png", plot = gg_sorensen, dpi = 300)
@@ -301,7 +302,7 @@ ggnmds_alltreatments <-
     stat_ellipse(geom = "polygon", aes(fill = treatment),
                  alpha = 0.12, show.legend = FALSE, level = 0.68) + 
     
-    geom_point(size = 1.5, aes(shape = treatment), show.legend = T) +
+    geom_point(size = 2, show.legend = T) +
     
     geom_text_repel(aes(label = sampling),
                     max.overlaps = 8,
@@ -314,17 +315,17 @@ ggnmds_alltreatments <-
     
     geom_vline(xintercept = 0, color = "gray52", linetype = "dashed") +
   
-    geom_segment(data = sp_scores,
-                 aes(x = 0, y = 0, xend = NMDS1, yend = NMDS2),
-                 arrow = arrow(length = unit(0.1, "cm")),
-                 colour = "black", 
-                 alpha = 0.5) +
+    #geom_segment(data = sp_scores,
+    #             aes(x = 0, y = 0, xend = NMDS1, yend = NMDS2),
+    #             arrow = arrow(length = unit(0.1, "cm")),
+    #             colour = "black", 
+    #             alpha = 0.5) +
     
-    geom_text(data = sp_scores,
-              aes(x = NMDS1, y = NMDS2, label = species),
-              hjust = 0.5, vjust = -0.3, size = 3.5,
-              colour = "black",
-              alpha = 0.5) +
+    #geom_text(data = sp_scores,
+    #          aes(x = NMDS1, y = NMDS2, label = species),
+    #          hjust = 0.5, vjust = -0.3, size = 3.5,
+    #          colour = "black",
+    #          alpha = 0.5) +
    
     scale_color_manual(values = palette_CB, labels = labels, guide = "legend") +
     
@@ -336,13 +337,7 @@ ggnmds_alltreatments <-
       #title = "NMDS Bray-Curtis: mean abundance of species at sampling level",
          subtitle = paste0("Stress = ", round(nmds_bc_sampling$stress, 3)),
          x = "NMDS1", y = "NMDS2", color = " ") +
-    theme(
-      panel.grid = element_blank(),
-      strip.background = element_blank(),
-      strip.text = element_text(face = "bold"),
-      text = element_text(size = 15),
-      legend.position = "bottom"
-    )
+    theme1
 
 print(ggnmds_alltreatments)
 

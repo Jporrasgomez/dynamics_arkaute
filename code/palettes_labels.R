@@ -45,6 +45,7 @@ theme1 <-
   theme(
     # Panel & grid
     panel.grid        = element_blank(),
+    panel.background = element_rect(fill = "white", color = "black"),
     
     # Text (global)
     text              = element_text(size = 14),
@@ -52,26 +53,28 @@ theme1 <-
     # Facets / strips
     strip.background  = element_blank(),
     strip.text        = element_text(face = "bold", size = 14),
-    strip.text.x      = element_blank(),
-    strip.text.y      = element_blank(),
     
     # Axes
     axis.text.y       = element_text(
       angle = 90,
       hjust = 0.5,
       face  = "plain",
-      size  = 12
+      size  = 14
     ),
     axis.text.x       = element_text(
       angle = 0,
-      hjust = 1,
+      hjust = 0.5,
       face  = "plain",
-      size  = 12
+      size  = 14
     ),
     
     # Legend
     legend.position   = "bottom",
-    legend.text       = element_text(size = 14, face = "plain")
+    legend.title = element_text(size = 14, face = "bold"),
+    legend.text       = element_text(size = 14, face = "plain"),
+    legend.background = element_blank(),
+    legend.box.background = element_blank(),
+    legend.key = element_rect(fill = "white", colour = NA)
   )
 
 
@@ -130,7 +133,7 @@ palette_sensor <- c("t_top" = "red", "t_bottom" = "purple", "t_ground" = "orange
 
 palette_OTC = c("control" = "#1FBDC7", "otc"     = "#EA6E13")
 
-labels_OTC = c("control" = "Without OTC", "otc" = "With OTC")
+labels_OTC = c("control" = "Ambient", "otc" = "OTC")
 
 labels_variables_sensor <- c("t_top" = "Temp. 40 cm", "t_bottom"= "Temp. 2 cm", "t_ground" = "Temp. -6 cm", "vwc" = "VWC")
 

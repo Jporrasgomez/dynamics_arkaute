@@ -17,7 +17,7 @@ sum(is.na(biomass$nind_m2)) /length(biomass$code) * 100
 
 biomass <- biomass %>% 
   mutate(
-    year(biomass$date))
+    year = year(date))
   
     
 
@@ -49,7 +49,7 @@ na1 <- ggplot(NA_biomass, aes(x = sampling, fill = cell_content)) +
 
 
 
-  na2 <- ggplot(NA_biomass, aes(x = plot, fill = cell_content)) +
+na2 <- ggplot(NA_biomass, aes(x = plot, fill = cell_content)) +
     geom_bar() +
     labs(
       y = "Number of rows",
@@ -59,7 +59,7 @@ na1 <- ggplot(NA_biomass, aes(x = sampling, fill = cell_content)) +
     theme1
   
 
-  na3 <- ggplot(
+na3 <- ggplot(
     NA_biomass,
     aes(x = fct_infreq(code), fill = cell_content)
   ) +
@@ -71,7 +71,7 @@ na1 <- ggplot(NA_biomass, aes(x = sampling, fill = cell_content)) +
     ) +
     gg_RR_theme
   
-  
+  library(patchwork)
   gg_na <-
     (na1 + na2 + na3) +
        plot_layout(ncol = 1, 
@@ -237,17 +237,35 @@ biomass_mice_imputed <- readRDS("data/biomass_mice_imputed.rds")
 
 imputed_db <- complete(biomass_mice_imputed, action = "long")
 
-# hay que intentar entender bien este gráfico
-ggdensity <- ggplot() +
-  geom_density(data = imputed_db, aes(x = nind_m2, color = as.factor(.imp))) +
-  geom_density(data = biomass, aes(x = nind_m2), color = "black",
-               linewidth = 0.8, linetype = "dashed") +
-  labs(title = "Density Plot of Original (Blue) vs Imputed (Colored by .imp)",
-       x = "nind_m2",
-       y = "Density",
-       color = "Imputation Number") +
-  theme_minimal()
 
+imputation_names <- paste("Imputation", 1:10)
+
+ggdensity <- ggplot() +
+  geom_density(
+    data = biomass,
+    aes(x = nind_m2, color = "Original values distribution"),
+    linewidth = 4
+  ) +
+  geom_density(
+    data = imputed_db,
+    aes(x = nind_m2, color = paste("Imputation", .imp))
+  ) +
+  scale_color_manual(
+    values = c(
+      "Original values distribution" = "gray70",
+      setNames(scales::hue_pal()(10), imputation_names)
+    )
+  ) +
+  labs(
+    x = expression(delta~"(ind/"*m^2*")"),
+    y = "Kernel density estimate",
+    color = NULL
+  ) +
+  theme1
+
+print(ggdensity)
+
+ggsave("results/Plots/protofinal/gg_mice_density.png", plot = ggdensity, dpi = 300)
 # Calculation of average value for 10 imputations of nind_m2 (m = 10) and its sd. 
 
 imputed_db <- imputed_db %>% 

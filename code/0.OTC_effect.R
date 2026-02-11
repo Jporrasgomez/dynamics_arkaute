@@ -7,115 +7,142 @@ pacman::p_unload(pacman::p_loaded(), character.only = TRUE) #se quitan todos los
 
 pacman::p_load(dplyr, reshape2,tidyverse, lubridate, ggplot2, ggpubr, gridExtra, stringr, readr, nortest)
 
+source("code/palettes_labels.R")
 
 
-########### 1. OPENING DATA ######################
-# ! it takes time ! around 1-3 minutes
+############ 1. OPENING DATA ######################
+## ! it takes time ! around 1-3 minutes
+#{
+#  plots <- read.csv("data/plots.csv")
+#plots$file_code <- paste0("data_", plots$sensor_code, "_2024_10_24_0.csv")
+#
+#file_code_values <- plots$file_code
+#
+#plots_list <- list()
+#
+#for (i in seq_along(file_code_values)) {
+#  file_path <- file.path("data/data_sensors", file_code_values[i])
+#  new_name <- plots$plot_code[i]
+#  OTC_value <- plots$OTC[i]  # Get ttreat value for the current plot_code
+#  data <- read_delim(file_path, 
+#                     ";", escape_double = FALSE,
+#                     col_names = FALSE, 
+#                     trim_ws = TRUE)
+#  data$OTC <- OTC_value  # Add a new variable "ttreat" to the data with ttreat_value
+#  plots_list[[new_name]] <- data
+#  
+#  rm(data)
+#}
+#
+#
+### NAMING AND TRANSFORMING VARIABLES
+#
+#for (i in seq_along(plots_list)) {
+#  item <- plots_list[[i]]
+#  colnames(item) <- c("n", "date_time0", "time_zone", "t_ground", "t_bottom",
+#                      "t_top", "soil_moisture", "a", "b", "c", "OTC")
+#  
+#  plots_list[[i]] <- item %>% 
+#    select(date_time0, t_ground, t_bottom, t_top, soil_moisture, OTC) %>% 
+#    mutate(
+#      date_time = lubridate::parse_date_time(stringr::str_replace(date_time0, "\\.", "/"),
+#                                               orders = "%Y/%m/%d %H:%M")
+#    ) %>% 
+#    mutate(
+#      date = format(as.Date(date_time), "%Y/%m/%d"),
+#      time = format(as.POSIXct(date_time), "%H:%M"),
+#      hour = as.numeric(format(as.POSIXct(date_time), "%H"))
+#    ) %>% 
+#    mutate(
+#      year = year(date),
+#      month = month(date, label = TRUE), 
+#      day = day(date)
+#      
+#    ) %>% 
+#    select(-date_time0) %>% 
+#    filter(date >= "2023/01/01") %>% # Filtering data from this date
+#    mutate(plot = names(plots_list)[i]) %>% 
+#    mutate(plot_type = gsub("[0-9]", "",plot)) %>% 
+#    
+#    # transforming soil_moisture in 
+#    # volumetric water content(%). Kopecký et al. 2021:
+#    # Topographic Wetness Index calculation guidelines based on measured soil
+#    #  moisture and plant species composition. Suplemetary materials, Apendix A
+#    mutate(
+#      vwc = (-0.0000000134 * soil_moisture^2 + 0.000249622 * soil_moisture - 0.157889) * 100
+#           ) %>% 
+#    mutate(
+#      vwc = ifelse(vwc < 0, 0, vwc) # There are some data of vwc that gows below 0 and that is not possible. 
+#    )
+#    
+#}
+#
+#
+### Arranging data
+## ~ 30 secs
+#
+#control_list <- c(plots_list["c2"],  plots_list["p3"], plots_list["p6"], plots_list["c7"]
+#                 , plots_list["p10"], plots_list["c11"], plots_list["c14"], plots_list["p15"])
+#
+#controls <- do.call(rbind, control_list)
+#
+#OTC_list <- c(plots_list["w1"],  plots_list["wp4"], plots_list["wp5"], plots_list["w8"]
+#            , plots_list["w9"], plots_list["wp12"], plots_list["wp13"], plots_list["w16"])
+#
+#OTCs <- do.call(rbind, OTC_list)
+#
+#
+#data <- merge(controls, OTCs, all = TRUE) %>% 
+#  mutate(date = date(date), 
+#         OTC = as.factor(OTC))
+#
+#data <- data %>% 
+#  mutate(
+#    OTC_label = ifelse(OTC == "YES", paste0("otc"), paste0("control"))
+#  ) %>% 
+#  mutate(
+#    OTC_label = as.factor( OTC_label)
+#  ) %>% 
+#  select(plot, OTC_label, date, month, time, hour, starts_with("t_"), vwc, soil_moisture )
+#
+#data_long <- data %>% 
+#  pivot_longer(
+#    cols      = -c(time, plot, OTC_label, date, month, hour),
+#    names_to  = "variable",
+#    values_to = "value"
+#  )
+#  
+#  
+#
+#}
+#
+#
+#data %>%  write.csv("data/data_sensors.csv")
+#data_long %>%  write.csv("data/data_sensors_long.csv")
 
-{
-  plots <- read.csv("data/plots.csv")
-plots$file_code <- paste0("data_", plots$sensor_code, "_2024_10_24_0.csv")
-
-file_code_values <- plots$file_code
-
-plots_list <- list()
-
-for (i in seq_along(file_code_values)) {
-  file_path <- file.path("data/data_sensors", file_code_values[i])
-  new_name <- plots$plot_code[i]
-  OTC_value <- plots$OTC[i]  # Get ttreat value for the current plot_code
-  data <- read_delim(file_path, 
-                     ";", escape_double = FALSE,
-                     col_names = FALSE, 
-                     trim_ws = TRUE)
-  data$OTC <- OTC_value  # Add a new variable "ttreat" to the data with ttreat_value
-  plots_list[[new_name]] <- data
-  
-  rm(data)
-}
-
-
-## NAMING AND TRANSFORMING VARIABLES
-
-for (i in seq_along(plots_list)) {
-  item <- plots_list[[i]]
-  colnames(item) <- c("n", "date_time0", "time_zone", "t_ground", "t_bottom",
-                      "t_top", "soil_moisture", "a", "b", "c", "OTC")
-  
-  plots_list[[i]] <- item %>% 
-    select(date_time0, t_ground, t_bottom, t_top, soil_moisture, OTC) %>% 
-    mutate(
-      date_time = lubridate::parse_date_time(stringr::str_replace(date_time0, "\\.", "/"),
-                                               orders = "%Y/%m/%d %H:%M")
-    ) %>% 
-    mutate(
-      date = format(as.Date(date_time), "%Y/%m/%d"),
-      time = format(as.POSIXct(date_time), "%H:%M"),
-      hour = as.numeric(format(as.POSIXct(date_time), "%H"))
-    ) %>% 
-    mutate(
-      year = year(date),
-      month = month(date, label = TRUE), 
-      day = day(date)
-      
-    ) %>% 
-    select(-date_time0) %>% 
-    filter(date >= "2023/01/01") %>% # Filtering data from this date
-    mutate(plot = names(plots_list)[i]) %>% 
-    mutate(plot_type = gsub("[0-9]", "",plot)) %>% 
-    
-    # transforming soil_moisture in 
-    # volumetric water content(%). Kopecký et al. 2021:
-    # Topographic Wetness Index calculation guidelines based on measured soil
-    #  moisture and plant species composition. Suplemetary materials, Apendix A
-    mutate(
-      vwc = (-0.0000000134 * soil_moisture^2 + 0.000249622 * soil_moisture - 0.157889) * 100
-           ) %>% 
-    mutate(
-      vwc = ifelse(vwc < 0, 0, vwc) # There are some data of vwc that gows below 0 and that is not possible. 
-    )
-    
-}
-
-
-
-## Arranging data
-# ~ 30 secs
-
-control_list <- c(plots_list["c2"],  plots_list["p3"], plots_list["p6"], plots_list["c7"]
-                 , plots_list["p10"], plots_list["c11"], plots_list["c14"], plots_list["p15"])
-
-controls <- do.call(rbind, control_list)
-
-OTC_list <- c(plots_list["w1"],  plots_list["wp4"], plots_list["wp5"], plots_list["w8"]
-            , plots_list["w9"], plots_list["wp12"], plots_list["wp13"], plots_list["w16"])
-
-OTCs <- do.call(rbind, OTC_list)
-
-
-data <- merge(controls, OTCs, all = TRUE) %>% 
-  mutate(date = date(date), 
-         OTC = as.factor(OTC))
-
-data <- data %>% 
+data <-  read.csv("data/data_sensors.csv") %>%  select(-X) %>% 
   mutate(
-    OTC_label = ifelse(OTC == "YES", paste0("otc"), paste0("control"))
-  ) %>% 
+    plot       = factor(plot),
+    OTC_label  = factor(OTC_label),
+    datetime   = ymd_hm(paste(date, time)),
+    date       = as_date(datetime),
+    month      = month(datetime, label = TRUE, abbr = TRUE),
+    hour       = hour(datetime)
+  ) %>% select(-datetime)
+
+
+data_long <-  read.csv("data/data_sensors_long.csv") %>%  select(-X) %>% 
   mutate(
-    OTC_label = as.factor( OTC_label)
-  ) %>% 
-  select(plot, OTC_label, date, month, time, hour, starts_with("t_"), vwc, soil_moisture )
+    plot       = factor(plot),
+    OTC_label  = factor(OTC_label),
+    datetime   = ymd_hm(paste(date, time)),
+    date       = as_date(datetime),
+    month      = month(datetime, label = TRUE, abbr = TRUE),
+    hour       = hour(datetime)
+  )%>% select(-datetime)
 
-data_long <- data %>% 
-  pivot_longer(
-    cols      = -c(time, plot, OTC_label, date, month, hour),
-    names_to  = "variable",
-    values_to = "value"
-  )
-  
-  
 
-}
+
 
 
 # Maximum values
@@ -167,9 +194,10 @@ maxttop <- max_temperatures_long %>%
   geom_boxplot() + 
   scale_fill_manual(
   name = NULL, values = palette_OTC, labels = labels_OTC) +
-  theme(legend.position = "bottom") + 
   labs( y = "Max temperature (ºC)") + 
-  theme2
+  theme1
+
+print(maxttop)
 
 #ggsave("results/Plots/protofinal/OTC_effect_maxtemperature.png", plot = maxttop, dpi = 300)
 
@@ -178,19 +206,19 @@ max_temperatures_long %>%
   filter(temperature == "daily_max_ttop") %>% 
   ggplot(aes(x = date, y = value, color = OTC_label)) + 
   facet_wrap( ~ year, ncol = 2, nrow = 1, scales = "free_x") +
-  geom_point(alpha = 0.5) + 
+  geom_point(alpha = 0.5, size = 3) + 
   scale_color_manual(
     name = NULL, values = palette_OTC, labels = labels_OTC) +
   theme(legend.position = "bottom") + 
   labs( y = "Max temperature (ºC)", x = NULL) +
    scale_x_date(
-    date_breaks = "1 months",
+    date_breaks = "2 months",
     date_labels = "%b",
     expand = expansion(add = c(0, 15))   # 10 días extra a la derecha
   ) +
-  theme3
-
-#ggsave("results/Plots/protofinal/OTC_effect_maxtemperature_time.png", plot = maxttop_time, dpi = 300)
+  theme1
+print(maxttop_time)
+ggsave("results/Plots/protofinal/OTC_effect_maxtemperature_time.png", plot = maxttop_time, dpi = 300)
 
 
 #maxttop_year_differences<- 
@@ -294,8 +322,6 @@ sampling_days_data <- sampling_days_data %>%
 ### 2. OTC EFFECT  ############
 
 # Charging palettes and themes for plots
-
-source("code/palettes_labels.R")
 
 
 
@@ -440,12 +466,12 @@ ggboxplot(
     labels = labels_OTC
   ) +
   
-theme2
+theme1 +
+  theme(axis.text.x  = element_blank(),
+        axis.ticks.x = element_blank())
 
 print(gg_OTC_temperature)
-
-
-ggsave("results/Plots/protofinal/OTC_effect_temperature.png", plot = gg_OTC_temperature, dpi = 300)
+#ggsave("results/Plots/protofinal/OTC_effect_temperature.png", plot = gg_OTC_temperature, dpi = 300)
 
 
 
@@ -476,11 +502,12 @@ gg_OTC_temperature_summer <- metadata %>%
   ) +
   scale_y_continuous(breaks = scales::pretty_breaks(n = 8)) +
   
-  theme2
+  theme1 +
+  theme(axis.text.x  = element_blank(),
+        axis.ticks.x = element_blank())
 
 print(gg_OTC_temperature_summer)
-
-ggsave("results/Plots/protofinal/OTC_effect_temperature_SUMMER.png", plot = gg_OTC_temperature_summer, dpi = 300)
+#ggsave("results/Plots/protofinal/OTC_effect_temperature_SUMMER.png", plot = gg_OTC_temperature_summer, dpi = 300)
 
 
 gg_allvariables_sensor <- 
@@ -509,11 +536,11 @@ data_long %>%
     labels = labels_OTC
   ) +
   
-  theme2 +
-  labs (y = NULL)
+  theme1 +
+  theme(axis.text.x  = element_blank(),
+        axis.ticks.x = element_blank())
 
 print(gg_allvariables_sensor)
-
 #ggsave("results/Plots/protofinal/OTC_effect_allvariables.png", plot = gg_allvariables_sensor, dpi = 300)
 
 
@@ -523,12 +550,8 @@ print(gg_allvariables_sensor)
 ### HOW DIFFERENT VARIABLES EVOLVE? 
 
 variables = c("t_top", "t_ground", "t_bottom", "vwc")
-                # 1        # 2        # 3      # 4
 
-{
-  
-  
-i = 1
+                # 1        # 2        # 3      # 4
 
 ylabels <- c(
   t_top     = "Temperature at 40 cm (ºC)",
@@ -536,6 +559,15 @@ ylabels <- c(
   t_bottom  = "Temperature at -6 cm (ºC)",
   vwc       = "VWC (%)"
 )
+
+
+
+{
+  
+  
+i = 1
+
+
 
 ytitle      <- ylabels[variables[i]]
 
@@ -565,8 +597,10 @@ gg_boxplot_alldata <-
   scale_fill_manual(
     name   = NULL,
     values = palette_OTC,
+    labels = labels_OTC,
     guide  = FALSE
   ) +
+  theme1 + 
   theme(legend.position = "none") +
   labs(y = ytitle, x = NULL)
 
@@ -601,6 +635,7 @@ gg_boxplot_alldata <-
       values = palette_OTC,
       labels = labels_OTC
     ) +
+    theme1 + 
     theme(legend.position = "none") +
     labs(y = ytitle, x = NULL)
   
@@ -639,11 +674,11 @@ gg_allyear <-
   scale_fill_manual(
     name = NULL, values = palette_OTC, labels = labels_OTC) +
   
-  labs ( x = NULL, y = ytitle ) +
+  labs ( x = NULL,
+         #y = ytitle,
+         y = "Temperature (ºC)") +
   
-  theme3 +
-  
-  theme(legend.position = "none")
+  theme1 
 
 
 
@@ -696,25 +731,25 @@ gg_24h_diff <-
     ) %>% 
 filter(variable == variables[i]) %>%                                       #### Modify in this line the variable or variables we want to see
   ggplot(aes(x = time, y = mean_diff_value, color = variable)) +
-  geom_hline(yintercept = 0, linetype = "dashed", color = "#1FBDC7") +
-  geom_line(aes(group = variable), size = 0.5, color = "#EA6E13") +
+  geom_hline(yintercept = 0, linetype = "dashed", color = "#1FBDC7", linewidth = 1) +
+  geom_line(aes(group = variable), color = "#EA6E13", linewidth = 2) +
   geom_line(aes(x = time,
                 y = mean_diff_value + sd_diff_value,
-                group = variable) , linetype = "dashed", size = 0.5, color = "#EA6E13") +
+                group = variable) , linetype = "dashed", color = "#EA6E13", linewidth = 1) +
   geom_line(aes(x = time,
                 y = mean_diff_value - sd_diff_value,
-                group = variable) , linetype = "dashed", size = 0.5, color = "#EA6E13") + 
+                group = variable) , linetype = "dashed", size = 0.5, color = "#EA6E13", linewidth = 1) + 
   scale_x_discrete(breaks = sprintf("%02d:00", c(1, 5, 9, 13, 17, 21))) +
     
   #scale_color_manual(values = palette_sensor) +
     
     
   labs( x = NULL,
-        y = ytitle
-        #y = "Temperature difference inside OTCs (ºC)"
+        #y = ytitle
+        y = "Temperature gain inside OTC (ºC)"
         ) +
   
-  theme3 +
+  theme1 +
   theme(legend.position = "none")
 
 
@@ -762,9 +797,10 @@ gg_year_diff <-
   ggplot(aes(x = date, y = mean_diff_value)) +
   geom_hline(yintercept = 0, linetype = "dashed", color = "#1FBDC7") +
   geom_line(color = "#EA6E13", linewidth = 0.5) +
+  geom_smooth(stat = "smooth", alpha = 0.2, color = "#EA6E13", fill = "#EA6E13") +
   labs(
     x = NULL,
-    y = "Temperature difference at 40 cm (ºC)"
+    y = "Temperature gain inside OTC (ºC)"
   ) +
   
   scale_x_date(
@@ -774,7 +810,7 @@ gg_year_diff <-
   ) +
   
   
-  theme3 +
+  theme1 +
   theme(
     legend.position = "none",
     #axis.text.x = element_text(angle = 45, hjust = 1)
@@ -794,16 +830,16 @@ gg_year_diff <-
   #ggsave("results/Plots/protofinal/OTC_effect_variable_daily_average.png", plot = gg_boxplot_daily_average, dpi = 300)
   
   print(gg_allyear)
-  #ggsave("results/Plots/protofinal/OTC_effect_allyear.png", plot = gg_allyear, dpi = 300)
+  ggsave("results/Plots/protofinal/OTC_effect_allyear.png", plot = gg_allyear, dpi = 300)
   
   
   print(gg_24h_diff)
-  #ggsave("results/Plots/protofinal/OTC_effect_24h_ttop.png", plot = gg_24h_diff, dpi = 300)   
+  ggsave("results/Plots/protofinal/OTC_effect_24h_ttop.png", plot = gg_24h_diff, dpi = 300)   
   
   
   
   print(gg_year_diff)
-  #ggsave("results/Plots/protofinal/OTC_effect_year_ttop.png", plot = gg_year_diff, dpi = 300) 
+  ggsave("results/Plots/protofinal/OTC_effect_year_ttop.png", plot = gg_year_diff, dpi = 300) 
   
   
   
@@ -857,7 +893,7 @@ vwc_data %>%
     show.legend = FALSE
   ) +
   
-  theme3
+  theme1
 
 
 
@@ -868,7 +904,7 @@ vwc_data %>%
 gg_vwc_vs_t <- 
   vwc_data %>% 
   ggplot(aes(y = vwc_mean, x = t_top_mean, color = OTC_label, fill = OTC_label)) + 
-  geom_point() + 
+  geom_point(size = 4, alpha = 0.5) + 
   scale_color_manual( 
     name = NULL,
     values = palette_OTC,
@@ -879,8 +915,8 @@ gg_vwc_vs_t <-
     values = palette_OTC,
     labels = labels_OTC
   ) +
-  labs ( x = "Temperature at 40 cm (ºC)", y = "VWC (%)") +
-  geom_smooth(method = "lm", se = FALSE) +
+  labs ( x = "Temperature (ºC)", y = "VWC (%)") +
+  geom_smooth(method = "lm", se = FALSE, linewidth = 3) +
   
   # primero la ecuación
   stat_regline_equation(
@@ -910,7 +946,7 @@ gg_vwc_vs_t <-
     show.legend = FALSE
   ) +
   
-  theme3
+  theme1
 
   print(gg_vwc_vs_t)
   ggsave("results/Plots/protofinal/vwc_vs_t.png", plot = gg_vwc_vs_t, dpi = 300)
