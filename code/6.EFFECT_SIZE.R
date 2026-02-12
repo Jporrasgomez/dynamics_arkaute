@@ -15,7 +15,7 @@ source("code/palettes_labels.R")
 palette <- palette_CB
 labels <- labels3
 
-{
+
   
 arkaute <- read.csv("data/arkaute.csv") %>% 
   mutate(
@@ -45,9 +45,9 @@ arkaute_no0 <- arkaute %>%
 variables <- c("richness",                         # 1     
                "abundance",                        # 2     
                "Y_zipf",                           # 3     
-               "biomass",                          # 4     
-               "biomass012",                       # 5     
-               "biomass_lm_plot",                  # 6     
+               "biomass_raw",                      # 4     
+               "biomass_mice",                     # 5     
+               "biomass_mice_lm",                  # 6     
                "SLA",                              # 7     
                "LDMC",                             # 8     
                "leafN"                             # 9     
@@ -113,7 +113,7 @@ effect_size_dynamics <- do.call(rbind, list_eff_dyn)  %>%
     )
   )
 
-}
+
 
 ## 2. GENERATING PLOTS ####
 
@@ -131,21 +131,21 @@ library(patchwork)
 
 ######### ! OJO con la variable de biomasa que usamos. Todas contienen imputación con MICE pero
 # difieren en cómo se han rellenado los huecos de los muestroes 0, 1, 2 y 12. 
-# 1) biomass: datos de biomasa sin usar regesión lineal para rellenar los vacíos de los muestreos 0, 1 , 2 y 12
-# 2) biomass012: datos de biomasa en los que se ha usado una regresión lineal a nivel de especie (mirar script 1.2.lm_biomass012.R)
-# 3) biomass_lm_plot : datos de biomassa en los que se ha usado una regresión 
+# 1) biomass_raw: datos crudos de biomasa sin usar mice o lm regression
+# 2) biomass_mice: datos de biomasa donde sehan imputado gaps con mice (gaps de nind_m2 para luego calcular biomasa)
+# 3) biomass_mice_lm: datos de biomasa donde se ha usado mice y también se han rellenado los muestreos 0, 1, 2 y 12 con un regression model linear
 # lineal a nivel de PLOT. 280 puntos para la regresión. Mirar script 5.1.biomass_lm_plot.R
 
-limits_variables <- c("richness",
-                      "abundance",
-                      "Y_zipf",
-                      "SLA", 
-                      "LDMC", 
-                      "leafN",
-                      #"biomass"                 # Biomass data without imputation of samplings 0, 1, 2 and 12
-                      #"biomass012"              # Biomass data with imputation of samplings 0, 1, 2 and 12 using linear model at species level
-                      "biomass_lm_plot"          # Biomass data with imputation of samplings 0, 1, 2 and 12 using linear model at plot level
-                      )
+limits_variables <- c("richness",                         # 1     
+                      "abundance",                        # 2     
+                      "Y_zipf",                           # 3     
+                      "SLA",                              # 4    
+                      "LDMC",                             # 5    
+                      "leafN",                            # 6
+                      "biomass_mice_lm"                   # 7
+                      #"biomass_raw",                     # 8     
+                      #"biomass_mice"                     # 9 
+)
 
 labels_variables <- c("richness" = "Richness",            # 1
                       "abundance" = "Cover",              # 2
@@ -153,9 +153,9 @@ labels_variables <- c("richness" = "Richness",            # 1
                       "SLA" = "SLA",                      # 4
                       "LDMC" = "LDMC",                    # 5
                       "leafN"= "LN",                      # 6
+                      "biomass_mice_lm" = "Biomass"       # 7
                       #"biomass" = "Biomass"
                       #"biomass012" = "Biomass"
-                      "biomass_lm_plot" = "Biomass"       # 7
                       )      
 
 
@@ -227,8 +227,8 @@ print(gg_control)
 }
 
 
-ggsave("results/Plots/protofinal/1.Results_LRR_4.png", plot = gg_control, dpi = 300)
-ggsave("results/Plots/protofinal/1.Results_LRR_4.svg", plot = gg_control, dpi = 300)
+#ggsave("results/Plots/protofinal/1.Results_LRR_4.png", plot = gg_control, dpi = 300)
+#ggsave("results/Plots/protofinal/1.Results_LRR_4.svg", plot = gg_control, dpi = 300)
 
 
 
@@ -283,8 +283,8 @@ gg_wp <-
 print(gg_wp)
 }
 
-ggsave("results/Plots/protofinal/1.Results_Warming_Effect_LRR.png", plot = gg_wp, dpi = 300)
-ggsave("results/Plots/protofinal/1.Results_Warming_Effect_LRR.svg", plot = gg_wp, dpi = 300)
+#ggsave("results/Plots/protofinal/1.Results_Warming_Effect_LRR.png", plot = gg_wp, dpi = 300)
+#ggsave("results/Plots/protofinal/1.Results_Warming_Effect_LRR.svg", plot = gg_wp, dpi = 300)
 
 
 ########### COMBINED / WARMING    ###

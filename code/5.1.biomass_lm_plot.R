@@ -4,10 +4,19 @@
 rm(list = ls(all.names = TRUE))
 pacman::p_load(dplyr, tidyverse, lubridate, ggplot2)
 
-arkaute <- read.csv("data/arkaute.csv")
+#arkaute <- read.csv("data/arkaute.csv")
 
 
-lm0 <- arkaute %>% 
+biomass_mice <- read.csv("data/biomass_mice_imputation.csv") %>%  rename(biomass_mice = biomass)
+abundance_richness <- read.csv("data/abrich_db_plot.csv")
+
+lm0 <- abundance_richness %>%
+  full_join(biomass_mice,  by = c("sampling", "plot", "treatment", "date", "omw_date", "one_month_window")) %>%
+  select(sampling, treatment, plot, biomass_mice, abundance) %>% 
+  rename(biomass = biomass_mice)
+
+
+lm0 <- lm0 %>% 
   select(sampling, treatment, plot, biomass, abundance)
 
 lm_nona <- lm0 %>% 
@@ -106,10 +115,11 @@ biomass_lm <- rbind(lm_nona, lm_fill) %>%
   rename(biomass_lm_plot = biomass) %>% 
   mutate(
     biomass_lm_plot = ifelse(biomass_lm_plot < 0, 1, biomass_lm_plot)  # Adding 1 unit of biomass to those estimations under 0 
-  )
+  ) %>% 
+  rename(biomass_mice_lm = biomass_lm_plot)
 
 
-biomass_lm %>%   write.csv("data/biomass_lm_plot.csv")
+biomass_lm %>%   write.csv("data/biomass_mice_lm.csv")
 
 
 

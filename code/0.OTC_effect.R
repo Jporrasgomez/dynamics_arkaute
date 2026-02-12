@@ -218,7 +218,7 @@ max_temperatures_long %>%
   ) +
   theme1
 print(maxttop_time)
-ggsave("results/Plots/protofinal/OTC_effect_maxtemperature_time.png", plot = maxttop_time, dpi = 300)
+#ggsave("results/Plots/protofinal/OTC_effect_maxtemperature_time.png", plot = maxttop_time, dpi = 300)
 
 
 #maxttop_year_differences<- 
@@ -292,7 +292,7 @@ sampling_days_data <- sampling_days_data %>%
   summarize(mean_temperature = mean(t_top), 
             mean_vwc = mean(vwc))
 
-#sampling_days_data %>%  write.csv("data/temp_vwc_data.csv",  row.names = F)
+sampling_days_data %>%  write.csv("data/temp_vwc_data.csv",  row.names = F)
 
  
 ## VISUALIZATION OF ALL PLOTS: it takes time
@@ -738,7 +738,7 @@ filter(variable == variables[i]) %>%                                       #### 
                 group = variable) , linetype = "dashed", color = "#EA6E13", linewidth = 1) +
   geom_line(aes(x = time,
                 y = mean_diff_value - sd_diff_value,
-                group = variable) , linetype = "dashed", size = 0.5, color = "#EA6E13", linewidth = 1) + 
+                group = variable) , linetype = "dashed", color = "#EA6E13", linewidth = 1) + 
   scale_x_discrete(breaks = sprintf("%02d:00", c(1, 5, 9, 13, 17, 21))) +
     
   #scale_color_manual(values = palette_sensor) +
@@ -808,13 +808,9 @@ gg_year_diff <-
     date_labels  = "%Y-%m-%d",              # ej. "Jan 2024"
     expand       = expansion(add = c(0, 0))  # ajusta márgenes si hace falta
   ) +
-  
-  
+
   theme1 +
-  theme(
-    legend.position = "none",
-    #axis.text.x = element_text(angle = 45, hjust = 1)
-    )
+  theme(legend.position = "bottom")
 
    
 }
@@ -904,7 +900,7 @@ vwc_data %>%
 gg_vwc_vs_t <- 
   vwc_data %>% 
   ggplot(aes(y = vwc_mean, x = t_top_mean, color = OTC_label, fill = OTC_label)) + 
-  geom_point(size = 4, alpha = 0.5) + 
+  geom_point(size = 3, alpha = 0.5) + 
   scale_color_manual( 
     name = NULL,
     values = palette_OTC,

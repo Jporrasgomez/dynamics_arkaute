@@ -1,25 +1,23 @@
 
 
 
+rm(list = ls(all.names = TRUE))
+pacman::p_load(dplyr, reshape2, tidyverse, lubridate, ggplot2, ggpubr, rpivotTable, ggrepel, here)
+
+source("code/palettes_labels.R")
 
 
+biomass_nind <-  read.csv("data/biomass_nind_for_mice.csv")
 
-biomass <- flora_biomass_raw
+biomass <- biomass_nind
 
-biomass <- merge(biomass, species_code)
-
-biomass <- left_join(biomass, nind)
 
 sum(is.na(biomass$nind_m2)) 
 
 sum(is.na(biomass$nind_m2)) /length(biomass$code) * 100
 
 
-biomass <- biomass %>% 
-  mutate(
-    year = year(date))
-  
-    
+
 
 
 #Where are the NA's?
@@ -79,8 +77,8 @@ na3 <- ggplot(
     plot_annotation(theme = theme(legend.position = "bottom"))
   print(gg_na)
   
-  ggsave("results/Plots/protofinal/NA_biomass.png", plot = gg_na, dpi = 300)
-  ggsave("results/Plots/protofinal/NA_biomass.png.svg", plot = gg_na, dpi = 300)
+  #ggsave("results/Plots/protofinal/NA_biomass.png", plot = gg_na, dpi = 300)
+  #ggsave("results/Plots/protofinal/NA_biomass.png.svg", plot = gg_na, dpi = 300)
   
   
   
@@ -96,7 +94,7 @@ na1_perc <-
     mutate(total_n = n_NA + n_available) %>% 
     mutate(percentage = (n_NA / total_n) * 100) %>%
     ggplot(aes(x = sampling, y = percentage)) +
-    geom_col(aes(fill = "#F8766D")) +
+    geom_col(fill = "gray40") +
     labs(
       y = NULL,
       x = "Sampling"
@@ -114,8 +112,8 @@ na2_perc <-
     ) %>%
     mutate(total_n = n_NA + n_available) %>% 
     mutate(percentage = (n_NA / total_n) * 100) %>%
-    ggplot(aes(x = reorder(plot, -percentage), y = percentage)) +
-    geom_col(aes(fill = "#F8766D")) +
+    ggplot(aes(x = plot, y = percentage)) +
+    geom_col(fill = "gray40") +
     labs(
       y = "Missing data (%)",
       x = "Plot"
@@ -136,14 +134,21 @@ na3_perc <-
       percentage = (n_NA / total_n) * 100
     ) %>%
     ggplot(aes(x = reorder(code, -percentage), y = percentage)) +
-    geom_col(aes(fill = "#F8766D")) +
+    geom_col(fill = "gray40") +
     labs(
       y = NULL,
       x = "Species code"
     ) +
-    gg_RR_theme
+  theme1 + theme( axis.text.x = element_text(
+    angle = 45,
+    hjust = 1,
+    face  = "plain",
+    size  = 12
+  ))
+
   
-  
+
+
   gg_na_perc <-
       (na1_perc + na2_perc + na3_perc) +
       plot_layout(ncol = 1, 
@@ -151,8 +156,8 @@ na3_perc <-
       plot_annotation(theme = theme(legend.position = "none"))
     print(gg_na_perc)
     
-    ggsave("results/Plots/protofinal/NA_perc_biomass.png", plot = gg_na_perc, dpi = 300)
-    ggsave("results/Plots/protofinal/NA_perc_biomass.png.svg", plot = gg_na_perc, dpi = 300)
+    #ggsave("results/Plots/protofinal/NA_perc_biomass.png", plot = gg_na_perc, dpi = 300)
+
 
 #NA's seem to be concentrated in the first year, as we already knew
 # NA's are randomly distributed across plots
@@ -240,6 +245,16 @@ imputed_db <- complete(biomass_mice_imputed, action = "long")
 
 imputation_names <- paste("Imputation", 1:10)
 
+imputed_db$.imp <- factor(
+  imputed_db$.imp,
+  levels = sort(as.numeric(unique(imputed_db$.imp)))
+)
+
+imputed_db$imp_label <- factor(
+  paste("Imputation", imputed_db$.imp),
+  levels = paste("Imputation", 1:10)
+)
+
 ggdensity <- ggplot() +
   geom_density(
     data = biomass,
@@ -248,7 +263,7 @@ ggdensity <- ggplot() +
   ) +
   geom_density(
     data = imputed_db,
-    aes(x = nind_m2, color = paste("Imputation", .imp))
+    aes(x = nind_m2, color = imp_label)
   ) +
   scale_color_manual(
     values = c(
@@ -261,11 +276,18 @@ ggdensity <- ggplot() +
     y = "Kernel density estimate",
     color = NULL
   ) +
-  theme1
+  theme1+ theme(
+    legend.position = c(0.75, 0.6),
+    legend.background = element_blank()
+  )
 
 print(ggdensity)
 
-ggsave("results/Plots/protofinal/gg_mice_density.png", plot = ggdensity, dpi = 300)
+#ggsave("results/Plots/protofinal/gg_mice_density.png", plot = ggdensity, dpi = 300)
+
+
+
+
 # Calculation of average value for 10 imputations of nind_m2 (m = 10) and its sd. 
 
 imputed_db <- imputed_db %>% 
@@ -289,35 +311,63 @@ imput_stability_db <- imputed_db %>%
 mean(imput_stability_db$CV)
 sd(imput_stability_db$CV)
 
+library(ggdist)
 
-imput_stability <- ggplot(imput_stability_db, aes(x = CV)) +
-  geom_histogram(bins = 30, fill = "steelblue", color = "white", alpha = 0.8) +
-  geom_vline(aes(xintercept = 1), color = "red3", linetype = "dashed", linewidth = 1) +
-  scale_x_continuous(
-    expand = expansion(mult = c(0.05, 0.1)),
-    breaks = seq(0, max(imputed_db$sd_imputation / imputed_db$nind_m2_imputed, na.rm = TRUE), by = 0.2) # Adjust "by" as needed
+raincloud_plot <- ggplot(imput_stability_db, aes(x = 1, y = CV)) +
+  
+  # Half-violin (the "cloud")
+  stat_halfeye(
+    adjust = 0.5,
+    width = 0.6,
+    justification = -0.3,
+    .width = 0,
+    point_colour = NA,
+    fill = "gray40"
   ) +
-  labs(title = "Distribution of Coefficient of Variation for Imputed Values",
-       x = "(SD/mean) Ratio",
-       y = "Count") +
-  theme(panel.grid.major = element_blank(),
-        panel.grid.minor = element_blank(),
-        plot.title = element_text(hjust = 0.5))
   
   
-imput_stability_boxplot <- 
-    ggplot(imput_stability_db, aes(y = CV)) +
-    geom_boxplot(fill = "steelblue") +
-    geom_hline(aes(yintercept = 1), color = "red3", linetype = "dashed", size = 1) +
-    labs(title = "Distribution of Coefficient of Variation for Imputed Values",
-         x = "(SD/mean) Ratio",
-         y = "Count") +
-    theme(panel.grid.major = element_blank(),
-          panel.grid.minor = element_blank(),
-          plot.title = element_text(hjust = 0.5))
+  # Raw data (the "rain")
+  geom_jitter(
+    width = 0.08,
+    alpha = 0.4,
+    size = 2
+  ) +
   
-mean(imput_stability_db$CV)
+  # Boxplot (the "box")
+  geom_boxplot(
+    width = 0.2,
+    outlier.shape = NA,
+    alpha = 0.4,
+    linewidth = 0.7
+  ) +
+  
+  coord_flip() +
+  scale_x_continuous(breaks = NULL) +
+  labs(
+    x = NULL,
+    y = "CV"
+  ) +
+  
+  theme1
 
+raincloud_plot
+
+#ggsave("results/Plots/protofinal/gg_raincloud_plot_mice_imputation.png", plot = raincloud_plot, dpi = 300)
+
+
+gg_mice_imputations <-
+  (ggdensity + 
+     theme1 + theme(
+       legend.position = c(0.75, 0.6),
+       legend.background = element_blank()
+     ) + raincloud_plot) +
+  plot_layout(ncol = 1) + 
+  plot_annotation(tag_levels = "A")
+print(gg_mice_imputations)
+
+#ggsave("results/Plots/protofinal/mice_imputation.png", plot = gg_mice_imputations, dpi = 300)
+
+library(ggdist)
   
   mice_results <-
     ggplot(imputed_db, aes( x = sampling, y = nind_m2_imputed, color = as.factor(label_imputation))) +
@@ -345,7 +395,7 @@ nind_nona <- biomass %>%
   filter(!is.na(nind_m2)) %>%  
   filter(!code %in% one_ind_species) 
 
-######### LONG TIME TO RUN LOOP : ###########################################################
+######### VERY VERY VERY LONG TIME TO RUN LOOP : ###########################################################
 #source("code/1.1.1.loop_reliability.R")
 
 
@@ -359,23 +409,56 @@ nind_nona <- biomass %>%
 #reliability_plot_combined <- imap_dfr(reliability_plot_list, ~ mutate(.x, counter = .y))
 #reliability_plot_combined %>% write.csv("data/reliability_LM_test.csv", row.names = F)
 
-######### LONG TIME TO RUN LOOP : ###########################################################
+######### VERY VERY VERY LONG TIME TO RUN LOOP : ###########################################################
 
 
 
 stability_test <- read.csv(here("data", "stability_test.csv"))
 
 
-stability_test %>% 
-  ggplot(aes(y = CV)) + 
-  geom_boxplot() + 
-  geom_hline(aes(yintercept = 1), color = "red", linetype = "dashed", size = 1) +
-  labs(title = "Distribution of Coefficient of Variation for Imputed Values",
-       y = "(SD/mean) Ratio")
 
 mean(stability_test$CV)
 sd(stability_test$CV)
 
+
+raincloud_plot_reliability <- ggplot(stability_test, aes(x = 1, y = CV)) +
+  
+  # Half-violin (the "cloud")
+  stat_halfeye(
+    adjust = 0.5,
+    width = 0.6,
+    justification = -0.3,
+    .width = 0,
+    point_colour = NA,
+    fill = "gray40"
+  ) +
+  
+  
+  # Raw data (the "rain")
+  geom_jitter(
+    width = 0.08,
+    alpha = 0.4,
+    size = 2
+  ) +
+  
+  # Boxplot (the "box")
+  geom_boxplot(
+    width = 0.2,
+    outlier.shape = NA,
+    alpha = 0.4,
+    linewidth = 0.7
+  ) +
+  
+  coord_flip() +
+  scale_x_continuous(breaks = NULL) +
+  labs(
+    x = NULL,
+    y = "CV"
+  ) +
+  
+  theme1
+
+print(raincloud_plot_reliability)
 
 reliability_test <- read.csv(here("data", "reliability_test.csv")) %>% 
   mutate(counter = as.factor(counter))
