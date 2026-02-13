@@ -35,6 +35,11 @@ arkaute <- read.csv("data/arkaute.csv") %>%
     )
   )
 
+
+arkaute %>% 
+  filter(sampling == "1") %>% 
+  filter(treatment %in% c("wp", "p")) %>% 
+  View()
   
 
 arkaute_no0 <- arkaute %>% 
@@ -79,8 +84,9 @@ eff_size_agg <- effect_size_aggregated %>%
     upper_limit = round(upper_limit, 2)
   ) %>% 
   filter(!variable %in% c("biomass", "biomass012")) %>%  # We use "biomass_lm_plot"
-  select(eff_descriptor, variable, eff_value, lower_limit, upper_limit, null_effect) %>% 
-  write.csv("results/effect_size_aggregated.csv")
+  select(eff_descriptor, variable, eff_value, lower_limit, upper_limit, null_effect)
+
+eff_size_agg %>%   write.csv("results/effect_size_aggregated.csv")
 
 
 
@@ -113,7 +119,7 @@ effect_size_dynamics <- do.call(rbind, list_eff_dyn)  %>%
     )
   )
 
-
+effect_size_dynamics %>%  write.csv("results/effect_size_dynamics.csv")
 
 ## 2. GENERATING PLOTS ####
 

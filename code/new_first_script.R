@@ -2,9 +2,6 @@
 
 
 
-
-
-
 # Revisar samplin 15, plot 5, especie shar. Le faltan datos.
 # Reisar sampling 17, plot 3, especie apar. Le faltan datos. 
 

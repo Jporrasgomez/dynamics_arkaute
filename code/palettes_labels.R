@@ -9,7 +9,9 @@
 
 gg_RR_theme <- theme(
   # Panel & grid
+  
   panel.grid        = element_blank(),
+  panel.background = element_rect(fill = "white", color = "black"),
   
   # Text (global)
   text              = element_text(size = 14),
@@ -36,7 +38,8 @@ gg_RR_theme <- theme(
   
   # Legend
   legend.position   = "bottom",
-  legend.text       = element_text(size = 14, face = "plain")
+  legend.text       = element_text(size = 14, face = "plain"), 
+  legend.key = element_rect(fill = "white", colour = NA)
 )
 
 

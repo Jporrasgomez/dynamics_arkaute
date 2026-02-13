@@ -104,6 +104,8 @@ lm_fill <- lm0 %>%
 #  select(-biomass_lm_all) %>% 
 #  rename(biomass = biomass_lm)
 
+
+# we use the biomass extrapolated by using the linear model for all treatments at once 
 lm_fill <- lm_fill %>% 
   select(-biomass_lm) %>% 
   rename(biomass = biomass_lm_all)
@@ -115,6 +117,11 @@ biomass_lm <- rbind(lm_nona, lm_fill) %>%
   rename(biomass_lm_plot = biomass) %>% 
   mutate(
     biomass_lm_plot = ifelse(biomass_lm_plot < 0, 1, biomass_lm_plot)  # Adding 1 unit of biomass to those estimations under 0 
+  ) %>% 
+  mutate(
+    biomass_lm_plot = ifelse(sampling == "1" & treatment %in% c("p", "wp"),
+                              0,
+                              biomass_lm_plot)
   ) %>% 
   rename(biomass_mice_lm = biomass_lm_plot)
 
