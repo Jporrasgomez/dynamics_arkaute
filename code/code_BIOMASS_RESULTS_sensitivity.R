@@ -5,9 +5,6 @@
 
 
 
-
-
-
 rm(list = ls(all.names = TRUE))  #Se limpia el environment
 pacman::p_unload(pacman::p_loaded(), character.only = TRUE) #se quitan todos los paquetes (limpiamos R)
 
@@ -37,9 +34,7 @@ arkaute <- read.csv("data/arkaute.csv") %>%
       date_label,
       levels = format(sort(unique(date)), "%d-%b-%y"),
       ordered = TRUE
-    )
-  )
-
+    ))
 
 
 arkaute_no0 <- arkaute %>% 

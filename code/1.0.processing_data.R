@@ -11,9 +11,10 @@ rm(list = ls(all.names = TRUE))
 pacman::p_load(dplyr, reshape2, tidyverse, lubridate, ggplot2, ggpubr, rpivotTable, ggrepel, here)
 
 source("code/palettes_labels.R")
-{
+
   
-  flora_raw <- read.csv("data/flora_db_raw.csv")
+{
+   flora_raw <- read.csv("data/flora_db_raw.csv")
   
   flora_raw <- flora_raw %>%
     mutate(across(where(is.character), as.factor),
@@ -104,8 +105,22 @@ source("code/palettes_labels.R")
   d <- 1.96
   z <- 2/3
   flora_medium$x <- (flora_medium$height/2)*(flora_medium$Ab + flora_medium$Ah)
+  library(ggdist)
+  
+ hist(flora_medium$x, breaks = 50)
+ boxplot(flora_medium$x)
+ 
+ flora_medium %>% write.csv("data/data_sensitivity_biomass.csv")
+  
+  
+  
+  
+  
   
   flora_medium$biomass_i <- d*(flora_medium$x^z)
+  
+  
+  
   
   # RICHNESSS ########
   
