@@ -2,6 +2,11 @@
 
 
 
+
+
+
+
+
 # Revisar samplin 15, plot 5, especie shar. Le faltan datos.
 # Reisar sampling 17, plot 3, especie apar. Le faltan datos. 
 
@@ -12,9 +17,9 @@ pacman::p_load(dplyr, reshape2, tidyverse, lubridate, ggplot2, ggpubr, rpivotTab
 
 source("code/palettes_labels.R")
 
-  
 
-   flora_raw <- read.csv("data/flora_db_raw.csv")
+
+  flora_raw <- read.csv("data/flora_db_raw.csv")
   
   flora_raw <- flora_raw %>%
     mutate(across(where(is.character), as.factor),
@@ -107,34 +112,41 @@ source("code/palettes_labels.R")
   flora_medium$x <- (flora_medium$height/2)*(flora_medium$Ab + flora_medium$Ah)
   library(ggdist)
   
- #hist(flora_medium$x, breaks = 50)
- #boxplot(flora_medium$x)
- 
- flora_medium$biomass_i <- d*(flora_medium$x^z)
- 
-
- flora_medium %>% write.csv("data/data_sensitivity_biomass.csv")
+  #hist(flora_medium$x, breaks = 50)
+  #boxplot(flora_medium$x)
+  
+  flora_medium$biomass_i <- d*(flora_medium$x^z)
   
   
   
- # Senstitivity analysis for z 
- 
- z_vector <- c(1/6, 1/3, 1/2, 2/3, 5/6, 3/3, 7/6)
- biomass_z <- flora_medium %>% 
-   select(-x)
- 
- for (i in seq_along(z_vector)) {
-   
-   # etiqueta estable para el nombre de columna
-   z_lbl <- gsub("/", "_", as.character(MASS::fractions(z_vector[i])))  # "2/3" -> "2_3"
-   colname <- paste0("biomass_z_", z_lbl)
-   
-   biomass_z[[colname]] <-  d * (((biomass_z$height/2) * (biomass_z$Ab + biomass_z$Ah))^z_vector[i])
- }
- 
- 
- biomass_z %>% write.csv("data/data_sensitivity_biomass_z.csv", row.names = F)
- 
+  #flora_medium %>% write.csv("data/data_sensitivity_biomass.csv")
+  
+  
+  
+  # Senstitivity analysis for z 
+  
+  z_vector <- c(1/6, 1/3, 1/2, 5/6, 3/3, 7/6)
+  
+  for (i in seq_along(z_vector)) {
+    
+    # etiqueta estable para el nombre de columna
+    z_lbl <- gsub("/", "_", as.character(MASS::fractions(z_vector[i])))  # "2/3" -> "2_3"
+    colname <- paste0("biomass_z_", z_lbl)
+    
+    flora_medium[[colname]] <-  d * (((flora_medium$height/2) * (flora_medium$Ab + flora_medium$Ah))^z_vector[i])
+  }
+  
+  
+  flora_medium <- flora_medium  %>% 
+    rename(original_biomass = biomass_i) %>% 
+    pivot_longer(
+      cols = starts_with("biomass"), 
+      names_to = "z", 
+      values_to = "biomass_z"
+    ) %>% 
+    filter(!is.na(biomass_z))
+  
+  
   
   
   
@@ -220,7 +232,7 @@ nind1 <- read.csv("data/n_individuals.csv") %>%
 ## Las especies de asteraceae que hemos agrupado por familia se recalculan sus individuos y abundancias aquí
 
 #2.  Up to sampling 11, We only measured the morphological parameters of 5 individuals per specie as maximum. 
-#    If there were less than 5 species, we know that number was the total amount of individuals in the plot.
+#    If there were less than 5 individuals, we know that number was the total amount of individuals in the plot.
 
 nind2 <- flora_raw %>%
   filter(!sampling %in% c( "12", "13", "14", "15", "16", "17", "18", "19", "20"))  %>%
@@ -250,7 +262,7 @@ biomass_nind <- flora_biomass_raw %>%
   mutate(
     year = year(date))
 
-biomass_nind %>%  write.csv("data/biomass_nind_for_mice.csv")
+#biomass_nind %>%  write.csv("data/biomass_nind_for_mice.csv")
 
 
 ####### CALCULATION OF BIOMASS #############
@@ -260,9 +272,10 @@ biomass_nind %>%  write.csv("data/biomass_nind_for_mice.csv")
 ## CALCULATION OF BIOMASS AT SPECIES LEVEL WITHOUT IMPUTATIONS
 
 biomass_just <- biomass_nind %>% 
-  mutate(biomass_s = nind_m2 * biomass_i) %>% 
+  mutate(biomass_s_original = nind_m2 * original_biomass,
+         biomass_s_z = nind_m2 * biomass_z) %>% 
   select(sampling, treatment, plot, year, date,  one_month_window, omw_date, code, species_level, genus_level, family,
-         abundance, richness, abundance_community, biomass_s, nind_m2)
+         abundance, richness, abundance_community, nind_m2, biomass_s_original, biomass_s_z, z)
 
 
 # Removing outliers
@@ -277,7 +290,19 @@ biomass_just <- biomass_nind %>%
 ## IMPUTATION OF is.na(nind_m2) with MICE (see script "1.1.MICE.R)  ####
 library(mice)
 
-biomass_mice_imputed <- readRDS("data/biomass_mice_imputed.rds")
+z_unique <- unique(biomass_nind$z)
+
+#for (i in seq_along(z_unique))
+  
+  i = 1
+biomass_mice <- biomass_nind %>% 
+  filter(z == z_unique[i]) %>% 
+  select(year, sampling, plot, treatment, code,
+         family, richness, abundance, abundance_community,
+         height, Ah, Ab, biomass_z, nind_m2) %>% 
+  mutate(across(where(is.character), as.factor))
+
+biomass_mice_imputed <- mice(biomass_mice, method = "rf", m = 10, maxit = 300)
 
 imputed_db <- complete(biomass_mice_imputed, action = "long") %>% 
   group_by(plot, treatment, sampling, code) %>% 
@@ -291,16 +316,19 @@ imputed_db$label_imputation <- ifelse(is.na(biomass_nind$nind_m2), 1, 0) # If th
 
 biomass_mice <- biomass_nind %>% 
   left_join(imputed_db) %>% 
-  mutate(biomass_s = nind_m2_imputed * biomass_i) %>% 
+  mutate(biomass_s = nind_m2_imputed * biomass_z) %>% 
   select(sampling, treatment, plot, year, date,  one_month_window, omw_date, code, species_level, genus_level, family,
-         abundance, richness, abundance_community, biomass_s, nind_m2, nind_m2_imputed, label_imputation)
+         abundance, richness, abundance_community, biomass_z, nind_m2, nind_m2_imputed, label_imputation)
+
+biomass_mice$z <- z_unique[i]
+
 
 # Removing outliers
-# Q1 <- quantile(log(biomass_mice$biomass_s), 0.25, na.rm = TRUE)
-# Q3 <- quantile(log(biomass_mice$biomass_s), 0.75, na.rm = TRUE)
-# IQR <- Q3 - Q1
-# biomass_mice <- biomass_mice %>%
-#   filter(log(biomass_s) >= Q1 - 1.5 * IQR & log(biomass_s) <= Q3 + 1.5 * IQR)
+#Q1 <- quantile(log(biomass_mice$biomass_s), 0.25, na.rm = TRUE)
+#Q3 <- quantile(log(biomass_mice$biomass_s), 0.75, na.rm = TRUE)
+#IQR <- Q3 - Q1
+#biomass_mice <- biomass_mice %>%
+#  filter(log(biomass_s) >= Q1 - 1.5 * IQR & log(biomass_s) <= Q3 + 1.5 * IQR)
 
 
 
@@ -328,26 +356,28 @@ biomass_mice <- biomass_nind %>%
 ## BIOMASS AT COMMUNITY LEVEL ##
 
 biomass_just <- biomass_just %>%
-  group_by(plot, sampling, treatment) %>%
-  mutate(biomass_community = sum(biomass_s, na.rm = TRUE)) %>%
+  group_by(plot, sampling, treatment, z) %>%
+  mutate(biomass_original = sum(biomass_s_original, na.rm = TRUE),
+         biomass_z = sum(biomass_s_z, na.rm = TRUE)) %>%
   ungroup() %>% 
   select(year, date, sampling, one_month_window, omw_date, treatment, plot, code, 
-         abundance, richness, biomass_s, biomass_community, abundance_community) %>% 
+         abundance, richness, abundance_community, biomass_original, z, 
+         biomass_z) %>% 
   mutate(sampling_date = as.factor(format(ymd(date), "%Y-%m-%d"))) %>% 
-  rename(biomass = biomass_community) %>% 
-  distinct(treatment, plot, sampling, date, omw_date, one_month_window, biomass)
+  distinct(treatment, plot, sampling, date, omw_date, one_month_window,
+           biomass_original, z,  biomass_z)
 
 
-biomass_mice <- biomass_mice %>%
-  group_by(plot, sampling, treatment) %>%
-  mutate(biomass_community = sum(biomass_s, na.rm = TRUE)) %>%
-  ungroup() %>% 
-  select(year, date, sampling, one_month_window, omw_date, treatment, plot, code, 
-         abundance, richness, biomass_s, biomass_community, abundance_community) %>% 
-  mutate(sampling_date = as.factor(format(ymd(date), "%Y-%m-%d"))) %>% 
-  rename(biomass = biomass_community) %>% 
-  distinct(treatment, plot, sampling, date, omw_date, one_month_window, biomass)
-
+#biomass_mice <- biomass_mice %>%
+#  group_by(plot, sampling, treatment) %>%
+#  mutate(biomass_community = sum(biomass_s, na.rm = TRUE)) %>%
+#  ungroup() %>% 
+#  select(year, date, sampling, one_month_window, omw_date, treatment, plot, code, 
+#         abundance, richness, biomass_s, biomass_community, abundance_community) %>% 
+#  mutate(sampling_date = as.factor(format(ymd(date), "%Y-%m-%d"))) %>% 
+#  rename(biomass = biomass_community) %>% 
+#  distinct(treatment, plot, sampling, date, omw_date, one_month_window, biomass)
+#
 
 
 # Dummy rows for 0 values of richness and abundance 
@@ -386,27 +416,9 @@ biomass_mice <- biomass_mice %>%
 ### Final databases: ##########
 
 
-flora_abrich <- bind_rows(flora_abrich, dummy_rows)%>% 
-  select(year, date, sampling, one_month_window, omw_date,  treatment, plot, code, species_level, genus_level, family, abundance,
-         richness, abundance_community) %>% 
-  mutate(sampling_date = as.factor(format(ymd(date), "%Y-%m-%d"))) %>% 
-  rename(abundance_s = abundance, 
-         abundance = abundance_community)
-
-flora_abrich %>%  write.csv("data/flora_abrich.csv") # Database for RAD, species composition and funct.traits
-
-abrich_db_plot <- flora_abrich %>% 
-  distinct(treatment, plot, sampling, date, omw_date, one_month_window, richness, abundance)
-
-abrich_db_plot %>%  write.csv("data/abrich_db_plot.csv")
-
 
 biomass_just %>%  write.csv("data/biomass_no_imputation.csv", row.names = F)
 biomass_mice %>%  write.csv("data/biomass_mice_imputation.csv", row.names = F)
-
-
-
-
 
 
 

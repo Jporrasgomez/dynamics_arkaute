@@ -16,12 +16,12 @@ flora_abrich <- read.csv("data/flora_abrich.csv")
 traits <- read.csv('data/traits/all.indi.used.csv')
 source("code/palettes_labels.R")
 
-theme_set(theme_bw() +
-            theme(legend.position = "right",
-                  panel.grid = element_blank(),
-                  strip.background = element_blank(),
-                  strip.text = element_text(face = "bold"),
-                  text = element_text(size = 11)))
+#theme_set(theme_bw() +
+#            theme(legend.position = "right",
+#                  panel.grid = element_blank(),
+#                  strip.background = element_blank(),
+#                  strip.text = element_text(face = "bold"),
+#                  text = element_text(size = 11)))
 
 # I remove 8 dummy rows of flora_abrich that I use for other 
 flora_abrich <- flora_abrich %>% 
@@ -444,13 +444,15 @@ cwm_sampling %>%
   # Añade la columna de sampling
   pca_sampling$sampling <- cwm_sampling$sampling
   
+  }
+  
   # Gráfico PCA final con numeración y líneas
   gg_cwm_sampling <- 
-    ggplot(pca_sampling, aes(x = PC1, y = PC2, color = treatment, shape = treatment)) +
+    ggplot(pca_sampling, aes(x = PC1, y = PC2, color = treatment)) +
     geom_path(aes(group = treatment), linewidth = 0.5, alpha = 0.2) +  # Conecta puntos del mismo tratamiento
-    geom_point(size = 1.5) +
+    geom_point(size = 2) +
     geom_text_repel(aes(label = sampling, color = treatment),
-                    size = 3,
+                    size = 4.5,
                     max.overlaps = Inf,
                     show.legend = F)  +  # Números de sampling
     stat_ellipse(aes(fill = treatment, color = treatment),
@@ -479,7 +481,7 @@ cwm_sampling %>%
     
     scale_fill_manual(values = palette_CB) +
     
-    scale_shape_manual(values = point_shapes, labels = labels1) +
+    #scale_shape_manual(values = point_shapes, labels = labels1) +
     
     labs(x = paste0("PC1 (", var_explained[1], "%)"),
          y = paste0("PC2 (", var_explained[2], "%)"),
@@ -489,17 +491,11 @@ cwm_sampling %>%
            shape = guide_legend(title = NULL),
            fill = "none") +
     #theme_test() +
-    theme(
-      panel.grid = element_blank(),
-      strip.background = element_blank(),
-      strip.text = element_text(face = "bold"),
-      text = element_text(size = 15),
-      legend.position = "bottom"
-    )
+    theme1
   print(gg_cwm_sampling)
-  ggsave("results/Plots/protofinal/FT_cwm_sampling.png", plot = gg_cwm_sampling, dpi = 300)
+#ggsave("results/Plots/protofinal/FT_cwm_sampling.png", plot = gg_cwm_sampling, dpi = 300)
 
-  }
+  
 
 ##############################################################################
 # Functional-trait PERMANOVA workflow on retained principal components (PCs) #

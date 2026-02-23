@@ -36,10 +36,10 @@ arkaute <- read.csv("data/arkaute.csv") %>%
   )
 
 
-arkaute %>% 
-  filter(sampling == "1") %>% 
-  filter(treatment %in% c("wp", "p")) %>% 
-  View()
+#arkaute %>% 
+#  filter(sampling == "1") %>% 
+#  filter(treatment %in% c("wp", "p")) %>% 
+#  View()
   
 
 arkaute_no0 <- arkaute %>% 

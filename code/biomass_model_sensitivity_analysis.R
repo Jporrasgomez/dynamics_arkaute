@@ -179,3 +179,50 @@ perc_big
 perc_intermediate + perc_small + perc_big
 
 #ggsave("results/Plots/protofinal/senstivity_biomass_z.png", plot = gg_sens_z, dpi = 300)
+
+
+
+biomass_z <- read.csv("data/data_sensitivity_biomass_z.csv") %>% 
+  select(
+    treatment, sampling, date, plot, starts_with("biomass")
+  ) %>% 
+  rename(original_biomass = biomass_i)
+
+biomass__long <- biomass_z %>% 
+  select(
+    treatment, sampling, date, plot, original_biomass, starts_with("biomass")
+  ) %>% 
+  rename(original_biomass = biomass_i) %>% 
+  pivot_longer(
+    cols = starts_with("biomass"), 
+    names_to = "z", 
+    values_to = "biomass_z"
+  ) %>% 
+  filter(!is.na(biomass_z)) %>% 
+  filter(z != "biomass_z_2_3") 
+
+order_z <- c(
+  "biomass_z_1_6",
+  "biomass_z_1_3",
+  "biomass_z_1_2",
+  "biomass_z_5_6",
+  "biomass_z_1",
+  "biomass_z_7_6"
+)
+
+biomass__long <- biomass__long %>%
+  mutate(z = factor(z, levels = order_z))
+
+ggplot(biomass__long, aes(x = original_biomass, y = biomass_z)) + 
+  facet_wrap(~ z, ncol = 3, nrow = 2, scales = "free") + 
+  geom_point(alpha = 0.5) + 
+  geom_smooth(method = "lm") +
+  theme_bw()
+
+
+
+
+
+
+
+
