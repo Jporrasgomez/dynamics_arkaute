@@ -296,11 +296,11 @@ biomass_mice <- biomass_nind %>%
          abundance, richness, abundance_community, biomass_s, nind_m2, nind_m2_imputed, label_imputation)
 
 # Removing outliers
-# Q1 <- quantile(log(biomass_mice$biomass_s), 0.25, na.rm = TRUE)
-# Q3 <- quantile(log(biomass_mice$biomass_s), 0.75, na.rm = TRUE)
-# IQR <- Q3 - Q1
-# biomass_mice <- biomass_mice %>%
-#   filter(log(biomass_s) >= Q1 - 1.5 * IQR & log(biomass_s) <= Q3 + 1.5 * IQR)
+ Q1 <- quantile(log(biomass_mice$biomass_s), 0.25, na.rm = TRUE)
+ Q3 <- quantile(log(biomass_mice$biomass_s), 0.75, na.rm = TRUE)
+ IQR <- Q3 - Q1
+ biomass_mice <- biomass_mice %>%
+   filter(log(biomass_s) >= Q1 - 1.5 * IQR & log(biomass_s) <= Q3 + 1.5 * IQR)
 
 
 

@@ -1,6 +1,7 @@
 
 
 
+
 rm(list = ls(all.names = TRUE))
 pacman::p_load(dplyr, tidyverse, lubridate, ggplot2)
 
@@ -53,18 +54,6 @@ fit_one <- function(df) {
   )
 }
 
-
-fit_one <- function(df) {
-  m <- lm(biomass ~ abundance, data = df)
-  coefs <- tidy(m)
-  slope_row <- coefs %>% filter(term == "abundance")
-  tibble(
-    R2        = summary(m)$r.squared,
-    `p-value` = slope_row$p.value,   # p-valor de la pendiente
-    slope     = slope_row$estimate,
-    intercept = coefs %>% filter(term == "(Intercept)") %>% pull(estimate)
-  )
-}
 
 # LM per treatment
 by_trt <- dat %>%
