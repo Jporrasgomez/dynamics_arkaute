@@ -1,12 +1,14 @@
 
 
 
+
+
 rm(list = ls(all.names = TRUE))
 pacman::p_load(dplyr, reshape2, tidyverse, lubridate, ggplot2, ggpubr, rpivotTable, ggrepel, here)
 
 source("code/palettes_labels.R")
 
-
+#
 
  { flora_raw <- read.csv("data/flora_db_raw.csv")
   
@@ -292,24 +294,33 @@ biomass_community <- biomass %>%
 
 # FIRST DATABASE for raw data (no imputation).  
 biomass_community_raw_wide <- biomass_community %>% 
-  select(-biomass_z_mice) %>%
+  select(-biomass_z_mice) %>% 
+  mutate(z = fct_relabel(z, ~ sub("^biomass_", "", .x))) %>% 
   pivot_wider(
     names_from = z,
     values_from = biomass_z_raw
-  )
+  ) %>% 
+  mutate(biomass_level = paste0("biomass_raw")) %>% 
+  select(-one_month_window, -omw_date)
 
 
-biomass_community_mice <- biomass_community %>% 
-  select(-biomass_z_raw) %>% 
-  mutate(z = forcats::fct_relabel(z, ~ paste0(.x, "_mice")))
+
+
+
 
 # SECOND DATABASE. 
 
+biomass_community_mice <- biomass_community %>% 
+  select(-biomass_z_raw)
+
 biomass_community_mice_wide <- biomass_community_mice %>% 
+  mutate(z = fct_relabel(z, ~ sub("^biomass_", "", .x))) %>% 
   pivot_wider(
     names_from = z,
     values_from = biomass_z_mice
-  )
+  ) %>% 
+  mutate(biomass_level = paste0("biomass_mice")) %>% 
+  select(-one_month_window, -omw_date)
 
 
 
@@ -331,12 +342,12 @@ data_lm <- abundance_richness %>%
 
 
 order_z <- c(
-  "biomass_z_1_6_mice",
-  "biomass_z_1_3_mice",
-  "biomass_z_1_2_mice",
-  "biomass_z_5_6_mice",
-  "biomass_z_1_mice",
-  "biomass_z_7_6_mice"
+  "biomass_z_1_6",
+  "biomass_z_1_3",
+  "biomass_z_1_2",
+  "biomass_z_5_6",
+  "biomass_z_1",
+  "biomass_z_7_6"
 )
 
 lm_nona <- data_lm %>% 
@@ -353,7 +364,7 @@ lm_nona %>%
   scale_color_manual(values = palette_CB, labels = labels) +
   theme_bw()
 
-biomass_na <- lm0 %>% 
+biomass_na <- data_lm %>% 
   filter(is.na(biomass)) %>% 
   select(-z)
 
@@ -449,14 +460,20 @@ biomass_community_mice_lm <- do.call(rbind, result_list_biomass_lm)
 
 
 
-# Third database
+# THIRD DATABASE
+
+dates_samplings_info <- abundance_richness %>% 
+  select(plot, sampling, treatment, date)
+
 biomass_community_mice_lm_wide <- biomass_community_mice_lm %>% 
-  mutate(z = forcats::fct_relabel(z, ~ paste0(.x, "_lm"))) %>% 
+  mutate(z = fct_relabel(z, ~ sub("^biomass_", "", .x))) %>% 
+  mutate(z = fct_relabel(z, ~ sub("_mice$", "", .x))) %>% 
   pivot_wider(
     names_from = z,
     values_from = biomass
-  )
-
+  ) %>% 
+  mutate(biomass_level = paste0("biomass_mice_lm")) %>%
+  left_join(dates_samplings_info)
 
 
 sensitivity_biomass <- merge(biomass_community_raw_wide, biomass_community_mice_wide) %>% 
@@ -464,61 +481,100 @@ sensitivity_biomass <- merge(biomass_community_raw_wide, biomass_community_mice_
 
 #adding original results of biomass (z = 2/3)
 
-biomass_orignal_raw <- read.csv("data/biomass_no_imputation.csv") %>%  rename(biomass_original_raw = biomass)
 
-biomass_original_mice <- read.csv("data/biomass_mice_imputation.csv") %>%  rename(biomass_original_mice = biomass)
 
-biomass_original_mice_lm <- read.csv("data/biomass_mice_lm.csv") %>%  rename(biomass_original_mice_lm = biomass_mice_lm)
 
-sensitivity_biomass <- sensitivity_biomass %>% 
-  left_join(biomass_orignal_raw) %>% 
-  left_join(biomass_original_mice) %>% 
-  left_join(biomass_original_mice_lm) %>% 
-  select(-X)
+biomass_sensitivity <- rbind(biomass_community_raw_wide, biomass_community_mice_wide) %>% 
+  rbind(biomass_community_mice_lm_wide)
 
 
 sensitivity_biomass %>%  write.csv("results/sensitivity_biomass.csv")
 
 
 
-sensitivity_biomass_long <- sensitivity_biomass %>% 
-  pivot_longer(
-    cols = starts_with("biomass"),
-    names_to = "biomass_z_level", 
-    values_to = 
-  )
 
-biomass_levels <- unique(sensitivity_biomass_long$biomass_z_level)
+### Adding original biomass info
 
-sensitivity_biomass_no0 <- sensitivity_biomass %>% 
+
+biomass_original_raw <- read.csv("data/biomass_no_imputation.csv") %>% 
+  rename(z_2_3_original = biomass) %>% 
+  mutate(biomass_level = paste0("biomass_raw")) %>%
+  select(-omw_date, -one_month_window)
+
+biomass_original_mice <- read.csv("data/biomass_mice_imputation.csv") %>% 
+  rename(z_2_3_original = biomass) %>% 
+  mutate(biomass_level = paste0("biomass_mice")) %>%
+  select(-omw_date, -one_month_window)
+
+biomass_original_mice_lm <- read.csv("data/biomass_mice_lm.csv") %>%
+  rename(z_2_3_original = biomass_mice_lm) %>% 
+  mutate(biomass_level = paste0("biomass_mice_lm")) %>% 
+  select(-X) %>% 
+  left_join(dates_samplings_info) 
+
+biomass_original <- rbind(biomass_original_raw, biomass_original_mice) %>% 
+  rbind(biomass_original_mice_lm)
+
+
+
+
+
+
+biomass_data_all <- merge(biomass_sensitivity, biomass_original) %>% 
+  mutate(treatment = as.factor(treatment))
+
+
+
+biomass_levels <- unique(biomass_data_all$biomass_level)
+z_levels <-  colnames(biomass_data_all)[6:12]
+
+biomass_no0 <- biomass_data_all %>% 
   filter(sampling != "0")
 
 source("code/functions/eff_size_LRR_function.R")
 
 list_eff <- list()
+counter = 0
+
 for (i in seq_along(biomass_levels)){
+
+  data <- biomass_no0 %>% 
+    filter(biomass_level == biomass_levels[i])
   
-  LRR_agg(sensitivity_biomass_no0, biomass_levels[i])
-  
-  list_eff[[i]] <- effsize_data
-  
-  rm(effsize_data)
+  for(j in seq_along(z_levels)){
+    
+    counter = counter + 1
+    
+    LRR_agg(data, z_levels[j])
+    
+    list_eff[[counter]] <- effsize_data %>% 
+      mutate(biomass_level = paste0(biomass_levels[i]))
+    
+    rm(effsize_data) 
+  }
 }
 
-eff_size_agg <- do.call(rbind, list_eff) 
-
-# Storing data for checking results
-
-eff_size_agg <- eff_size_agg %>% 
+eff_size_agg <- do.call(rbind, list_eff)  %>% 
   mutate(
     eff_value = round(eff_value, 2),
     lower_limit = round(lower_limit, 2),
     upper_limit = round(upper_limit, 2)
   ) %>% 
-  select(eff_descriptor, variable, eff_value, lower_limit, upper_limit, null_effect)
+  rename(z_value = variable) %>% 
+  select(eff_descriptor, biomass_level, z_value, eff_value, lower_limit, upper_limit, null_effect)
 
 
 
+
+labels_z = c(
+  "z_1_6" = "1/6",
+  "z_1_3" = "1/3",
+  "z_1_2" = "1/2",
+  "z_2_3_original" = "2/3",
+  "z_5_6" = "5/6",
+  "z_1" = "1",
+  "z_7_6" = "7/6"
+)
 
 
 {
@@ -526,19 +582,33 @@ eff_size_agg <- eff_size_agg %>%
 data <- eff_size_agg %>% 
   filter(eff_descriptor == "wp_vs_p") %>% 
   mutate(
-    eff_descriptor = factor(eff_descriptor),
-    x_jit = (as.integer(eff_descriptor) - 2) 
+    eff_descriptor = as.factor(eff_descriptor),
+    biomass_level = factor(
+      biomass_level,
+      levels = c("biomass_raw", "biomass_mice", "biomass_mice_lm")
+    ),
+    z_value = factor(
+      z_value,
+      levels = c("z_1_6", "z_1_3", "z_1_2", "z_2_3_original", "z_5_6", "z_1", "z_7_6")
+    )
   )
-
+    
 ggplot(data, aes(
-  x = variable,                 # centrado en 0 + pequeño desplazamiento
+  x = z_value,                 # centrado en 0 + pequeño desplazamiento
   y = eff_value,
-  color = variable
+  color = eff_descriptor
 )) +
-  #facet_wrap( scales = "free_y") +
+  facet_wrap( ~biomass_level, scales = "free_y", nrow = 3, ncol = 1,
+              strip.position = "left",
+              labeller = as_labeller(c(
+                biomass_raw     = "Raw biomass",
+                biomass_mice    = "Biomass (MICE)",
+                biomass_mice_lm = "Biomass (MICE + LM)"
+              ))
+              ) +
   
   geom_hline(yintercept = 0, linetype = "dashed",
-             color = "black", linewidth = 0.5) +
+             color = p_CB, linewidth = 0.5) +
   
   
   geom_linerange(aes(ymin = lower_limit, ymax = upper_limit),
@@ -553,30 +623,28 @@ ggplot(data, aes(
   show.legend = FALSE,
   size = 8) +
   
-  #scale_color_manual(values = palette, labels = labels) +
+  scale_color_manual(values = palette_RR_wp, labels = labels_RR_wp2) +
   
-  # Chat gpt help
-  #scale_x_continuous(limits = c(-1.8 , 1.8 ), expand = expansion(mult = 0.1)) +
+  scale_x_discrete(labels = labels_z) +
   
-  #scale_y_continuous( breaks = scales::pretty_breaks(n = breaks_axix_y), 
-  #                    # añade margen relativo por abajo y por arriba (5% y 25% como ejemplo)
-  #                    expand = expansion(mult = c(0.05, 0.1)) ) +
-  #
-  
-  labs(x = NULL, y = NULL, color = NULL) +
-  
-  gg_RR_theme +
+  labs(x = "z value", y = NULL, color = NULL) +
   theme(
-    strip.background   = element_blank(),
-    strip.placement    = "outside",
-    strip.text         = element_text(face = "bold", size = 12),
-    strip.text.y.left  = element_text(face = "bold"),
-    axis.text.y        = element_text(angle = 90, hjust = 0.5, face = "plain", size = 12),
-    axis.text.x        = element_blank(),
-    axis.ticks.x       = element_blank(),
-    legend.position    = "bottom",
-    legend.text        = element_text(size = 14, face = "plain")
+    panel.grid = element_blank(),
+    panel.background = element_rect(fill = "white", color = "black"),
+    text = element_text(size = 14),
+    strip.background = element_blank(),
+    strip.text = element_text(face = "bold", size = 14),
+    strip.placement = "outside",                
+    strip.text.y.left = element_text(            
+      angle = 90, face = "bold", size = 14
+    ),
+    axis.text.y = element_text(hjust = 0.5, face = "plain", size = 12),
+    axis.text.x = element_text(face = "plain", size = 12),
+    legend.position = "bottom",
+    legend.text = element_text(size = 14, face = "plain"),
+    legend.key = element_rect(fill = "white", colour = NA)
   )
+
 
 }
 
@@ -584,5 +652,88 @@ ggplot(data, aes(
 
 
 
+  
 
+{  
+  data_c <- eff_size_agg %>% 
+    filter(eff_descriptor %in% c("p_vs_c", "w_vs_c", "wp_vs_c")) %>% 
+    mutate(
+      eff_descriptor = as.factor(eff_descriptor),
+      eff_descriptor = factor(eff_descriptor, levels = c("p_vs_c","w_vs_c","wp_vs_c")),
+      biomass_level = factor(
+        biomass_level,
+        levels = c("biomass_raw", "biomass_mice", "biomass_mice_lm")
+      ),
+      z_value = factor(
+        z_value,
+        levels = c("z_1_6", "z_1_3", "z_1_2", "z_2_3_original", "z_5_6", "z_1", "z_7_6")
+      ), 
+    ) 
+  
+  pos_d <- position_dodge(width = 0.5)
+  
+  ggplot(data_c, aes(
+    x = z_value,
+    y = eff_value,
+    color = eff_descriptor,
+    group = eff_descriptor   # importante para que el dodge respete el orden
+  )) +
+    facet_wrap(~ biomass_level, scales = "free_y", nrow = 3, ncol = 1,
+               strip.position = "left", 
+               labeller = as_labeller(c(
+                 biomass_raw     = "Raw biomass",
+                 biomass_mice    = "Biomass (MICE)",
+                 biomass_mice_lm = "Biomass (MICE + LM)"
+               ))
+               ) +
+    
+    geom_hline(yintercept = 0, linetype = "dashed",
+               color = "black", linewidth = 0.5) +
+    
+    geom_linerange(
+      aes(ymin = lower_limit, ymax = upper_limit),
+      linewidth = 1, alpha = 1,
+      position = pos_d
+    ) +
+    
+    geom_point(
+      size = 2.5,
+      position = pos_d
+    ) +
+    
+    geom_text(
+      aes(
+        y = ifelse(eff_value < 0, lower_limit - 0.5, upper_limit + 0.5),
+        label = ifelse(null_effect == "NO", "*", NA_character_)
+      ),
+      position = pos_d,
+      show.legend = FALSE,
+      size = 8
+    ) +
+   
+    
+    scale_color_manual(values = palette_RR_CB, labels = labels_RR2) +
+    
+    scale_x_discrete(labels = labels_z) +
+    
+    labs(x = "z value", y = NULL, color = NULL) +
+    theme(
+      panel.grid = element_blank(),
+      panel.background = element_rect(fill = "white", color = "black"),
+      text = element_text(size = 14),
+      strip.background = element_blank(),
+      strip.text = element_text(face = "bold", size = 14),
+      strip.placement = "outside",                
+      strip.text.y.left = element_text(            
+        angle = 90, face = "bold", size = 14
+      ),
+      axis.text.y = element_text(hjust = 0.5, face = "plain", size = 12),
+      axis.text.x = element_text(face = "plain", size = 12),
+      legend.position = "bottom",
+      legend.text = element_text(size = 14, face = "plain"),
+      legend.key = element_rect(fill = "white", colour = NA)
+    )
+
+
+}
 
