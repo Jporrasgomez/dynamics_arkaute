@@ -8,9 +8,55 @@ pacman::p_load(dplyr, reshape2, tidyverse, lubridate, ggplot2, ggpubr, rpivotTab
 
 source("code/palettes_labels.R")
 
+
+k = 1
+
+{
+  
+z_vector_75 <- c(1/6, 1/3, 1/2, 5/6, 3/3, 7/6)
+z_vector_25 <- c(1/2, 5/6)
+
+z_vector_list <- list(z_vector_75, z_vector_25)
+z_vector <- z_vector_list[[k]]
+
+
+
+order_z_75 <-  c(
+  "biomass_z_1_6",
+  "biomass_z_1_3",
+  "biomass_z_1_2",
+  "biomass_z_5_6",
+  "biomass_z_1",
+  "biomass_z_7_6"
+)
+
+
+order_z_25 <- c(
+  "biomass_z_1_2",
+  "biomass_z_5_6"
+)
+
+order_z_list <- list(order_z_75, order_z_25)
+order_z <- order_z_list[[k]]
+
+
+labels_z = c(
+  "z_1_6" = "1/6",
+  "z_1_3" = "1/3",
+  "z_1_2" = "1/2",
+  "z_2_3_original" = "2/3",
+  "z_5_6" = "5/6",
+  "z_1" = "1",
+  "z_7_6" = "7/6"
+)
+
+
+
+
 #
 
- { flora_raw <- read.csv("data/flora_db_raw.csv")
+ 
+ flora_raw <- read.csv("data/flora_db_raw.csv")
   
   flora_raw <- flora_raw %>%
     mutate(across(where(is.character), as.factor),
@@ -100,7 +146,7 @@ source("code/palettes_labels.R")
   
   # Senstitivity analysis for z 
   
-  z_vector <- c(1/6, 1/3, 1/2, 5/6, 3/3, 7/6)
+
   
   for (i in seq_along(z_vector)) {
     
@@ -120,6 +166,63 @@ source("code/palettes_labels.R")
       names_to = "z", 
       values_to = "biomass_i_z"
     ) 
+  
+  
+  quantile(flora_medium$x, na.rm = T)
+  
+  library(ggdist)
+  raincloud_plot <- ggplot(flora_medium, aes(x = 1, y = log(x))) +
+    
+    # Half-violin (the "cloud")
+    stat_halfeye(
+      adjust = 0.5,
+      width = 0.6,
+      justification = -0.3,
+      .width = 0,
+      point_colour = NA,
+      fill = "gray40"
+    ) +
+    
+    
+    # Raw data (the "rain")
+    geom_jitter(
+      width = 0.08,
+      alpha = 0.4,
+      size = 2
+    ) +
+    
+    # Boxplot (the "box")
+    geom_boxplot(
+      width = 0.2,
+      outlier.shape = NA,
+      alpha = 0.4,
+      linewidth = 0.7
+    ) +
+    
+    coord_flip() +
+    scale_x_continuous(breaks = NULL) +
+    labs(
+      x = NULL,
+      y = "log(x)"
+    ) +
+    
+    theme1
+  
+  print(raincloud_plot)
+  
+  #ggsave("results/Plots/protofinal/x_distribution.png", plot = raincloud_plot, dpi = 300)
+  
+  
+  
+
+  
+  flora_medium %>% 
+    mutate(z = factor(z, levels = order_z)) %>% 
+    ggplot(aes(x = original_biomass_i, y = biomass_i_z)) + 
+    facet_wrap(~ z, ncol = 3, nrow = 2, scales = "free") + 
+    geom_point(alpha = 0.5) + 
+    geom_smooth(method = "lm") +
+    theme_bw()
   
   
   # RICHNESSS ########
@@ -196,6 +299,8 @@ biomass_just <- biomass_nind %>%
          abundance, richness, abundance_community, nind_m2, Ah, Ab, height, biomass_s_original, biomass_s_z, z)
 
 
+
+
 # MICE IMPUTATION
 
 #library(mice)
@@ -239,29 +344,29 @@ biomass_just <- biomass_nind %>%
 #
 #}
 #
-
 #biomass_mice <- do.call(rbind, mice_list)
 #
 #biomass_mice <- merge(biomass_mice, biomass_just) %>% select(-Ah, -Ab, -height)
 #
 #biomass_mice %>% write.csv("data/z_mice_biomass_sensitivity.csv", row.names = F)
-
-}
-
+#
+#
+#
 
 biomass <- read.csv("data/z_mice_biomass_sensitivity.csv") %>% 
   select(-biomass_s_original) %>% 
-  rename(biomass_s_z_imp = biomass_s_imp)
+  rename(biomass_s_z_imp = biomass_s_imp) %>% 
+  filter( z %in% order_z)
 
 
 # removing outliers of imputation data
 
-z_levels <- unique(biomass$z)
+
 result_list <- list()
-for(i in seq_along(z_levels)){
+for(i in seq_along(order_z)){
   
 data <- biomass %>% 
-  filter(z == z_levels[i])
+  filter(z == order_z[i])
 
 Q1 <- quantile(log(data$biomass_s_z_imp), 0.25, na.rm = TRUE)
 Q3 <- quantile(log(data$biomass_s_z_imp), 0.75, na.rm = TRUE)
@@ -306,8 +411,6 @@ biomass_community_raw_wide <- biomass_community %>%
 
 
 
-
-
 # SECOND DATABASE. 
 
 biomass_community_mice <- biomass_community %>% 
@@ -324,10 +427,6 @@ biomass_community_mice_wide <- biomass_community_mice %>%
 
 
 
-
-
-
-
 ## Including samplings 0, 1, 2 and 12 for each z subset
 
 
@@ -341,14 +440,7 @@ data_lm <- abundance_richness %>%
   select(sampling, treatment, plot, z, biomass, abundance)
 
 
-order_z <- c(
-  "biomass_z_1_6",
-  "biomass_z_1_3",
-  "biomass_z_1_2",
-  "biomass_z_5_6",
-  "biomass_z_1",
-  "biomass_z_7_6"
-)
+
 
 lm_nona <- data_lm %>% 
   filter(!is.na(biomass)) %>%
@@ -369,8 +461,7 @@ biomass_na <- data_lm %>%
   select(-z)
 
 
-# Paquetes (usa broom para obtener p-value del F-test cómodamente)
-library(dplyr)
+
 library(broom)
 
 # Function to get estimates
@@ -386,16 +477,16 @@ fit_one <- function(df) {
 }
 
 treat_levels <- unique(biomass_community_mice$treatment)
-z_levels <- unique(biomass_community_mice$z)
+z_levels <- order_z
 
 result_list_regression <- list() 
 result_list_biomass_lm <- list() 
 
 
-for(i in seq_along(z_levels)){
+for(i in seq_along(order_z)){
   
   data_nona <- lm_nona %>% 
-    filter(z == z_levels[i])
+    filter(z == order_z[i])
 
 # LM per treatment
 lm_by_trt <- data_nona %>%
@@ -476,19 +567,12 @@ biomass_community_mice_lm_wide <- biomass_community_mice_lm %>%
   left_join(dates_samplings_info)
 
 
-sensitivity_biomass <- merge(biomass_community_raw_wide, biomass_community_mice_wide) %>% 
-  right_join(biomass_community_mice_lm_wide)
-
-#adding original results of biomass (z = 2/3)
-
-
-
 
 biomass_sensitivity <- rbind(biomass_community_raw_wide, biomass_community_mice_wide) %>% 
   rbind(biomass_community_mice_lm_wide)
 
 
-sensitivity_biomass %>%  write.csv("results/sensitivity_biomass.csv")
+#sensitivity_biomass %>%  write.csv("results/sensitivity_biomass.csv")
 
 
 
@@ -526,7 +610,7 @@ biomass_data_all <- merge(biomass_sensitivity, biomass_original) %>%
 
 
 biomass_levels <- unique(biomass_data_all$biomass_level)
-z_levels <-  colnames(biomass_data_all)[6:12]
+z_levels <- colnames(biomass_data_all)[6:ncol(biomass_data_all)]
 
 biomass_no0 <- biomass_data_all %>% 
   filter(sampling != "0")
@@ -566,18 +650,6 @@ eff_size_agg <- do.call(rbind, list_eff)  %>%
 
 
 
-labels_z = c(
-  "z_1_6" = "1/6",
-  "z_1_3" = "1/3",
-  "z_1_2" = "1/2",
-  "z_2_3_original" = "2/3",
-  "z_5_6" = "5/6",
-  "z_1" = "1",
-  "z_7_6" = "7/6"
-)
-
-
-{
 
 data <- eff_size_agg %>% 
   filter(eff_descriptor == "wp_vs_p") %>% 
@@ -592,7 +664,9 @@ data <- eff_size_agg %>%
       levels = c("z_1_6", "z_1_3", "z_1_2", "z_2_3_original", "z_5_6", "z_1", "z_7_6")
     )
   )
-    
+ 
+
+gg_sensitivity_z_wp <-    
 ggplot(data, aes(
   x = z_value,                 # centrado en 0 + pequeño desplazamiento
   y = eff_value,
@@ -601,9 +675,9 @@ ggplot(data, aes(
   facet_wrap( ~biomass_level, scales = "free_y", nrow = 3, ncol = 1,
               strip.position = "left",
               labeller = as_labeller(c(
-                biomass_raw     = "Raw biomass",
-                biomass_mice    = "Biomass (MICE)",
-                biomass_mice_lm = "Biomass (MICE + LM)"
+                biomass_raw     = "No gap filling",
+                biomass_mice    = "MICE",
+                biomass_mice_lm = "MICE + LM"
               ))
               ) +
   
@@ -646,7 +720,7 @@ ggplot(data, aes(
   )
 
 
-}
+
 
 
 
@@ -654,7 +728,7 @@ ggplot(data, aes(
 
   
 
-{  
+ 
   data_c <- eff_size_agg %>% 
     filter(eff_descriptor %in% c("p_vs_c", "w_vs_c", "wp_vs_c")) %>% 
     mutate(
@@ -672,6 +746,8 @@ ggplot(data, aes(
   
   pos_d <- position_dodge(width = 0.5)
   
+  
+ gg_sensitivity_z_c <-   
   ggplot(data_c, aes(
     x = z_value,
     y = eff_value,
@@ -681,9 +757,9 @@ ggplot(data, aes(
     facet_wrap(~ biomass_level, scales = "free_y", nrow = 3, ncol = 1,
                strip.position = "left", 
                labeller = as_labeller(c(
-                 biomass_raw     = "Raw biomass",
-                 biomass_mice    = "Biomass (MICE)",
-                 biomass_mice_lm = "Biomass (MICE + LM)"
+                 biomass_raw     = "No gap filling",
+                 biomass_mice    = "MICE",
+                 biomass_mice_lm = "MICE + LM"
                ))
                ) +
     
@@ -736,4 +812,13 @@ ggplot(data, aes(
 
 
 }
+
+
+print(gg_sensitivity_z_wp)
+
+ggsave("results/Plots/protofinal/z_sensitivity_wp.svg", plot = gg_sensitivity_z_wp, dpi = 300)
+
+print(gg_sensitivity_z_c)
+
+ggsave("results/Plots/protofinal/z_sensitivity_c.svg", plot = gg_sensitivity_z_c, dpi = 300)
 
