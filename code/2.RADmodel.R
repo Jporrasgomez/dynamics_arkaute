@@ -330,6 +330,14 @@ ggplot(rad_plot_AIC, aes(x = model, y = AIC))+
   geom_boxplot()
 
 
+means_plot_AIC <- rad_plot_AIC %>% 
+  group_by(model) %>% 
+  summarize(
+    mean_AIC = mean(AIC, na.rm = T), 
+    sd_AIC = sd(AIC, na.rm = T)
+  )
+  
+
 # Again, we decide to use zipf because it only has one explanatory coefficient of the curve (gamma)
 
 # Here, the estimation of ZIPF parameter is less stable for very small communities. That's why 

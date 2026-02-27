@@ -218,7 +218,7 @@ max_temperatures_long %>%
   ) +
   theme1
 print(maxttop_time)
-#ggsave("results/Plots/protofinal/OTC_effect_maxtemperature_time.png", plot = maxttop_time, dpi = 300)
+ggsave("results/Plots/protofinal/OTC_effect_maxtemperature_time.png", plot = maxttop_time, dpi = 300)
 
 
 #maxttop_year_differences<- 
@@ -739,7 +739,7 @@ filter(variable == variables[i]) %>%                                       #### 
   geom_line(aes(x = time,
                 y = mean_diff_value - sd_diff_value,
                 group = variable) , linetype = "dashed", color = "#EA6E13", linewidth = 1) + 
-  scale_x_discrete(breaks = sprintf("%02d:00", c(1, 5, 9, 13, 17, 21))) +
+  scale_x_discrete(breaks = sprintf("%02d:00", c(5, 13, 21))) +
     
   #scale_color_manual(values = palette_sensor) +
     
