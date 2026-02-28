@@ -16,7 +16,6 @@ palette <- palette_CB
 labels <- labels3
 
 
-  
 arkaute <- read.csv("data/arkaute.csv") %>% 
   mutate(
     year = as.factor(year),
@@ -27,10 +26,10 @@ arkaute <- read.csv("data/arkaute.csv") %>%
     plot = as.factor(plot),
     treatment = as.factor(treatment))  %>%
   mutate(
-    date_label = format(date, "%d-%b-%y"),  # p.ej. "04-May-2023"
+    date_label = format(date, "%b %d %y"),  # p.ej. "04-May-2023"
     date_label = factor(
       date_label,
-      levels = format(sort(unique(date)), "%d-%b-%y"),
+      levels = format(sort(unique(date)), "%b %d %y"),
       ordered = TRUE
     )
   )
@@ -86,7 +85,7 @@ eff_size_agg <- effect_size_aggregated %>%
   filter(!variable %in% c("biomass", "biomass012")) %>%  # We use "biomass_lm_plot"
   select(eff_descriptor, variable, eff_value, lower_limit, upper_limit, null_effect)
 
-eff_size_agg %>%   write.csv("results/effect_size_aggregated.csv")
+#eff_size_agg %>%   write.csv("results/effect_size_aggregated.csv")
 
 
 
@@ -119,15 +118,13 @@ effect_size_dynamics <- do.call(rbind, list_eff_dyn)  %>%
     )
   )
 
-effect_size_dynamics %>%  write.csv("results/effect_size_dynamics.csv")
+#effect_size_dynamics %>%  write.csv("results/effect_size_dynamics.csv")
 
 ## 2. GENERATING PLOTS ####
 
+
 {
-source("code/functions/gg_aggregated_function.R")
 source("code/functions/gg_aggregated_function_2.R")
-source("code/functions/gg_aggregated_function_2_wp.R")
-source("code/functions/gg_dynamics_function.R")
 source("code/functions/gg_dynamics_function2.R")
 
 library(patchwork)
@@ -142,57 +139,76 @@ library(patchwork)
 # 3) biomass_mice_lm: datos de biomasa donde se ha usado mice y también se han rellenado los muestreos 0, 1, 2 y 12 con un regression model linear
 # lineal a nivel de PLOT. 280 puntos para la regresión. Mirar script 5.1.biomass_lm_plot.R
 
-limits_variables <- c("richness",                         # 1     
-                      "abundance",                        # 2     
-                      "Y_zipf",                           # 3     
-                      "SLA",                              # 4    
-                      "LDMC",                             # 5    
-                      "leafN",                            # 6
-                      "biomass_mice_lm"                   # 7
-                      #"biomass_raw",                     # 8     
-                      #"biomass_mice"                     # 9 
-)
+  limits_main_variables <- c("richness",                    # 1     
+                        "abundance",                        # 2     
+                        "Y_zipf",                           # 3     
+                        "SLA",                              # 4    
+                        "LDMC",                             # 5    
+                        "leafN",                            # 6
+                        "biomass_mice_lm"                   # 7
+  )
+  
+  labels_main_variables <- c("richness" = "Richness",            # 1
+                        "abundance" = "Cover",                   # 2
+                        "Y_zipf" = "Evenness",                   # 3
+                        "SLA" = "SLA",                           # 4
+                        "LDMC" = "LDMC",                         # 5
+                        "leafN"= "LN",                           # 6
+                        "biomass_mice_lm" = "Biomass"    # 7
+  )    
+  
+  
+  limits_biomass_variables <- c(
+                        "biomass_raw",                         
+                        "biomass_mice",
+                        "biomass_mice_lm"                    
+  )
+  
+  labels_biomass_variables <- c(
+                        
+                        "biomass_raw" = "No imputation",
+                        "biomass_mice" = "MICE",
+                        "biomass_mice_lm" = "MICE + LM"
+  )      
+  
+  
+  
 
-labels_variables <- c("richness" = "Richness",            # 1
-                      "abundance" = "Cover",              # 2
-                      "Y_zipf" = "Evenness",              # 3
-                      "SLA" = "SLA",                      # 4
-                      "LDMC" = "LDMC",                    # 5
-                      "leafN"= "LN",                      # 6
-                      "biomass_mice_lm" = "Biomass"       # 7
-                      #"biomass" = "Biomass"
-                      #"biomass012" = "Biomass"
-                      )      
+k = 2    # k = 1: main variables for manuscript. k = 2: biomass variables for sensitivity analyisis
+  
+limits_list <- list(limits_main_variables, limits_biomass_variables)
 
+limits_variables <- limits_list[[k]]
 
+labels_list <- list(labels_main_variables, labels_biomass_variables)
 
-}
+labels_variables <- labels_list[[k]]
 
-# Choosing the range of variables to be displayed (i to j)
-{
-i = 1
-j = 7
-
-########### ALL TREATMENTS / CONTROL ###
 
 agg <- effect_size_aggregated
 dyn <- effect_size_dynamics
 
-lvls <- limits_variables[i:j]
+lvls <- limits_variables
 labs <- unname(labels_variables[lvls])
 
 
-pos_dod_c_agg <- position_dodge2(width = 0.3, preserve = "single")
-pos_dod_c_dyn <- position_dodge2(width = 12, preserve = "single")
 
 }
 
 
-{gg_eff_agg_c2 <- agg %>% 
-  filter(eff_descriptor %in% c("p_vs_c", "w_vs_c", "wp_vs_c"),
+########### ALL TREATMENTS / CONTROL ###
+
+{
+  comparissons <- c("p_vs_c", "w_vs_c")
+
+pos_dod_c_agg <- position_dodge2(width = 0.3, preserve = "single")
+pos_dod_c_dyn <- position_dodge2(width = 12, preserve = "single")
+
+gg_eff_agg_c2 <- agg %>% 
+  filter(eff_descriptor %in% comparissons,
                 variable %in% lvls) %>% 
   mutate(
-    eff_descriptor = factor(eff_descriptor, levels = c("p_vs_c","w_vs_c","wp_vs_c")),
+    eff_descriptor = factor(eff_descriptor, levels = comparissons),
     variable       = factor(variable, levels = lvls, labels = labs)
   ) %>% 
   ggagg2(
@@ -207,12 +223,12 @@ pos_dod_c_dyn <- position_dodge2(width = 12, preserve = "single")
 
 
 gg_eff_dynamics_c2<- dyn %>% 
-  filter(eff_descriptor %in% c("w_vs_c", "p_vs_c", "wp_vs_c")) %>% 
-  filter(variable %in% limits_variables[i:j]) %>%  
+  filter(eff_descriptor %in% comparissons) %>% 
+  filter(variable %in% limits_variables) %>%  
   mutate(
     variable = factor(variable, 
-                      levels = limits_variables[i:j], 
-                      labels = labels_variables[i:j])) %>% 
+                      levels = limits_variables, 
+                      labels = labels_variables)) %>% 
   ggdyn2(palette_RR_CB,
          labels_RR2, 
          "grey50",
@@ -225,7 +241,7 @@ gg_control <-
   (gg_eff_agg_c2 + 
      gg_eff_dynamics_c2 + theme (legend.position = "none") + 
      plot_layout(guides = "collect",
-                 widths = c(1, 7))) +
+                 widths = c(1, 10))) +
   plot_annotation(theme = theme(legend.position = "bottom"))
 print(gg_control)
 
@@ -233,8 +249,8 @@ print(gg_control)
 }
 
 
-#ggsave("results/Plots/protofinal/1.Results_LRR_4.png", plot = gg_control, dpi = 300)
-#ggsave("results/Plots/protofinal/1.Results_LRR_4.svg", plot = gg_control, dpi = 300)
+ggsave("results/Plots/protofinal/sensitivity_biomass_dynamics.png", plot = gg_control, dpi = 300)
+ggsave("results/Plots/protofinal/sensitivity_biomass_dynamics.svg", plot = gg_control, dpi = 300)
 
 
 
@@ -252,10 +268,10 @@ gg_eff_agg_wp2 <- agg %>%
   mutate(
     variable = factor(variable, levels = lvls, labels = labs)
   ) %>% 
-  ggagg2_wp(
+  ggagg2(
     palette   = palette_RR_wp,
     labels    = labels_RR_wp,
-    p_CB,
+    colorline = p_CB,
     limitvar  = lvls,
     labelvar  = labels_variables[lvls], 
     breaks_axix_y = 2
@@ -266,11 +282,11 @@ gg_eff_agg_wp2 <- agg %>%
 
 gg_eff_dynamics_wp2<- dyn %>% 
   filter(eff_descriptor %in% c("wp_vs_p")) %>% 
-  filter(variable %in% limits_variables[i:j]) %>%  
+  filter(variable %in% limits_variables) %>%  
   mutate(
     variable = factor(variable, 
-                      levels = limits_variables[i:j], 
-                      labels = labels_variables[i:j])) %>% 
+                      levels = limits_variables, 
+                      labels = labels_variables)) %>% 
   
   ggdyn2(palette_RR_wp,
          labels_RR_wp2, 
@@ -284,13 +300,13 @@ gg_wp <-
   (gg_eff_agg_wp2 + 
      gg_eff_dynamics_wp2 + theme (legend.position = "none") + 
      plot_layout(guides = "collect",
-                 widths = c(1, 7))) +
+                 widths = c(1, 10))) +
   plot_annotation(theme = theme(legend.position = "bottom"))
 print(gg_wp)
 }
 
-#ggsave("results/Plots/protofinal/1.Results_Warming_Effect_LRR.png", plot = gg_wp, dpi = 300)
-#ggsave("results/Plots/protofinal/1.Results_Warming_Effect_LRR.svg", plot = gg_wp, dpi = 300)
+ggsave("results/Plots/protofinal/sensitivity_biomass_dynamics_wp.png", plot = gg_wp, dpi = 300)
+ggsave("results/Plots/protofinal/sensitivity_biomass_dynamics_wp.svg", plot = gg_wp, dpi = 300)
 
 
 ########### COMBINED / WARMING    ###

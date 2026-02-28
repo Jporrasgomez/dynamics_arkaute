@@ -13,7 +13,7 @@ ggagg2 <- function(data, palette, labels, colorline, limitvar, labelvar, breaks_
     )
   
   ggplot(data, aes(
-    x = x_jit,                 # centrado en 0 + pequeño desplazamiento
+    x = eff_descriptor,                 # centrado en 0 + pequeño desplazamiento
     y = eff_value,
     color = eff_descriptor
   )) +
@@ -38,7 +38,7 @@ ggagg2 <- function(data, palette, labels, colorline, limitvar, labelvar, breaks_
     scale_color_manual(values = palette, labels = labels) +
     
    # Chat gpt help
-    scale_x_continuous(limits = c(-1.8 , 1.8 ), expand = expansion(mult = 0.1)) +
+    #scale_x_continuous(limits = c(-1.8 , 1.8 ), expand = expansion(mult = 0.1)) +
     
     scale_y_continuous( breaks = scales::pretty_breaks(n = breaks_axix_y), 
                         # añade margen relativo por abajo y por arriba (5% y 25% como ejemplo)

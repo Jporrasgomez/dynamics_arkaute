@@ -163,16 +163,16 @@ palette_CB <- c("c" = c_CB, "w" = w_CB, "p" = p_CB, "wp" = wp_CB)
 ## Response ratio
 labels_RR <- c("w_vs_c" = "Warming vs Control", "p_vs_c" = "Perturbation vs Control", "wp_vs_c" = "Global change vs Control")
 
-labels_RR2 <- c("w_vs_c" = "Warming effect",
-                "p_vs_c" = "Perturbation effect",
-                "wp_vs_c" = "Combined effect")
+labels_RR2 <- c("w_vs_c" = "Warming effect on assembly",
+                "p_vs_c" = "Recovery of ambient communities",
+                "wp_vs_c" = "Combined effect on assembly")
 
 palette_RR_CB <- c("w_vs_c" = w_CB, "p_vs_c" = p_CB, "wp_vs_c" = wp_CB)
 
 
 palette_RR_wp <- c(wp_vs_p = "#903996", wp_vs_w = "#903996")
 
-labels_RR_wp <- c("wp_vs_w" = "Global Change vs Warming", "wp_vs_p" = "Warming effects on recovery")
+labels_RR_wp <- c("wp_vs_w" = "Global Change vs Warming", "wp_vs_p" = "Warming effect on recovery")
 
 labels_RR_wp2 <- c("wp_vs_w" = "Perturbation effect", "wp_vs_p" = "Warming effect on recovery")
 labels_RR_wp3 <- c("wp_vs_w" = "Global Change vs Warming", "wp_vs_p" = "Combined vs Perturbation")

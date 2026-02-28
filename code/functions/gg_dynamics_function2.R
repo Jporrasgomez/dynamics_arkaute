@@ -8,8 +8,8 @@ ggdyn2 <- function(data, palette, labels, colorline, position, asterisk, caps){
 pos_dod_c_dyn <- position_dodge(width = 0.5)
 
 levs  <- levels(data$date_label_noyear)
-v_perturbation  <- match("04-May", levs) + 0.5 
-v_year  <- match("13-Nov", levs) + 0.5 
+v_perturbation  <- match("May 04", levs) + 0.5 
+v_year  <- match("Nov 13", levs) + 0.5 
   
   plot <- 
   ggplot(data, aes(x = date_label_noyear, y = eff_value,

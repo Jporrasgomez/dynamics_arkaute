@@ -9,7 +9,7 @@ pacman::p_load(dplyr, reshape2, tidyverse, lubridate, ggplot2, ggpubr, rpivotTab
 source("code/palettes_labels.R")
 
 
-k = 1
+k = 2
 
 {
   
@@ -675,7 +675,7 @@ ggplot(data, aes(
   facet_wrap( ~biomass_level, scales = "free_y", nrow = 3, ncol = 1,
               strip.position = "left",
               labeller = as_labeller(c(
-                biomass_raw     = "No gap filling",
+                biomass_raw     = "No imputation",
                 biomass_mice    = "MICE",
                 biomass_mice_lm = "MICE + LM"
               ))
@@ -691,7 +691,7 @@ ggplot(data, aes(
   geom_point(size = 2.5) +
   
   geom_text(aes(
-    y = ifelse(eff_value < 0, lower_limit - 0.5, upper_limit + 0.5),
+    y = ifelse(eff_value < 0, lower_limit - 0.1, upper_limit + 0.1),
     label = ifelse(null_effect == "NO", "*", NA_character_)
   ),
   show.legend = FALSE,
@@ -730,10 +730,10 @@ ggplot(data, aes(
 
  
   data_c <- eff_size_agg %>% 
-    filter(eff_descriptor %in% c("p_vs_c", "w_vs_c", "wp_vs_c")) %>% 
+    filter(eff_descriptor %in% c("p_vs_c", "w_vs_c")) %>% 
     mutate(
       eff_descriptor = as.factor(eff_descriptor),
-      eff_descriptor = factor(eff_descriptor, levels = c("p_vs_c","w_vs_c","wp_vs_c")),
+      eff_descriptor = factor(eff_descriptor, levels = c("p_vs_c","w_vs_c")),
       biomass_level = factor(
         biomass_level,
         levels = c("biomass_raw", "biomass_mice", "biomass_mice_lm")
@@ -757,7 +757,7 @@ ggplot(data, aes(
     facet_wrap(~ biomass_level, scales = "free_y", nrow = 3, ncol = 1,
                strip.position = "left", 
                labeller = as_labeller(c(
-                 biomass_raw     = "No gap filling",
+                 biomass_raw     = "No imputation",
                  biomass_mice    = "MICE",
                  biomass_mice_lm = "MICE + LM"
                ))
@@ -779,7 +779,7 @@ ggplot(data, aes(
     
     geom_text(
       aes(
-        y = ifelse(eff_value < 0, lower_limit - 0.5, upper_limit + 0.5),
+        y = ifelse(eff_value < 0, lower_limit - 0.1, upper_limit + 0.1),
         label = ifelse(null_effect == "NO", "*", NA_character_)
       ),
       position = pos_d,
